@@ -14,7 +14,11 @@ to GitHub Pages by ``.github/workflows/docs.yml``. It enables
 Heavy optional dependencies (``torch``, ``transformers``, ``datasets``,
 ``peft``, ``trl``, ``sentence_transformers``, ...) are listed in
 :data:`autodoc_mock_imports` so the GitHub-Pages runner does not have to
-install a full ML stack just to render docstrings.
+install a full ML stack just to render docstrings. ``autodoc_mock_imports``
+only mocks *foreign* packages, however — ``infl_ens`` itself must be
+importable. The :func:`_locate_package_root` helper probes several
+candidate locations to handle both the canonical ``src/infl_ens/``
+layout and a flat ``infl_ens/`` layout.
 
 :see: https://www.sphinx-doc.org/en/master/usage/configuration.html
 """
@@ -23,14 +27,70 @@ from __future__ import annotations
 import os
 import sys
 from datetime import datetime
+from typing import List, Optional
 
 # ---------------------------------------------------------------------------
 # Path setup
 # ---------------------------------------------------------------------------
-# ``docs/`` sits at the repo root next to ``src/``; expose the package so
-# autodoc can import ``infl_ens`` without an editable install.
+# ``conf.py`` lives in ``<repo>/docs/`` next to ``<repo>/src/infl_ens/``.
+# Sphinx imports this file before autodoc runs, so any ``sys.path`` edits
+# made here are visible to ``autosummary :recursive:``.
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "src")))
+
+
+def _locate_package_root(pkg_name: str = "infl_ens") -> Optional[str]:
+    """Return the directory that should be prepended to ``sys.path``.
+
+    Tries several common layouts (in order) and returns the first one
+    that actually contains ``<root>/<pkg_name>``:
+
+    1. ``<docs>/../src``      (canonical ``src/infl_ens/`` layout)
+    2. ``<docs>/..``          (flat ``infl_ens/`` at the repo root)
+    3. ``<cwd>/src``          (CI runners that ``cd`` into the repo root)
+    4. ``<cwd>``              (same, flat layout)
+
+    Each candidate is logged so the GitHub-Actions build log shows
+    exactly what was tried — useful when the build fails because the
+    layout on disk differs from what ``structure.md`` describes.
+
+    :param pkg_name: Package directory name to look for.
+    :type pkg_name: str
+    :returns: Absolute path to prepend to ``sys.path``, or ``None`` if
+              no candidate worked.
+    :rtype: str | None
+    """
+    candidates: List[str] = [
+        os.path.abspath(os.path.join(HERE, "..", "src")),
+        os.path.abspath(os.path.join(HERE, "..")),
+        os.path.abspath(os.path.join(os.getcwd(), "src")),
+        os.path.abspath(os.getcwd()),
+    ]
+    print(f"[conf.py] looking for package {pkg_name!r}")
+    seen: set[str] = set()
+    for root in candidates:
+        if root in seen:
+            continue
+        seen.add(root)
+        has_pkg = os.path.isdir(os.path.join(root, pkg_name))
+        print(f"[conf.py]   tried {root!r} (has {pkg_name}/: {has_pkg})")
+        if has_pkg:
+            return root
+    return None
+
+
+_PKG_ROOT = _locate_package_root()
+if _PKG_ROOT is not None:
+    sys.path.insert(0, _PKG_ROOT)
+    print(f"[conf.py] using {_PKG_ROOT!r} for autodoc imports")
+else:
+    # Don't raise: let Sphinx fail with its own (clearer) ImportError
+    # message inside autosummary so the offending module is visible.
+    print(
+        "[conf.py] WARNING: could not locate 'infl_ens' on any candidate "
+        "path; autodoc will fail. Check that the repo really contains "
+        "'src/infl_ens/' or 'infl_ens/' with an __init__.py.",
+        file=sys.stderr,
+    )
 
 # ---------------------------------------------------------------------------
 # Project information
@@ -70,9 +130,13 @@ autodoc_default_options = {
     "inherited-members": False,
 }
 
-# Modules that the package imports but that the docs runner should not
-# have to install. Autodoc replaces each entry with a stub object so the
-# rest of the module still parses.
+# Foreign modules the package imports but that the docs runner should
+# not have to install. Autodoc replaces each entry with a stub object
+# so the rest of the module still parses.
+#
+# IMPORTANT: do not add ``infl_ens`` or its subpackages here — mocking
+# them would defeat the entire docs build. ``infl_ens`` must be
+# importable via the ``sys.path`` insertion performed above.
 autodoc_mock_imports = [
     "torch",
     "transformers",

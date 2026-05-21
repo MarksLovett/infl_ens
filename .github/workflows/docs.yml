@@ -13,9 +13,12 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "infl_ens/**"
       - "docs/**"
       - "README.md"
       - "structure.md"
+      - "pyproject.toml"
+      - "setup.py"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -44,15 +47,45 @@ jobs:
           cache: pip
           cache-dependency-path: docs/requirements.txt
 
+      - name: Show repo layout (diagnostic)
+        # Helps debug "ModuleNotFoundError: No module named 'infl_ens'"
+        # by surfacing the actual on-disk layout the doc build sees.
+        run: |
+          echo "::group::Top-level"
+          ls -la
+          echo "::endgroup::"
+          echo "::group::src/ (if present)"
+          [ -d src ] && find src -maxdepth 3 -type d | sort || echo "no src/ directory"
+          echo "::endgroup::"
+          echo "::group::infl_ens/ at repo root (if present)"
+          [ -d infl_ens ] && find infl_ens -maxdepth 3 -type d | sort || echo "no flat infl_ens/ directory"
+          echo "::endgroup::"
+
       - name: Install docs dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
 
+      - name: Install the package (if pyproject.toml or setup.py exists)
+        # Belt-and-suspenders: if the repo is pip-installable, do it so
+        # autodoc can find ``infl_ens`` regardless of layout quirks.
+        # If neither file exists this step is a no-op.
+        run: |
+          if [ -f pyproject.toml ] || [ -f setup.py ]; then
+            echo "Installing package in editable mode..."
+            pip install -e . || echo "::warning::editable install failed; falling back to PYTHONPATH"
+          else
+            echo "No pyproject.toml / setup.py; relying on PYTHONPATH + conf.py sys.path."
+          fi
+
       - name: Build HTML
         # ``-W --keep-going`` turns warnings into errors but still runs
         # through to surface every problem in one go. Loosen if the
         # repo intentionally ships warnings.
+        # ``PYTHONPATH`` is set as a belt-and-suspenders backup to the
+        # ``sys.path`` insertion done in ``docs/conf.py``.
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
         run: |
           sphinx-build -b html -W --keep-going docs docs/_build/html
 
