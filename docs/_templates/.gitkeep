@@ -1,0 +1,3 @@
+# Sphinx looks here for HTML template overrides. Tracked via this
+# placeholder so the build never warns about a missing
+# ``templates_path`` entry.

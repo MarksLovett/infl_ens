@@ -72,6 +72,26 @@ infl_ens/
 ├── tests/
 │   ├── test_benchmark_loaders.py                 offline tests with synthetic JSON fixtures
 │   └── test_safety_trait_space.py                offline tests using a toy encoder
+├── docs/
+│   ├── conf.py                                   Sphinx config (autodoc, autosummary, MyST, Furo)
+│   ├── index.rst                                 main TOC: user guide / API / tooling
+│   ├── getting_started.rst                       wraps README.md via myst-parser
+│   ├── structure.rst                             wraps this file via myst-parser
+│   ├── scripts.rst                               script table + invocation notes
+│   ├── configs.rst                               YAML config tree reference
+│   ├── requirements.txt                          docs build deps (sphinx, furo, myst, copybutton)
+│   ├── Makefile                                  ``make -C docs html`` for local builds
+│   ├── make.bat                                  Windows equivalent
+│   ├── _static/.gitkeep                          tracked placeholder for static assets
+│   ├── _templates/.gitkeep                       tracked placeholder for template overrides
+│   └── api/
+│       ├── data.rst                              recursive autosummary for infl_ens.data
+│       ├── inflgame.rst                          recursive autosummary for infl_ens.inflgame
+│       ├── training.rst                          recursive autosummary for infl_ens.training
+│       └── utils.rst                             recursive autosummary for infl_ens.utils
+├── .github/
+│   └── workflows/
+│       └── docs.yml                              builds Sphinx + deploys to GitHub Pages
 ├── data/                                         gitignored
 └── results/                                      gitignored
 ```
@@ -161,6 +181,37 @@ infl_ens/
 |---|---|
 | `test_benchmark_loaders.py` | Offline tests for BeaverTails and HaluEval loaders |
 | `test_safety_trait_space.py` | Offline tests for `build_safety_trait_space` |
+
+### `docs/`
+
+Sphinx project that builds the public documentation site. The HTML
+output is published to GitHub Pages by `.github/workflows/docs.yml` on
+every push to `main` that touches `src/`, `docs/`, `README.md`, or
+`structure.md`. Heavy ML dependencies (torch, transformers, datasets,
+peft, ...) are *not* required to build the docs — they are mocked via
+`autodoc_mock_imports` in `docs/conf.py`.
+
+| File | Role |
+|---|---|
+| `conf.py` | Sphinx configuration: autodoc + autosummary (`:recursive:`), MyST, Furo theme, mathjax, copybutton, intersphinx; adds `../src` to `sys.path`; mocks heavy deps |
+| `index.rst` | Main page; defines the three-section TOC (User guide / API reference / Tooling) |
+| `getting_started.rst` | Includes `../README.md` verbatim via MyST so the quick-start stays in one place |
+| `structure.rst` | Includes `../structure.md` verbatim via MyST |
+| `scripts.rst` | Table of every `scripts/*.py` with role + invocation snippet |
+| `configs.rst` | Table of every `configs/**/*.yaml` |
+| `api/data.rst` | Recursive autosummary entry point for `infl_ens.data` |
+| `api/inflgame.rst` | Recursive autosummary entry point for `infl_ens.inflgame` |
+| `api/training.rst` | Recursive autosummary entry point for `infl_ens.training` |
+| `api/utils.rst` | Recursive autosummary entry point for `infl_ens.utils` |
+| `requirements.txt` | Docs-only build deps: `sphinx`, `furo`, `myst-parser`, `sphinx-copybutton` |
+| `Makefile` / `make.bat` | Local build (`make -C docs html`) |
+| `_static/`, `_templates/` | Tracked placeholders for static assets and template overrides |
+
+### `.github/workflows/`
+
+| File | Role |
+|---|---|
+| `docs.yml` | Builds `docs/` with Sphinx and publishes to GitHub Pages via `actions/upload-pages-artifact` + `actions/deploy-pages`. Writes `.nojekyll` into the artifact so directories like `_static/` are served. One-time setup: **Settings → Pages → Source: GitHub Actions**. |
 
 ## `__init__.py` re-export summary
 

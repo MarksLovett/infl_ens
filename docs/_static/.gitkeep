@@ -1,0 +1,4 @@
+# Sphinx writes user-provided static assets (logos, custom CSS) into
+# this directory and copies them into ``_build/html/_static/`` on each
+# build. Keep the directory tracked by git via this placeholder so the
+# build never warns about a missing ``html_static_path`` entry.
