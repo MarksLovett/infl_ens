@@ -27,8 +27,6 @@ permissions:
   pages: write
   id-token: write
 
-# Only one concurrent deployment; in-progress builds finish so we don't
-# publish a half-rendered site.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -48,16 +46,19 @@ jobs:
           cache-dependency-path: docs/requirements.txt
 
       - name: Show repo layout (diagnostic)
-        # Helps debug "ModuleNotFoundError: No module named 'infl_ens'"
-        # by surfacing the actual on-disk layout the doc build sees.
+        # Surfaces the actual on-disk layout the doc build sees.
         run: |
           echo "::group::Top-level"
           ls -la
           echo "::endgroup::"
-          echo "::group::src/ (if present)"
-          [ -d src ] && find src -maxdepth 3 -type d | sort || echo "no src/ directory"
+          echo "::group::src/ tree (3 levels deep, with __init__.py markers)"
+          if [ -d src ]; then
+            find src -maxdepth 4 \( -type d -o -name '__init__.py' -o -name '*.py' \) | sort
+          else
+            echo "no src/ directory"
+          fi
           echo "::endgroup::"
-          echo "::group::infl_ens/ at repo root (if present)"
+          echo "::group::infl_ens/ at repo root (if flat layout)"
           [ -d infl_ens ] && find infl_ens -maxdepth 3 -type d | sort || echo "no flat infl_ens/ directory"
           echo "::endgroup::"
 
@@ -67,9 +68,10 @@ jobs:
           pip install -r docs/requirements.txt
 
       - name: Install the package (if pyproject.toml or setup.py exists)
-        # Belt-and-suspenders: if the repo is pip-installable, do it so
-        # autodoc can find ``infl_ens`` regardless of layout quirks.
-        # If neither file exists this step is a no-op.
+        # If the repo is pip-installable, do it so autodoc can find
+        # ``infl_ens`` regardless of layout quirks. If neither file
+        # exists this step is a no-op and the build falls back to the
+        # ``sys.path`` insertion in ``docs/conf.py``.
         run: |
           if [ -f pyproject.toml ] || [ -f setup.py ]; then
             echo "Installing package in editable mode..."
@@ -78,16 +80,69 @@ jobs:
             echo "No pyproject.toml / setup.py; relying on PYTHONPATH + conf.py sys.path."
           fi
 
-      - name: Build HTML
-        # ``-W --keep-going`` turns warnings into errors but still runs
-        # through to surface every problem in one go. Loosen if the
-        # repo intentionally ships warnings.
-        # ``PYTHONPATH`` is set as a belt-and-suspenders backup to the
-        # ``sys.path`` insertion done in ``docs/conf.py``.
+      - name: Preflight import (surface the real error)
+        # Sphinx's autosummary wraps ImportError and re-raises with a
+        # synthetic ``"no module named X"`` message that throws away
+        # the original traceback. This step imports each subpackage
+        # directly so a clean Python traceback shows up in the build
+        # log if anything is wrong (missing __init__.py, syntax error,
+        # unmocked top-level import in a leaf module, ...).
+        #
+        # The MagicMock shim mirrors the pre-emptive mocking that
+        # ``docs/conf.py`` performs, so this step's pass/fail signal
+        # matches what Sphinx itself will experience.
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
         run: |
-          sphinx-build -b html -W --keep-going docs docs/_build/html
+          python <<'PY'
+          import sys
+          from unittest.mock import MagicMock
+          MOCKS = [
+              "torch", "torch.nn", "torch.nn.functional",
+              "transformers", "datasets", "peft", "trl", "accelerate",
+              "bitsandbytes", "sentence_transformers", "huggingface_hub",
+              "sklearn", "scipy", "matplotlib", "matplotlib.pyplot",
+              "pandas", "yaml", "hydra", "omegaconf", "tqdm",
+          ]
+          for m in MOCKS:
+              sys.modules.setdefault(m, MagicMock())
+
+          subs = [
+              "infl_ens",
+              "infl_ens.data",
+              "infl_ens.data.benchmarks",
+              "infl_ens.inflgame",
+              "infl_ens.inflgame.router",
+              "infl_ens.training",
+              "infl_ens.utils",
+          ]
+          failed = False
+          for name in subs:
+              try:
+                  mod = __import__(name, fromlist=["_"])
+                  print(f"  OK   {name:32s} -> {getattr(mod, '__file__', '<namespace>')}")
+              except Exception:
+                  print(f"  FAIL {name}")
+                  import traceback
+                  traceback.print_exc()
+                  failed = True
+                  break
+          if failed:
+              # Hard-fail this step so the user sees a red X next to
+              # "Preflight import" rather than a confusing autosummary
+              # error in a later step.
+              sys.exit(1)
+          PY
+
+      - name: Build HTML
+        # ``-W --keep-going`` turns warnings into errors but still
+        # surfaces every problem in one go. ``-v`` produces more
+        # detailed logs so internal exceptions (which Sphinx normally
+        # swallows) become visible.
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: |
+          sphinx-build -b html -v -W --keep-going docs docs/_build/html
 
       - name: Disable Jekyll on Pages
         # Without ``.nojekyll`` GitHub Pages skips files/directories

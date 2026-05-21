@@ -92,6 +92,7 @@ infl_ens/
 ├── .github/
 │   └── workflows/
 │       └── docs.yml                              builds Sphinx + deploys to GitHub Pages
+├── pyproject.toml                                hatchling build backend, src/ layout, optional extras
 ├── data/                                         gitignored
 └── results/                                      gitignored
 ```
@@ -212,6 +213,39 @@ peft, ...) are *not* required to build the docs — they are mocked via
 | File | Role |
 |---|---|
 | `docs.yml` | Builds `docs/` with Sphinx and publishes to GitHub Pages via `actions/upload-pages-artifact` + `actions/deploy-pages`. Writes `.nojekyll` into the artifact so directories like `_static/` are served. One-time setup: **Settings → Pages → Source: GitHub Actions**. |
+
+### `pyproject.toml`
+
+Single source of build and tooling configuration. Uses **hatchling** as
+the build backend, declares the package at `src/infl_ens`, and pins core
+runtime deps to the minimum (`numpy>=1.24`). Heavy ML deps are opt-in
+via extras so `pip install infl_ens` stays slim. The cross-extra `dev`
+includes everything plus `ruff` and `mypy`.
+
+| Section | Role |
+|---|---|
+| `[build-system]` | Hatchling backend |
+| `[project]` | Metadata + core deps (just `numpy`) |
+| `[project.optional-dependencies]` | Extras: `ml`, `data`, `vis`, `configs`, `docs`, `test`, `dev` |
+| `[project.scripts]` | Console-script aliases `infl-ens-train`, `infl-ens-data` |
+| `[tool.hatch.build.targets.{wheel,sdist}]` | Ships `src/infl_ens` in the wheel; sdist also bundles `configs/`, `scripts/`, `docs/`, `tests/` |
+| `[tool.pytest.ini_options]` | `testpaths = ["tests"]`, `pythonpath = ["src"]` |
+| `[tool.ruff]` / `[tool.ruff.lint]` | Lint config; `F401`/`F403` ignored in `__init__.py` |
+| `[tool.mypy]` | Targets `src/infl_ens`, ignores missing imports for heavy deps |
+| `[tool.coverage.*]` | Branch coverage of `src/infl_ens` |
+
+Install workflows:
+
+```bash
+# Minimal install (analytical pieces only)
+pip install .
+
+# Full ML stack (LoRA SFT, sentence-transformer encoders)
+pip install ".[ml,data,configs]"
+
+# Everything (tests + docs + linters)
+pip install -e ".[dev]"
+```
 
 ## `__init__.py` re-export summary
 
