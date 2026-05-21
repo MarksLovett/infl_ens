@@ -69,13 +69,22 @@ jobs:
 
       - name: Install the package (if pyproject.toml or setup.py exists)
         # If the repo is pip-installable, do it so autodoc can find
-        # ``infl_ens`` regardless of layout quirks. If neither file
-        # exists this step is a no-op and the build falls back to the
-        # ``sys.path`` insertion in ``docs/conf.py``.
+        # ``infl_ens`` regardless of layout quirks AND so that
+        # ``pyproject.toml``'s declared runtime dependencies (e.g.
+        # numpy) end up installed. If neither file exists this step is
+        # a no-op and the build falls back to:
+        #
+        # - the ``sys.path`` insertion in ``docs/conf.py`` (for finding
+        #   the package), and
+        # - the explicit ``numpy`` entry in ``docs/requirements.txt``
+        #   (for the one runtime dep autodoc actually needs).
+        #
+        # A broken ``pyproject.toml`` fails here with a clear pip
+        # error rather than later inside autosummary.
         run: |
           if [ -f pyproject.toml ] || [ -f setup.py ]; then
             echo "Installing package in editable mode..."
-            pip install -e . || echo "::warning::editable install failed; falling back to PYTHONPATH"
+            pip install -e .
           else
             echo "No pyproject.toml / setup.py; relying on PYTHONPATH + conf.py sys.path."
           fi

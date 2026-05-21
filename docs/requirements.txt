@@ -1,7 +1,23 @@
 # Documentation build dependencies for the GitHub-Pages workflow.
-# Keep this minimal: heavy package deps are mocked via
-# ``autodoc_mock_imports`` in docs/conf.py.
+#
+# Two kinds of dependencies live here:
+#
+# 1. Sphinx + theme + extensions. These are needed to *render* the
+#    docs, regardless of what the package does.
+# 2. ``numpy``: the package's *only* core runtime dependency
+#    (see ``pyproject.toml`` ``[project] dependencies``). Every
+#    ``__init__.py`` and most leaf modules ``import numpy as np`` at
+#    module top, so autodoc cannot import any ``infl_ens.*`` module
+#    without it. Unlike the heavy ML stack (torch, transformers,
+#    datasets, ...), numpy is small and is *not* mocked in
+#    ``docs/conf.py`` — mocking it would replace every
+#    ``numpy.ndarray`` type hint with ``<MagicMock>`` in the rendered
+#    output, which defeats the purpose of building the docs.
+
 sphinx>=7.3,<9
 furo>=2024.5.6
 myst-parser>=2.0,<4
 sphinx-copybutton>=0.5.2
+
+# Package runtime dep (mirrors pyproject.toml ``[project] dependencies``).
+numpy>=1.24
