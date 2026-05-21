@@ -1,0 +1,58 @@
+# configs/benchmark/router/safety_truth.yaml
+# Influencer-game router on the 2-D (harm, hallucination) trait space.
+# Two specialist agents start as clones of Qwen2.5-1.5B-Instruct and
+# alternate routing with LoRA SFT. Below the stability threshold the
+# agents differentiate into a "harm-aware" and a "hallucination-aware"
+# specialist; above the threshold they remain clones.
+
+task: closed_loop          # router_training | sft_training | closed_loop
+seed: 0
+output_dir: results/safety_truth
+policy: proportional       # argmax | proportional
+
+# Two benchmark splits → two trait-space axes (harm, hallucination).
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 32
+  kde_bandwidth: null      # null → Scott's rule
+  threshold: 0.5
+
+# Three agents start as clones at the resource-weighted mean. Drop one
+# to run the two-player baseline (Theorem 5: symmetric equilibrium stable).
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+
+# Choose sigma relative to the data-derived stability threshold.
+# sigma_fraction < 1 ⇒ below threshold ⇒ symmetry breaks ⇒ specialists.
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  n_rounds: 5
+  batch_size: 256
+  blend: 0.5
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/safety_truth/agents
+    max_seq_length: 1024
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 2
+    num_train_epochs: 1.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    seed: 0

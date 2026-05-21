@@ -1,0 +1,45 @@
+# Example router training config. Drop under configs/benchmark/router/.
+# Launched via:  python -m inflai.training benchmark=router/example
+
+# Trait-space construction
+trait_space:
+  L: 3
+  n_grid: 32
+  kde_bandwidth: null    # null -> Scott's rule
+  anchors:
+    - "mathematics and quantitative reasoning"
+    - "software engineering and code"
+    - "creative writing and storytelling"
+
+# Calibration corpus path (one query per line, plain text)
+calibration_corpus: data/router/calibration_queries.txt
+
+# Agents and their calibration query files
+agents:
+  - name: "qwen2.5-3b-math"
+    calibration: data/router/math_seeds.txt
+  - name: "qwen2.5-3b-coder"
+    calibration: data/router/code_seeds.txt
+  - name: "qwen2.5-3b-base"
+    calibration: data/router/general_seeds.txt
+
+# Game parameters
+# sigma controls competitive reach. Below sigma_0* (computed at runtime),
+# agents stay differentiated; above, they collapse to the centroid.
+# Pick `sigma_mode: stability_fraction` and a fraction in (0, 1] to choose
+# sigma relative to the data-derived threshold.
+sigma_mode: stability_fraction
+sigma_fraction: 0.8
+
+# Routing policy at inference
+policy: argmax    # or 'proportional'
+
+# Training
+training:
+  enabled: false  # see "Equilibrium training caveat" in design notes
+  learning_rate: 5e-3
+  n_steps: 5000
+  tol: 1.0e-8
+  clip_to_box: true
+
+seed: 0

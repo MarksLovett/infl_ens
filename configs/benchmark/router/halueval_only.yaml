@@ -1,0 +1,32 @@
+# configs/benchmark/router/halueval_only.yaml
+# Single-axis ablation: HaluEval hallucination axis only.
+
+task: router_training
+seed: 0
+output_dir: results/halueval_only
+
+benchmarks:
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 64
+  kde_bandwidth: null
+  threshold: 0.5
+
+agents:
+  - name: agent-0
+  - name: agent-1
+  - name: agent-2
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+training:
+  learning_rate: 5.0e-3
+  n_steps: 5000
+  tol: 1.0e-8
+  clip_to_box: true

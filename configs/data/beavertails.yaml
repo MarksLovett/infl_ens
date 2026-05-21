@@ -1,0 +1,11 @@
+# configs/data/beavertails.yaml
+# Static loader settings consumed by infl_ens.data when previewing or
+# building a trait space from BeaverTails alone.
+
+kind: beavertails
+path: data/beavertails/30k_train.jsonl
+max_records: null         # null = no cap
+# Optional: restrict to a subset of the 14 categories.
+# categories:
+#   - violence,aiding_and_abetting,incitement
+#   - hate_speech,offensive_language
