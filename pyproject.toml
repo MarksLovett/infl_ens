@@ -16,7 +16,17 @@ build-backend = "hatchling.build"
 name = "infl_ens"
 version = "0.1.0"
 description = "Influencer-game router and learning algorithms for small language models."
-readme = "README.md"
+# ``readme`` is intentionally not declared here. Hatchling validates
+# this field at metadata-generation time and aborts the install if the
+# referenced file is missing, which makes the build brittle in CI when
+# a branch hasn't committed a README yet. Once ``README.md`` is a
+# stable repo-root file, re-enable with:
+#
+#     readme = "README.md"
+#
+# or (preferred) the explicit form:
+#
+#     readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [

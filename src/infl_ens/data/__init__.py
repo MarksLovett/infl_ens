@@ -1,42 +1,43 @@
-"""Trait-space construction, embedding wrappers, and benchmark loaders.
+"""AI-safety benchmark loaders and learned trait-space construction.
 
-This subpackage groups the *data side* of the influencer-game pipeline:
+This subpackage groups one module per benchmark used as a trait-space
+axis, plus a combined builder. Public surface:
 
-- :class:`TraitSpace` and :func:`build_trait_space` define the
-  :math:`L`-dimensional trait space :math:`\\mathbb{B}` and the empirical
-  resource distribution :math:`B(b)` over it.
-- :func:`position_from_corpus` projects a fresh corpus of queries into a
-  pre-built trait space (used by closed-loop trainers to refresh agent
-  positions between rounds).
-- :class:`SentenceTransformerEncoder` and :class:`HuggingFaceEncoder`
-  are production-ready encoder backends. Heavy imports (``torch``,
-  ``transformers``, ``sentence_transformers``) are deferred until the
-  encoder is *constructed*, so importing this subpackage stays cheap.
-- :mod:`infl_ens.data.benchmarks` provides labelled benchmark loaders
-  for BeaverTails (harm axis) and HaluEval (hallucination axis).
+- :class:`BenchmarkSplit`: uniform container of (prompt, score) records.
+- :func:`load_beavertails`: BeaverTails loader (harm axis).
+- :func:`load_halueval`: HaluEval loader (hallucination axis).
+- :func:`build_safety_trait_space`: combined :math:`N`-axis trait space.
+- :class:`LearnedAxis`: a single scoring axis fit from labelled prompts.
+- :data:`BEAVERTAILS_CATEGORIES`, :data:`HALUEVAL_TASKS`: dataset
+  taxonomy constants exposed for downstream filtering.
 
-Per AGENTS.md §3 this subpackage is *code only*: no disk reads, no global
-state, no side effects at import time.
+All loaders return :class:`BenchmarkSplit` instances so downstream code
+(trait-space builders, trainers, evaluation scripts) handles every
+benchmark through one interface.
 """
 
 from __future__ import annotations
 
-from infl_ens.data import benchmarks
-from infl_ens.data.encoders import (
-    HuggingFaceEncoder,
-    SentenceTransformerEncoder,
+from infl_ens.data.benchmarks.base import BenchmarkSplit
+from infl_ens.data.benchmarks.beavertails import (
+    BEAVERTAILS_CATEGORIES,
+    load_beavertails,
 )
-from infl_ens.data.trait_space import (
-    TraitSpace,
-    build_trait_space,
-    position_from_corpus,
+from infl_ens.data.benchmarks.halueval import (
+    HALUEVAL_TASKS,
+    load_halueval,
+)
+from infl_ens.data.benchmarks.safety_trait_space import (
+    LearnedAxis,
+    build_safety_trait_space,
 )
 
 __all__ = [
-    "HuggingFaceEncoder",
-    "SentenceTransformerEncoder",
-    "TraitSpace",
-    "benchmarks",
-    "build_trait_space",
-    "position_from_corpus",
+    "BEAVERTAILS_CATEGORIES",
+    "BenchmarkSplit",
+    "HALUEVAL_TASKS",
+    "LearnedAxis",
+    "build_safety_trait_space",
+    "load_beavertails",
+    "load_halueval",
 ]
