@@ -1,33 +1,38 @@
-"""Cross-cutting helpers for the influencer-game pipeline.
+"""Influencer-game router and learning algorithms for small language models.
 
-Per AGENTS.md §4 rule 4, this subpackage does *not* import any sibling
-subpackages — utilities here are pure helpers usable from anywhere in
-the codebase. At present the public surface is:
+This package implements the *influencer's game* (Lovett & Fu, 2024) and
+extends it to align small language models (SLMs) as the learning agents.
+The proportional-allocation rule
 
-- :func:`weighted_mean` and :func:`weighted_covariance`: moments of an
-  empirical resource distribution on a discrete trait-space grid.
-- :func:`gaussian_stability_threshold`: closed-form first-bifurcation
-  threshold
+.. math::
 
-  .. math::
+   G_i(\\mathbf{x}, b) \\;=\\; \\frac{f_i(x_i, b)}{\\sum_{j=1}^{N} f_j(x_j, b)}
 
-     \\sigma_0^* \\;=\\; \\sqrt{\\frac{N - 2}{N - 1}}\\, \\sigma_B
+routes queries to candidate models via a multivariate-Gaussian influence
+kernel on a trait space constructed automatically from a calibration
+corpus.
 
-  (Corollary 8, Lovett & Fu 2024). Picking the competitive reach
-  :math:`\\sigma` above or below :math:`\\sigma_0^*` decides whether the
-  symmetric Nash equilibrium is locally stable.
+Subpackages are imported lazily — ``import infl_ens`` does *not* pull in
+:mod:`torch`, :mod:`transformers`, or any other heavy dependency. Import
+the specific subpackage you need:
+
+- :mod:`infl_ens.data`      — trait spaces, encoders, benchmark loaders
+- :mod:`infl_ens.inflgame`  — game environment (router, allocation math)
+- :mod:`infl_ens.training`  — training entry points and trainers
+- :mod:`infl_ens.utils`     — cross-cutting helpers
+
+The single training CLI is ``python -m infl_ens.training --config <path>``;
+the single data CLI is ``python -m infl_ens.data {preview, build-...}``
+(see AGENTS.md §4 rule 1).
+
+References
+----------
+Lovett, M. & Fu, X. (2024). *Learning Dynamics of the Influencer's Game
+in Resource Landscapes.*
 """
 
 from __future__ import annotations
 
-from infl_ens.utils.resource import (
-    gaussian_stability_threshold,
-    weighted_covariance,
-    weighted_mean,
-)
+__version__ = "0.1.0"
 
-__all__ = [
-    "gaussian_stability_threshold",
-    "weighted_covariance",
-    "weighted_mean",
-]
+__all__ = ["__version__"]

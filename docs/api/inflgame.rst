@@ -2,10 +2,8 @@
 ========================
 
 Game environment: routing agents, allocation math
-(:math:`G_i, u_i, \nabla_{x_i} u_i, p_i^{\mathrm{strat}}`), and the
-public :class:`~infl_ens.inflgame.router.InfluencerRouter` class.
-
-.. currentmodule:: infl_ens.inflgame.router
+(:math:`G_i,\, u_i,\, \nabla_{x_i} u_i,\, p_i^{\mathrm{strat}}`), and
+the public :class:`~infl_ens.inflgame.router.InfluencerRouter` class.
 
 Top-level re-exports
 --------------------
@@ -17,13 +15,13 @@ The following symbols are available directly off
 .. autosummary::
    :nosignatures:
 
-   RouterAgent
-   InfluencerRouter
-   allocation_weights
-   expected_utilities
-   empirical_utility
-   strategic_routing_weights
-   utility_gradient
+   infl_ens.inflgame.router.RouterAgent
+   infl_ens.inflgame.router.InfluencerRouter
+   infl_ens.inflgame.router.allocation_weights
+   infl_ens.inflgame.router.expected_utilities
+   infl_ens.inflgame.router.empirical_utility
+   infl_ens.inflgame.router.strategic_routing_weights
+   infl_ens.inflgame.router.utility_gradient
 
 Submodules
 ----------

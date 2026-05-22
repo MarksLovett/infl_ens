@@ -18,6 +18,10 @@ sphinx>=7.3,<9
 furo>=2024.5.6
 myst-parser>=2.0,<4
 sphinx-copybutton>=0.5.2
+# Runtime dep for MyST's ``linkify`` extension enabled in
+# ``docs/conf.py``. Tiny pure-python package; auto-converts bare URLs
+# in Markdown to clickable links.
+linkify-it-py>=2.0
 
 # Package runtime dep (mirrors pyproject.toml ``[project] dependencies``).
 numpy>=1.24

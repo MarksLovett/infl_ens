@@ -1,40 +1,23 @@
-"""Public surface of the router: :class:`InfluencerRouter` and helpers.
+"""Influencer's-game environment: kernels, dynamics, and equilibrium math.
 
-Top-level exports:
+This subpackage hosts everything that defines the *game* rather than
+the *learners*:
 
-- :class:`InfluencerRouter` — wraps a trait space and a list of agents,
-  provides ``route(query)`` and ``route_batch(queries)`` for passive
-  routing and exposes the allocation math for closed-loop trainers.
-- :class:`RouterAgent` — dataclass for a single candidate model, with
-  :py:meth:`RouterAgent.from_calibration` for centroid-based init and
-  :py:meth:`RouterAgent.update_position_from_corpus` for post-training
-  position refresh.
-- :func:`allocation_weights` — :math:`G_i(\\mathbf{x}, b)`.
-- :func:`expected_utilities` — :math:`u_i` on a discrete trait space.
-- :func:`empirical_utility` — :math:`\\hat u_i` from a finite query batch.
-- :func:`strategic_routing_weights` — :math:`p_i^{\\mathrm{strat}}`,
-  the strategic-gradient routing weight :math:`G_i (1 - G_i)`.
-- :func:`utility_gradient` — :math:`\\nabla_{x_i} u_i(\\mathbf{x})`.
+- :func:`~infl_ens.inflgame.router.allocation_weights`     —
+  :math:`G_i(\\mathbf{x}, b)`, the proportional-allocation rule.
+- :func:`~infl_ens.inflgame.router.expected_utilities`     —
+  :math:`u_i(\\mathbf{x}) = \\int G_i(\\mathbf{x}, b)\\, B(b)\\, db`.
+- :func:`~infl_ens.inflgame.router.utility_gradient`       —
+  :math:`\\nabla_{x_i} u_i(\\mathbf{x})`.
+- :class:`~infl_ens.inflgame.router.InfluencerRouter`      —
+  public router class wrapping the math for trainers.
+
+Per AGENTS.md §4 rule 2, *the environment owns the reward*: trainers
+consume this subpackage and do not reimplement payoff math.
 """
 
 from __future__ import annotations
 
-from infl_ens.inflgame.router.agents import RouterAgent
-from infl_ens.inflgame.router.allocation import (
-    allocation_weights,
-    empirical_utility,
-    expected_utilities,
-    strategic_routing_weights,
-    utility_gradient,
-)
-from infl_ens.inflgame.router.core import InfluencerRouter
+from infl_ens.inflgame import router
 
-__all__ = [
-    "InfluencerRouter",
-    "RouterAgent",
-    "allocation_weights",
-    "empirical_utility",
-    "expected_utilities",
-    "strategic_routing_weights",
-    "utility_gradient",
-]
+__all__ = ["router"]

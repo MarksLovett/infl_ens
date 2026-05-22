@@ -9,10 +9,10 @@ single CLI:
    python -m infl_ens.training --config <path>
 
 which dispatches on the config's ``task`` field. The router trainer
-(gradient ascent on agent positions) and the LoRA SFT trainer live as
-submodules.
-
-.. currentmodule:: infl_ens.training
+(gradient ascent on agent positions) is exported *eagerly*; the LoRA
+SFT helpers are exported *lazily* via :func:`__getattr__` so importing
+``infl_ens.training`` does not pull in :mod:`torch` or
+:mod:`transformers`.
 
 Top-level re-exports
 --------------------
@@ -20,17 +20,10 @@ Top-level re-exports
 .. autosummary::
    :nosignatures:
 
-   RouterTrainingConfig
-   train_router_positions
-
-The SFT helpers are lazily re-exported (``infl_ens.training`` avoids
-importing :mod:`torch` and :mod:`transformers` at package import time):
-
-.. autosummary::
-   :nosignatures:
-
-   SFTTrainingConfig
-   sft_train_agent
+   infl_ens.training.RouterTrainingConfig
+   infl_ens.training.train_router_positions
+   infl_ens.training.SFTTrainingConfig
+   infl_ens.training.sft_train_agent
 
 Submodules
 ----------
