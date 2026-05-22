@@ -7,27 +7,24 @@ dataset loaders.
 Top-level re-exports
 --------------------
 
-The following symbols are available directly off ``infl_ens.data``
-(see ``src/infl_ens/data/__init__.py``). Fully qualified names are used
-in the autosummary block because Sphinx's bare-name lookup does not
-respect ``currentmodule`` in autosummary contexts; see
-``docs/conf.py`` for the broader explanation.
+The following symbols are intended to be available directly off
+``infl_ens.data`` (see ``src/infl_ens/data/__init__.py``). Each link
+below jumps to the **canonical** definition, which is what gets
+documented on the per-module pages below — so these links resolve
+regardless of whether ``__init__.py`` re-exports the symbol or not.
 
-.. autosummary::
-   :nosignatures:
-
-   infl_ens.data.TraitSpace
-   infl_ens.data.build_trait_space
-   infl_ens.data.position_from_corpus
-   infl_ens.data.SentenceTransformerEncoder
-   infl_ens.data.HuggingFaceEncoder
+- :class:`~infl_ens.data.trait_space.TraitSpace`
+- :func:`~infl_ens.data.trait_space.build_trait_space`
+- :func:`~infl_ens.data.trait_space.position_from_corpus`
+- :class:`~infl_ens.data.encoders.SentenceTransformerEncoder`
+- :class:`~infl_ens.data.encoders.HuggingFaceEncoder`
 
 Submodules
 ----------
 
 Recursive autosummary picks up every public submodule automatically and
-generates one stub page per module under ``_autosummary/``. Adding a new
-file to ``src/infl_ens/data/`` is enough — no doc edits required.
+generates one stub page per module under ``_autosummary/``. Adding a
+new file to ``src/infl_ens/data/`` is enough — no doc edits required.
 
 .. autosummary::
    :toctree: _autosummary

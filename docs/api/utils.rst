@@ -14,12 +14,11 @@ does not import sibling subpackages.
 Top-level re-exports
 --------------------
 
-.. autosummary::
-   :nosignatures:
+Each link below jumps to the **canonical** definition:
 
-   infl_ens.utils.weighted_mean
-   infl_ens.utils.weighted_covariance
-   infl_ens.utils.gaussian_stability_threshold
+- :func:`~infl_ens.utils.resource.weighted_mean`
+- :func:`~infl_ens.utils.resource.weighted_covariance`
+- :func:`~infl_ens.utils.resource.gaussian_stability_threshold`
 
 Submodules
 ----------

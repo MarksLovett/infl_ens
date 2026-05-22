@@ -235,6 +235,104 @@ _preflight_imports(_SUBPACKAGES_TO_PREFLIGHT)
 
 
 # ---------------------------------------------------------------------------
+# Step 4 — attribute-surface check.
+#
+# Importing a module is necessary but not sufficient: autosummary also
+# needs the documented re-exports to be present as *attributes* on each
+# subpackage. The structure.md document spells out which names each
+# ``__init__.py`` should re-export; this check verifies the live module
+# matches. Missing re-exports are reported as warnings (not failures)
+# so the docs still build with cross-references to canonical locations,
+# but the build log makes the gap obvious.
+# ---------------------------------------------------------------------------
+_EXPECTED_REEXPORTS: dict[str, tuple[str, ...]] = {
+    "infl_ens.data": (
+        "TraitSpace",
+        "build_trait_space",
+        "position_from_corpus",
+        "SentenceTransformerEncoder",
+        "HuggingFaceEncoder",
+    ),
+    "infl_ens.data.benchmarks": (
+        "BenchmarkSplit",
+        "load_beavertails",
+        "load_halueval",
+        "build_safety_trait_space",
+        "LearnedAxis",
+    ),
+    "infl_ens.inflgame.router": (
+        "RouterAgent",
+        "InfluencerRouter",
+        "allocation_weights",
+        "expected_utilities",
+        "empirical_utility",
+        "strategic_routing_weights",
+        "utility_gradient",
+    ),
+    "infl_ens.training": (
+        "RouterTrainingConfig",
+        "train_router_positions",
+        # SFTTrainingConfig / sft_train_agent are lazy via __getattr__
+        # and intentionally not listed here.
+    ),
+    "infl_ens.utils": (
+        "weighted_mean",
+        "weighted_covariance",
+        "gaussian_stability_threshold",
+    ),
+}
+
+
+def _check_attribute_surface(expected: dict) -> None:
+    """Warn for each missing re-export named in ``expected``.
+
+    For each ``(module_name, attrs)`` pair, import the module and
+    verify that every attribute in ``attrs`` is accessible via
+    :func:`getattr`. Missing attributes are reported individually so
+    the build log shows exactly which ``__init__.py`` needs which
+    re-export added.
+
+    :param expected: Mapping of fully-qualified module name to a tuple
+                     of attribute names that should be re-exported.
+    :type expected: dict[str, tuple[str, ...]]
+    """
+    print()
+    print("[conf.py] attribute-surface check (compared against structure.md)")
+    total_missing = 0
+    for mod_name, attrs in expected.items():
+        try:
+            mod = __import__(mod_name, fromlist=["_"])
+        except Exception:  # noqa: BLE001
+            # Already reported by the import preflight; skip silently.
+            continue
+        missing = [a for a in attrs if not hasattr(mod, a)]
+        if missing:
+            total_missing += len(missing)
+            print(
+                f"[conf.py]   {mod_name}: missing re-exports "
+                f"{missing} — autosummary tables that depend on these "
+                f"will fall back to canonical-path cross-references.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"[conf.py]   {mod_name:32s} all {len(attrs)} re-exports present")
+    if total_missing:
+        print(
+            f"[conf.py] {total_missing} missing re-exports total. "
+            f"The docs still build (the API pages use canonical-path "
+            f"xrefs), but adding the listed names to each __init__.py "
+            f"will silence the warning.",
+            file=sys.stderr,
+        )
+    else:
+        print("[conf.py] all expected re-exports present on every subpackage")
+    print()
+
+
+_check_attribute_surface(_EXPECTED_REEXPORTS)
+
+
+# ---------------------------------------------------------------------------
 # Project information
 # ---------------------------------------------------------------------------
 project = "infl_ens"
