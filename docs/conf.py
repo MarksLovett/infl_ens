@@ -278,6 +278,31 @@ autodoc_mock_imports = list({m.split(".")[0] for m in _MOCK_MODULES})
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+# Warning categories suppressed below the ``-W`` threshold. We keep
+# ``-W --keep-going`` in the build command so a *genuine* import error
+# still fails the workflow, but the following warning classes are
+# known-cosmetic byproducts of design choices documented elsewhere:
+#
+# - ``ref.python``  — autosummary's recursive mode happily documents
+#   re-exported symbols at both their canonical location and at the
+#   re-export path (e.g. ``BenchmarkSplit`` appears under both
+#   ``infl_ens.data.benchmarks`` and
+#   ``infl_ens.data.benchmarks.base``). That ambiguity makes Sphinx
+#   emit "more than one target found for cross-reference" on every
+#   docstring xref. The duplication is intentional — re-exports are
+#   the package's public surface (AGENTS.md §4) — so we silence the
+#   warning rather than break the re-export pattern.
+#
+# - ``myst.xref_missing`` — ``README.md`` is included in the docs via
+#   ``.. include:: ../README.md``, and any plain Markdown links
+#   (``[text](path.html)``) that don't resolve to a Sphinx doc target
+#   raise this warning. Suppressed so a README aimed at GitHub readers
+#   doesn't have to be rewritten for Sphinx.
+suppress_warnings = [
+    "ref.python",
+    "myst.xref_missing",
+]
+
 
 # ---------------------------------------------------------------------------
 # MyST (Markdown) configuration

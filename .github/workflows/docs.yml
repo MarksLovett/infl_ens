@@ -71,6 +71,11 @@ jobs:
         # this does NOT commit anything back to the repo, it just keeps
         # the include directive happy. When the real file exists, it
         # wins and no placeholder is written.
+        #
+        # Placeholder content is intentionally link-free: any Markdown
+        # link to a Sphinx doc path (e.g. ``[text](api/data.html)``)
+        # triggers a ``myst.xref_missing`` warning at build time, which
+        # is suppressed but still noisy in logs.
         run: |
           if [ ! -f README.md ]; then
             cat > README.md <<'EOF'
@@ -80,8 +85,8 @@ jobs:
           `README.md` at the repo root to replace this content.)*
 
           Influencer-game router and learning algorithms for small
-          language models. See the [API reference](api/data.html) and
-          [repository structure](structure.html) for details.
+          language models. Browse the navigation sidebar for the API
+          reference and repository structure.
           EOF
             echo "::warning::README.md is missing from the repo root; wrote a placeholder for the docs build only."
           fi
