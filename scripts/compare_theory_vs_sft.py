@@ -132,6 +132,21 @@ def _build_trait_space(cfg: dict, splits: list):
     )
 
 
+def _load_history_records(history_path: Path) -> list[dict]:
+    """Load all rounds from ``history.json``.
+
+    :param history_path: Path to the history file.
+    :type history_path: pathlib.Path
+    :returns: Per-round records.
+    :rtype: list[dict]
+    """
+    with history_path.open("r", encoding="utf-8") as fh:
+        records = json.load(fh)
+    if not records:
+        raise ValueError(f"{history_path} contains no rounds")
+    return records
+
+
 def _initial_positions_from_history(history_path: Path) -> tuple[list[str], np.ndarray]:
     """Extract round-0 positions from a closed-loop ``history.json``.
 
@@ -142,14 +157,28 @@ def _initial_positions_from_history(history_path: Path) -> tuple[list[str], np.n
     :rtype: tuple[list[str], numpy.ndarray]
     :raises ValueError: If the file is empty.
     """
-    with history_path.open("r", encoding="utf-8") as fh:
-        records = json.load(fh)
-    if not records:
-        raise ValueError(f"{history_path} contains no rounds")
+    records = _load_history_records(history_path)
     r0 = records[0]
     names = list(r0["positions"].keys())
     pos = np.stack([np.asarray(r0["positions"][n]) for n in names], axis=0)
     return names, pos
+
+
+def _theory_gradient_starts_from_history(
+    history_path: Path,
+) -> Optional[np.ndarray]:
+    """Pre-GA separated positions from ``theory_init`` metadata, if present.
+
+    :param history_path: Path to ``history.json``.
+    :type history_path: pathlib.Path
+    :returns: ``(N, L)`` array or ``None``.
+    :rtype: numpy.ndarray | None
+    """
+    r0 = _load_history_records(history_path)[0]
+    meta = r0.get("theory_init")
+    if not meta or "theory_initial" not in meta:
+        return None
+    return np.stack([np.asarray(row, dtype=float) for row in meta["theory_initial"]])
 
 
 def _sft_trajectory(history_path: Path, names: Sequence[str]) -> np.ndarray:
@@ -235,10 +264,12 @@ def run_strategic_ascent(
     """
     splits = _load_splits(cfg)
     space = _build_trait_space(cfg, splits)
-    names, init_pos = _initial_positions_from_history(history_path)
+    names, sft_start = _initial_positions_from_history(history_path)
+    theory_start = _theory_gradient_starts_from_history(history_path)
+    ga_start = theory_start if theory_start is not None else sft_start
 
     agents = [
-        RouterAgent(name=n, position=init_pos[i].copy())
+        RouterAgent(name=n, position=ga_start[i].copy())
         for i, n in enumerate(names)
     ]
     sigma = _sigma_from_cfg(cfg, len(agents), space)
@@ -259,7 +290,10 @@ def run_strategic_ascent(
         "agents": agents,
         "sigma": sigma,
         "sigma_star": float(sigma_star),
-        "initial_positions": init_pos,
+        "sft_start_positions": sft_start,
+        "theory_start_positions": ga_start if theory_start is not None else sft_start,
+        "theory_gradient_init": theory_start is not None,
+        "initial_positions": sft_start,
         "names": names,
         "splits": splits,
     })
@@ -272,6 +306,7 @@ def plot_comparison(
     *,
     axis_labels: tuple[str, str] = ("harm", "hallucination"),
     title: Optional[str] = None,
+    dyn_label: str = "SFT",
 ):
     """Render a two-panel comparison figure.
 
@@ -283,10 +318,14 @@ def plot_comparison(
     :type axis_labels: tuple[str, str]
     :param title: Optional suptitle.
     :type title: str | None
+    :param dyn_label: Label for the closed-loop / sim trajectory (e.g.
+        ``SFT`` or ``position-only``).
+    :type dyn_label: str
     :returns: Matplotlib figure.
     :rtype: matplotlib.figure.Figure
     """
     import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
 
     names = info["names"]
     n_agents = len(names)
@@ -294,44 +333,89 @@ def plot_comparison(
     sigma = info["sigma"]
     sigma_star = info["sigma_star"]
     space = info["space"]
+    theory_start = info.get("theory_start_positions", theo_traj[0])
+    sft_start = info.get("sft_start_positions", sft_traj[0])
+    has_sep_init = bool(info.get("theory_gradient_init"))
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 6), constrained_layout=True)
     colors = plt.get_cmap("tab10")(np.linspace(0, 1, max(n_agents, 3)))
 
-    # --- Left: trait-space trajectories side-by-side ---------------------
+    # --- Left: trait-space trajectories ----------------------------------
     ax = axes[0]
     for i, name in enumerate(names):
-        # Theoretical (strategic gradient ascent)
+        # Theory: gradient-ascent path (solid)
         tx, ty = theo_traj[:, i, 0], theo_traj[:, i, 1]
-        ax.plot(tx, ty, "-", color=colors[i], lw=1.0, alpha=0.55,
-                label=f"{name} (theory)" if i == 0 else None)
-        ax.scatter(tx[-1], ty[-1], color=colors[i], marker="X", s=130,
-                   edgecolor="black", linewidth=0.7, zorder=4)
-        # SFT (closed-loop)
+        ax.plot(tx, ty, "-", color=colors[i], lw=1.4, alpha=0.75, zorder=2)
+        # Separated random start (before GA), when recorded
+        if has_sep_init:
+            ax.scatter(
+                theory_start[i, 0], theory_start[i, 1],
+                color=colors[i], marker="D", s=70,
+                edgecolor="black", linewidth=0.6, zorder=5,
+            )
+        ax.scatter(
+            tx[-1], ty[-1], color=colors[i], marker="X", s=130,
+            edgecolor="black", linewidth=0.7, zorder=6,
+        )
+        # SFT closed loop (dashed)
         sx, sy = sft_traj[:, i, 0], sft_traj[:, i, 1]
-        ax.plot(sx, sy, "--", color=colors[i], lw=1.8, alpha=0.95,
-                label=f"{name} (SFT)" if i == 0 else None)
-        ax.scatter(sx[0], sy[0], color=colors[i], marker="o", s=55,
-                   edgecolor="black", linewidth=0.6, zorder=3)
-        ax.scatter(sx[-1], sy[-1], color=colors[i], marker="*", s=200,
-                   edgecolor="black", linewidth=0.7, zorder=4)
+        ax.plot(sx, sy, "--", color=colors[i], lw=1.8, alpha=0.95, zorder=3)
+        ax.scatter(
+            sft_start[i, 0], sft_start[i, 1],
+            color=colors[i], marker="o", s=55,
+            edgecolor="black", linewidth=0.6, zorder=5,
+        )
+        ax.scatter(
+            sx[-1], sy[-1], color=colors[i], marker="*", s=200,
+            edgecolor="black", linewidth=0.7, zorder=6,
+        )
 
-    # Resource centroid for visual context
     mu = space.mean
     ax.scatter([mu[0]], [mu[1]], marker="+", s=180, color="black",
-               linewidth=1.6, label=r"$\mathbb{E}_B[b]$", zorder=5)
+               linewidth=1.6, zorder=7)
 
     ax.set_xlim(-0.02, 1.02)
     ax.set_ylim(-0.02, 1.02)
     ax.set_xlabel(axis_labels[0])
     ax.set_ylabel(axis_labels[1])
     ax.set_aspect("equal", adjustable="box")
+    init_note = (
+        "◇ theory init (separated)" if has_sep_init else f"○ {dyn_label} start (round 0)"
+    )
     ax.set_title(
-        f"trajectories  •  ○ start, ★ SFT end, ✕ theory end\n"
+        f"trait-space trajectories\n"
         f"σ = {sigma:.3f},  σ₀* = {sigma_star:.3f}  ({sigma/sigma_star:.2f}·σ₀*)"
     )
     ax.grid(True, alpha=0.3)
-    ax.legend(loc="best", fontsize=8, frameon=True)
+
+    legend_handles = [
+        Line2D([0], [0], marker="D", color="w", markerfacecolor="gray",
+               markeredgecolor="black", markersize=8,
+               label=init_note),
+        Line2D([0], [0], color="gray", lw=1.4, label="theory gradient path"),
+        Line2D([0], [0], marker="X", color="w", markerfacecolor="gray",
+               markeredgecolor="black", markersize=9,
+               label="theory end (gradient NE)"),
+        Line2D([0], [0], color="C0", lw=1.8, ls="--",
+               label=f"{dyn_label} trajectory"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="C0",
+               markeredgecolor="black", markersize=7,
+               label=f"{dyn_label} start (round 0)"),
+        Line2D([0], [0], marker="*", color="w", markerfacecolor="C0",
+               markeredgecolor="black", markersize=12,
+               label=f"{dyn_label} end"),
+        Line2D([0], [0], marker="+", color="k", ls="",
+               markersize=10, label=r"$\mathbb{E}_B[b]$"),
+    ]
+    color_handles = [
+        Line2D([0], [0], color=colors[i], lw=2, label=names[i])
+        for i in range(n_agents)
+    ]
+    leg1 = ax.legend(handles=legend_handles, loc="upper left", fontsize=7.5,
+                     frameon=True, title="markers")
+    ax.add_artist(leg1)
+    ax.legend(handles=color_handles, loc="lower right", fontsize=7.5,
+              frameon=True, title="agents")
 
     # --- Right: bar chart of SFT-end vs theory-end distance to centroid ---
     ax2 = axes[1]
@@ -345,9 +429,9 @@ def plot_comparison(
     ax2.bar(x - w, d_theo, w, color="lightgray", edgecolor="black",
             label="theory NE  →  centroid")
     ax2.bar(x,     d_sft,  w, color="steelblue", edgecolor="black",
-            label="SFT end    →  centroid")
+            label=f"{dyn_label} end  →  centroid")
     ax2.bar(x + w, d_pairwise, w, color="tomato", edgecolor="black",
-            label="SFT end  →  theory NE")
+            label=f"{dyn_label} end  →  theory NE")
     ax2.set_xticks(x)
     ax2.set_xticklabels(names, rotation=0)
     ax2.set_ylabel("L2 distance in trait space")
@@ -384,6 +468,23 @@ def _build_parser() -> argparse.ArgumentParser:
                         "scripts/figures/theory_vs_sft.")
     p.add_argument("--summary-json", type=Path, default=None,
                    help="Optional JSON summary path with per-agent endpoints.")
+    p.add_argument("--sigma-fraction-override", type=float, default=None,
+                   help="Override the config's sigma_fraction for theory "
+                        "computation. Useful when invoking this script "
+                        "per-sigma against a base config that pins a single "
+                        "value. Mutually exclusive with --sigma-override.")
+    p.add_argument("--sigma-override", type=float, default=None,
+                   help="Override the absolute scalar sigma (not the "
+                        "fraction-of-sigma_0* multiplier). Mutually "
+                        "exclusive with --sigma-fraction-override.")
+    p.add_argument(
+        "--theory-mode", choices=("gradient", "matched_pool", "both"),
+        default="gradient",
+        help="Theory reference: grid gradient ascent, expected-pool "
+             "dynamics (fix 3), or report both.",
+    )
+    p.add_argument("--theory-rounds", type=int, default=None,
+                   help="Rounds for matched_pool mode (default: SFT rounds).")
     return p
 
 
@@ -398,6 +499,36 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = _build_parser().parse_args(argv)
     cfg = _load_yaml(args.config)
 
+    # Apply CLI sigma overrides. These let the caller decouple the
+    # theory's sigma from whatever the SFT run's base config pinned —
+    # essential when post-processing a sigma sweep where every run shares
+    # one base config but used a different sigma via launch-time
+    # overrides.
+    if (args.sigma_fraction_override is not None
+            and args.sigma_override is not None):
+        print("error: --sigma-fraction-override and --sigma-override are "
+              "mutually exclusive", file=sys.stderr)
+        return 1
+    if args.sigma_fraction_override is not None:
+        cfg = dict(cfg)
+        cfg["sigma_mode"] = "stability_fraction"
+        cfg["sigma_fraction"] = float(args.sigma_fraction_override)
+        print(f"  sigma override     = {cfg['sigma_fraction']:.4f} sigma_0*")
+    elif args.sigma_override is not None:
+        cfg = dict(cfg)
+        cfg["sigma_mode"] = "absolute"
+        cfg["sigma"] = float(args.sigma_override)
+        print(f"  sigma override     = {cfg['sigma']:.4f} (absolute)")
+
+    with args.history.open(encoding="utf-8") as fh:
+        hist_records = json.load(fh)
+    n_sft_rounds = len(hist_records) - 1
+    cl_meta = hist_records[0] if hist_records else {}
+    sim_tag = str(cl_meta.get("simulation", ""))
+    dyn_label = (
+        "position-only" if "position_only" in sim_tag else "SFT"
+    )
+
     print("rebuilding trait space and running strategic gradient ascent ...")
     info = run_strategic_ascent(
         cfg, args.history,
@@ -406,6 +537,35 @@ def main(argv: Optional[list[str]] = None) -> int:
         tol=args.tol,
         seed=args.seed,
     )
+    info["dyn_label"] = dyn_label
+    grad_end = info["positions"][-1]
+
+    pool_end = None
+    if args.theory_mode in ("matched_pool", "both"):
+        from infl_ens.training.pool_dynamics import run_matched_pool_dynamics
+        pool_prompts = [p for s in info["splits"] for p in s.prompts]
+        n_pool_rounds = (
+            args.theory_rounds if args.theory_rounds is not None else n_sft_rounds
+        )
+        blend_base = float(cl_meta.get("blend_base", cl_meta.get("blend", 0.5)))
+        pool_dyn = run_matched_pool_dynamics(
+            info["space"],
+            info["initial_positions"],
+            info["names"],
+            pool_prompts,
+            sigma=info["sigma"],
+            n_rounds=n_pool_rounds,
+            blend_base=blend_base,
+            blend_schedule=cl_meta.get("blend_schedule"),
+            blend_start=cl_meta.get("blend_start"),
+        )
+        pool_end = pool_dyn["positions"][-1]
+        print(f"  matched-pool rounds = {n_pool_rounds}  layout = {pool_dyn['layout']}")
+
+    theo_end_for_plot = pool_end if (
+        args.theory_mode == "matched_pool" and pool_end is not None
+    ) else grad_end
+
     print(f"  sigma_0*           = {info['sigma_star']:.4f}")
     print(f"  sigma              = {info['sigma']:.4f}"
           f"  ({info['sigma']/info['sigma_star']:.2f} sigma_0*)")
@@ -414,24 +574,31 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # SFT trajectory
     sft_traj = _sft_trajectory(args.history, info["names"])
-    print(f"  SFT trajectory     = {sft_traj.shape[0]} rounds, "
+    print(f"  {dyn_label} trajectory = {sft_traj.shape[0]} rounds, "
           f"{sft_traj.shape[1]} agents")
 
     # Summary numbers
     sft_end = sft_traj[-1]
-    theo_end = info["positions"][-1]
+    theo_end = theo_end_for_plot
     mu = info["space"].mean
-    print(f"\n{'agent':<10} {'SFT end':>20} {'theory end':>20} "
-          f"{'gap':>8} {'d(SFT,μ)':>10} {'d(theo,μ)':>10}")
-    print("-" * 82)
+    hdr = f"\n{'agent':<10} {dyn_label + ' end':>20} {'theory end':>20} {'gap':>8}"
+    if pool_end is not None and args.theory_mode == "both":
+        hdr += f" {'gap(pool)':>9}"
+    print(hdr + f" {'d(SFT,μ)':>10}")
+    print("-" * 92)
     for i, name in enumerate(info["names"]):
         gap = float(np.linalg.norm(sft_end[i] - theo_end[i]))
         d_sft = float(np.linalg.norm(sft_end[i] - mu))
-        d_theo = float(np.linalg.norm(theo_end[i] - mu))
-        print(f"{name:<10} "
-              f"({sft_end[i, 0]:.3f}, {sft_end[i, 1]:.3f})"
-              f"   ({theo_end[i, 0]:.3f}, {theo_end[i, 1]:.3f})"
-              f"   {gap:.3f}    {d_sft:.3f}     {d_theo:.3f}")
+        line = (
+            f"{name:<10} "
+            f"({sft_end[i, 0]:.3f}, {sft_end[i, 1]:.3f})"
+            f"   ({theo_end[i, 0]:.3f}, {theo_end[i, 1]:.3f})"
+            f"   {gap:.3f}"
+        )
+        if pool_end is not None and args.theory_mode == "both":
+            line += f"   {float(np.linalg.norm(sft_end[i] - pool_end[i])):.3f}"
+        line += f"    {d_sft:.3f}"
+        print(line)
 
     # u_pool for both endpoints on the full benchmark pool
     pool_corpus = [p for s in info["splits"] for p in s.prompts]
@@ -461,6 +628,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         info, sft_traj,
         axis_labels=(args.axis_labels[0], args.axis_labels[1]),
         title=args.title,
+        dyn_label=dyn_label,
     )
     stem = args.output_stem or (FIGS_DIR / "theory_vs_sft")
     stem.parent.mkdir(parents=True, exist_ok=True)
@@ -484,9 +652,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                 {
                     "name": name,
                     "initial": info["initial_positions"][i].tolist(),
+                    "theory_start": info["theory_start_positions"][i].tolist(),
+                    "sft_start": info["sft_start_positions"][i].tolist(),
                     "sft_end": sft_end[i].tolist(),
                     "theory_end": theo_end[i].tolist(),
+                    "theory_grad_end": grad_end[i].tolist(),
+                    "theory_pool_end": (
+                        pool_end[i].tolist() if pool_end is not None else None
+                    ),
                     "gap": float(np.linalg.norm(sft_end[i] - theo_end[i])),
+                    "gap_pool": (
+                        float(np.linalg.norm(sft_end[i] - pool_end[i]))
+                        if pool_end is not None else None
+                    ),
                     "u_pool_sft": float(u_pool_sft[i]),
                     "u_pool_theory": float(u_pool_theo[i]),
                 }

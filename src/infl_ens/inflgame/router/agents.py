@@ -83,7 +83,8 @@ class RouterAgent:
         *,
         scores: Optional[list[float]] = None,
         blend: float = 1.0,
-    ) -> None:
+        position_step: Optional[dict[str, Any]] = None,
+    ) -> float:
         """Re-estimate this agent's position from a fresh corpus.
 
         Used after each external training round (or each closed-loop step)
@@ -97,16 +98,30 @@ class RouterAgent:
         :type project: Callable[[list[str]], numpy.ndarray]
         :param scores: Optional per-query non-negative weights.
         :type scores: list[float] | None
-        :param blend: Linear blend coefficient in ``[0, 1]``. ``1.0``
-            replaces the current position with the new estimate; ``0.0``
-            keeps the current position; intermediate values do EMA
-            smoothing :math:`x \\leftarrow (1 - \\beta) x + \\beta \\hat x`.
+        :param blend: Linear blend ceiling in ``[0, 1]``. With
+            ``position_step.mode: static``, this is the EMA coefficient
+            :math:`\\beta` in
+            :math:`x \\leftarrow (1 - \\beta) x + \\beta \\hat x`.
         :type blend: float
+        :param position_step: Optional adaptive step policy from
+            ``closed_loop.position_step`` (see
+            :func:`infl_ens.utils.position_step.apply_position_update`).
+        :type position_step: dict | None
+        :returns: Effective blend coefficient used for this update.
+        :rtype: float
         :raises ValueError: If ``blend`` is outside ``[0, 1]``.
         """
         if not 0.0 <= blend <= 1.0:
             raise ValueError(f"blend must be in [0, 1], got {blend}")
         # Local import to avoid a circular dep through inflgame.router.__init__.
         from infl_ens.data.trait_space import position_from_corpus
+        from infl_ens.utils.position_step import apply_position_update
+
         new_pos = position_from_corpus(queries, project, scores=scores)
-        self.position = (1.0 - blend) * self.position + blend * new_pos
+        self.position, beta_eff = apply_position_update(
+            self.position,
+            new_pos,
+            blend=blend,
+            position_step=position_step,
+        )
+        return beta_eff

@@ -37,15 +37,19 @@ infl_ens/
 │       │   └── sft_training.py                   LoRA SFT (Qwen2.5-1.5B-Instruct by default)
 │       └── utils/
 │           ├── __init__.py
+│           ├── agent_init.py                     mean_noise, pairs_near_theory, theory_gradient inits
+│           ├── position_step.py                  adaptive EMA blend / expected_pool centroid
 │           └── resource.py                       weighted_mean, weighted_covariance, σ₀*
 ├── scripts/
 │   ├── download_beavertails.py                   one-off download (HF datasets)
 │   ├── download_halueval.py                      one-off download (RUCAIBox/HaluEval JSON files)
 │   ├── build_safety_trait_space.py               wrapper around `python -m infl_ens.data`
 │   ├── compare_utility_estimators.py             u_grid vs u_pool vs share diagnostic
+│   ├── diagnose_trait_support.py                 KDE vs empirical resource density; explains SFT-vs-theory gaps
 │   ├── compare_theory_vs_sft.py                  strategic Nash vs SFT closed-loop endpoints
 │   ├── plot_closed_loop_history.py               trajectories + utility tracking from history.json
 │   ├── run_sweep.sh                              bash sweep launcher (seeds / sigma / kde)
+│   ├── run_sigma_sweep_r20.sh                    end-to-end cumulative-LoRA sigma sweep at 20 rounds
 │   ├── plot_sweep.py                             aggregate sweep results, classify equilibria
 │   ├── probe_sft_capability.py                   cross-perplexity probe over saved per-round adapters
 │   ├── closed_loop_demo.py                       toy closed-loop simulation
@@ -72,27 +76,6 @@ infl_ens/
 ├── tests/
 │   ├── test_benchmark_loaders.py                 offline tests with synthetic JSON fixtures
 │   └── test_safety_trait_space.py                offline tests using a toy encoder
-├── docs/
-│   ├── conf.py                                   Sphinx config (autodoc, autosummary, MyST, Furo)
-│   ├── index.rst                                 main TOC: user guide / API / tooling
-│   ├── getting_started.rst                       wraps README.md via myst-parser
-│   ├── structure.rst                             wraps this file via myst-parser
-│   ├── scripts.rst                               script table + invocation notes
-│   ├── configs.rst                               YAML config tree reference
-│   ├── requirements.txt                          docs build deps (sphinx, furo, myst, copybutton)
-│   ├── Makefile                                  ``make -C docs html`` for local builds
-│   ├── make.bat                                  Windows equivalent
-│   ├── _static/.gitkeep                          tracked placeholder for static assets
-│   ├── _templates/.gitkeep                       tracked placeholder for template overrides
-│   └── api/
-│       ├── data.rst                              recursive autosummary for infl_ens.data
-│       ├── inflgame.rst                          recursive autosummary for infl_ens.inflgame
-│       ├── training.rst                          recursive autosummary for infl_ens.training
-│       └── utils.rst                             recursive autosummary for infl_ens.utils
-├── .github/
-│   └── workflows/
-│       └── docs.yml                              builds Sphinx + deploys to GitHub Pages
-├── pyproject.toml                                hatchling build backend, src/ layout, optional extras
 ├── data/                                         gitignored
 └── results/                                      gitignored
 ```
@@ -132,7 +115,7 @@ infl_ens/
 | File | Role | Key public symbols |
 |---|---|---|
 | `__init__.py` | Eager re-export of router training; lazy proxy for SFT | `RouterTrainingConfig`, `train_router_positions`, (lazy) `SFTTrainingConfig`, `sft_train_agent` |
-| `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`) and `closed_loop.save_per_round` (per-round adapter archiving); always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` per round in `history.json`. | `main` |
+| `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`), `closed_loop.loss_reweight`, `closed_loop.init_noise` (Gaussian symmetry-breaking at clone start), and `closed_loop.save_per_round`; always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` per round in `history.json`. | `main` |
 | `router_training.py` | Gradient-ascent loop on agent positions | `RouterTrainingConfig`, `train_router_positions` |
 | `sft_training.py` | LoRA SFT for a single :class:`RouterAgent`; accepts `out_dir_override` for per-round adapter archiving; accepts `cfg.cumulative_lora=True` to load and continue training the prior adapter rather than starting fresh; returns `log_history` and `loaded_prior_lora` from the SFT trainer's state | `SFTTrainingConfig`, `sft_train_agent` |
 
@@ -151,11 +134,31 @@ infl_ens/
 | `download_halueval.py` | Downloads HaluEval task JSON files from `RUCAIBox/HaluEval` to `data/halueval/` |
 | `build_safety_trait_space.py` | Convenience wrapper around `python -m infl_ens.data build-safety-trait-space` |
 | `compare_utility_estimators.py` | Side-by-side comparison of grid :math:`u_i`, empirical-pool :math:`\hat u_i`, and finite-batch proportional share. `--mode {toy,safety}`. |
+| `diagnose_trait_support.py` | Diagnoses the KDE-smoothed resource density :math:`B(b)` vs the actual prompt projections in trait space, recomputes theoretical Nash, and reports per-agent density / prompt-count metrics at theory NE and SFT end. Supports `--density-mode {kde,empirical,both}`: `empirical` rebuilds :math:`B(b)` as a 2-D histogram of projected prompts on the same `n_grid × n_grid` lattice (mass only where prompts actually project; tunable `--empirical-smoothing-cells` to avoid hard zeros), while `both` produces a 2-panel comparison figure plus both console tables side-by-side. `--config-override KEY=VAL` repeatable for bandwidth/sigma sweeps without YAML edits. |
 | `compare_theory_vs_sft.py` | Rebuilds the trait space from a closed-loop run's config, initialises agents from `history.json` round 0, runs `train_router_positions`, and compares the strategic-Nash endpoints with the SFT trajectory in trait space. |
 | `plot_closed_loop_history.py` | Reads `history.json` from a closed-loop run and renders trajectories + utility tracking to PDF/PNG under `scripts/figures/`. |
 | `run_sweep.sh` | Bash launcher that sweeps one parameter (seeds, sigma_fraction, or kde_bandwidth) over the closed-loop trainer. Skips runs whose `history.json` already exists; optionally runs per-run plotting and theory comparison after each training. |
+| `run_sigma_sweep_r20.sh` | End-to-end wrapper for the cumulative-LoRA sigma sweep at 20 rounds: pre-creates unique figure subfolders, launches `run_sweep.sh sigma`, runs trajectory + theory_vs_sft + capability probe per sigma into its own subfolder, aggregates with `plot_sweep.py`, prints a cross-sigma specialisation-margin table. Defaults to cumulative framework + `safety_truth_n4_r20_strategic_long_cum.yaml`; switchable to independent framework via env-var overrides. |
 | `plot_sweep.py` | Aggregates a sweep root directory into one figure: per-run trajectory panels, equilibrium-type classification by single-linkage clustering, optional overlay of theoretical Nash endpoints, CSV summary. |
 | `probe_sft_capability.py` | Capability probe: reads a closed-loop run with `save_per_round: true` and computes Tier 1 (per-agent SFT loss curves) + Tier 3 (cross-perplexity matrix and specialisation margin per round). Headline output is `μ(r) = NLL(others) − NLL(own)`; negligible μ means SFT isn't actually differentiating the agents and observed position dynamics are pure routing-centroid geometry. |
+| `run_position_only_cum_r10.sh` | Single 10-round launcher for the matched `position_only` config (`batch_size=256`, cumulative LoRA): trains to `results/position_only_cum_round_sweep/r10/`, then runs trajectory + theory_vs_sft + capability probe figures. |
+| `run_position_only_cum_sweeps.sh` | Two-pass sweep (rounds 10/20/40; sigma 0.25–1.5× threshold at 20 rounds) over the matched `position_only_cum` config. Mirrors `run_loss_reweight_cum_sweeps.sh`. Supports `REDO_SIGMA_SWEEP=1`, `SKIP_ROUND_SWEEP=1`. |
+| `run_position_only_cum_sigma_redo.sh` | Sigma sweep only: wipes `position_only_cum_sigma_sweep`, re-trains with `init_noise` from config. |
+| `run_position_only_seed_sigma_sweep.sh` | Resumable seed×sigma grid (default 5 seeds × 5 sigmas, 20 rounds) for `position_only_cum`; per-run figures under `scripts/figures/<SWEEP_NAME>/per_run/`; calls `aggregate_seed_sigma_sweep.py` for mean±std aggregates. Extend via `SEEDS` / `SIGMA_VALUES`. |
+| `aggregate_seed_sigma_sweep.py` | Aggregates `results/<sweep>/sigma*/seed*/` or `r*/seed*/` into trajectory, spread, probe-margin, and overview figures plus `summary.csv` under `scripts/figures/<sweep>/aggregate/`. |
+| `run_pairs_near_eq_sweeps.sh` | Full SFT sweeps with `pairs_near_theory` init: PASS 1 seed×rounds `{10,20,40}`; PASS 2 seed×σ `{0.25…1.5}` at 20 rounds; probe + aggregate per pass. |
+| `run_pairs_near_theory_10seeds.sh` | Position-only sim: `pairs_near_theory` init, 10 seeds × 2 σ (fast, no SFT). |
+| `summarize_pairs_near_theory.py` | (2,2) vs collapsed summary for position-only pair-init runs. |
+| `simulate_position_only_loop.py` | Fast closed-loop with routing + `(1-G)` centroid updates only (no SFT). Centroid modes: `batch`, `full_pool` (~10k prompts), `expected_pool` (deterministic static limit). |
+| `run_large_batch_static_analysis.sh` | Compares batch 256, batch 10k, full pool, and expected pool at σ=0.25/0.75 (no SFT). |
+| `compare_batch_size_static.py` | Summarises `large_batch_static_analysis` vs optional prior batch-256 sweep. |
+| `run_position_fix_comparison.sh` | A/B fixes at σ=0.25/0.75, batch 256: baseline vs `expected_pool` vs `init_noise=0.01` (sim, no SFT). |
+| `run_pool_and_noise_10seeds.sh` | Both fixes (`expected_pool` + `init_noise=0.01`), 10 seeds; calls `aggregate_final_positions.py`. |
+| `aggregate_final_positions.py` | Mean ± std of final clone positions and pairwise spread across seeds. |
+| `run_position_step_stability_test.sh` | Pre-sweep grid over position-step policies at σ=0.25/0.75 via `simulate_position_only_loop.py` (seconds per cell, not full training). |
+| `compare_position_step_modes.py` | Summarises stability-test runs: final spread, mean effective blend, collapse flags; overview figure under `scripts/figures/position_step_stability_test/`. |
+| `verify_position_update.py` | Audits `history.json` position deltas against weighted vs unweighted centroid predictions (detects pre-fix `position_only` centroid bugs). |
+| `compare_histories.py` | Compares per-round position trajectories between two closed-loop `history.json` files. |
 | `closed_loop_demo.py` | Toy hash-bag closed-loop simulation (no external deps) |
 | `smoke_test.py` | End-to-end pipeline sanity check |
 
@@ -182,70 +185,6 @@ infl_ens/
 |---|---|
 | `test_benchmark_loaders.py` | Offline tests for BeaverTails and HaluEval loaders |
 | `test_safety_trait_space.py` | Offline tests for `build_safety_trait_space` |
-
-### `docs/`
-
-Sphinx project that builds the public documentation site. The HTML
-output is published to GitHub Pages by `.github/workflows/docs.yml` on
-every push to `main` that touches `src/`, `docs/`, `README.md`, or
-`structure.md`. Heavy ML dependencies (torch, transformers, datasets,
-peft, ...) are *not* required to build the docs — they are mocked via
-`autodoc_mock_imports` in `docs/conf.py`.
-
-| File | Role |
-|---|---|
-| `conf.py` | Sphinx configuration: autodoc + autosummary (`:recursive:`), MyST, Furo theme, mathjax, copybutton, intersphinx; adds `../src` to `sys.path`; mocks heavy deps |
-| `index.rst` | Main page; defines the three-section TOC (User guide / API reference / Tooling) |
-| `getting_started.rst` | Includes `../README.md` verbatim via MyST so the quick-start stays in one place |
-| `structure.rst` | Includes `../structure.md` verbatim via MyST |
-| `scripts.rst` | Table of every `scripts/*.py` with role + invocation snippet |
-| `configs.rst` | Table of every `configs/**/*.yaml` |
-| `api/data.rst` | Recursive autosummary entry point for `infl_ens.data` |
-| `api/inflgame.rst` | Recursive autosummary entry point for `infl_ens.inflgame` |
-| `api/training.rst` | Recursive autosummary entry point for `infl_ens.training` |
-| `api/utils.rst` | Recursive autosummary entry point for `infl_ens.utils` |
-| `requirements.txt` | Docs-only build deps: `sphinx`, `furo`, `myst-parser`, `sphinx-copybutton` |
-| `Makefile` / `make.bat` | Local build (`make -C docs html`) |
-| `_static/`, `_templates/` | Tracked placeholders for static assets and template overrides |
-
-### `.github/workflows/`
-
-| File | Role |
-|---|---|
-| `docs.yml` | Builds `docs/` with Sphinx and publishes to GitHub Pages via `actions/upload-pages-artifact` + `actions/deploy-pages`. Writes `.nojekyll` into the artifact so directories like `_static/` are served. One-time setup: **Settings → Pages → Source: GitHub Actions**. |
-
-### `pyproject.toml`
-
-Single source of build and tooling configuration. Uses **hatchling** as
-the build backend, declares the package at `src/infl_ens`, and pins core
-runtime deps to the minimum (`numpy>=1.24`). Heavy ML deps are opt-in
-via extras so `pip install infl_ens` stays slim. The cross-extra `dev`
-includes everything plus `ruff` and `mypy`.
-
-| Section | Role |
-|---|---|
-| `[build-system]` | Hatchling backend |
-| `[project]` | Metadata + core deps (just `numpy`) |
-| `[project.optional-dependencies]` | Extras: `ml`, `data`, `vis`, `configs`, `docs`, `test`, `dev` |
-| `[project.scripts]` | Console-script aliases `infl-ens-train`, `infl-ens-data` |
-| `[tool.hatch.build.targets.{wheel,sdist}]` | Ships `src/infl_ens` in the wheel; sdist also bundles `configs/`, `scripts/`, `docs/`, `tests/` |
-| `[tool.pytest.ini_options]` | `testpaths = ["tests"]`, `pythonpath = ["src"]` |
-| `[tool.ruff]` / `[tool.ruff.lint]` | Lint config; `F401`/`F403` ignored in `__init__.py` |
-| `[tool.mypy]` | Targets `src/infl_ens`, ignores missing imports for heavy deps |
-| `[tool.coverage.*]` | Branch coverage of `src/infl_ens` |
-
-Install workflows:
-
-```bash
-# Minimal install (analytical pieces only)
-pip install .
-
-# Full ML stack (LoRA SFT, sentence-transformer encoders)
-pip install ".[ml,data,configs]"
-
-# Everything (tests + docs + linters)
-pip install -e ".[dev]"
-```
 
 ## `__init__.py` re-export summary
 

@@ -1,0 +1,89 @@
+# Cumulative-LoRA variant of safety_truth_n4_r10_loss_reweight.yaml.
+# Combines two ideas:
+#
+#   1. Canonical routing + (1-G) loss reweight (the gradient-exact mode;
+#      see safety_truth_n4_r10_loss_reweight.yaml for the rationale).
+#   2. cumulative_lora: true — each round loads the agent's prior LoRA
+#      adapter and keeps training rather than re-initialising. Capability
+#      therefore accumulates across rounds instead of being independent
+#      per round (the original framework).
+#
+# Why combine these two: the independent-round variant landed in a
+# clean (1,1,1,1) bifurcation with SFT endpoints ~0.05-0.08 from theory
+# Nash and specialisation margin μ growing 0.04 → 0.08 over 10 rounds.
+# Cumulative training should sharpen the same specialisation faster
+# because each agent retains the capability gained in earlier rounds
+# rather than re-learning from base every round. Catastrophic forgetting
+# is the failure mode to watch for — Tier 3c (specialisation margin)
+# should keep climbing under cumulative; if μ flattens or drops, the
+# adapters are forgetting earlier-round specialisations.
+#
+# Saves to results/safety_truth_n4_r10_loss_reweight_cum/ so the
+# independent-round run at safety_truth_n4_r10_loss_reweight/ stays
+# intact for side-by-side comparison.
+
+task: closed_loop
+seed: 0
+output_dir: results/safety_truth_n4_r10_loss_reweight_cum
+policy: proportional
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 32
+  kde_bandwidth: 0.08
+  threshold: 0.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  n_rounds: 10
+  batch_size: 256
+  blend: 0.5
+  # Canonical routing — keeps the game's natural assignment counts
+  # (an agent that owns G_i of trait b receives that fraction of the
+  # queries from b). The reweighting fixes gradient alignment without
+  # changing the routing.
+  routing_weight: G
+  # Per-query SFT loss weight w_m = 1 - G_i(x, b_m). Combined with
+  # routing_weight: G above, the expected position drift is exactly
+  # proportional to ∇_{x_i} u_i.
+  loss_reweight: one_minus_G
+  # Persist a separate LoRA adapter per (agent, round) under
+  # results/safety_truth_n4_r10_loss_reweight_cum/agents/<clone>/round-NN.
+  # Required for scripts/probe_sft_capability.py.
+  save_per_round: true
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/safety_truth_n4_r10_loss_reweight_cum/agents
+    max_seq_length: 1024
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 2
+    num_train_epochs: 1.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    logging_steps: 1
+    # The only delta from safety_truth_n4_r10_loss_reweight.yaml:
+    # load the prior round's adapter and continue training rather than
+    # re-initialising LoRA. Capability accumulates across rounds.
+    cumulative_lora: true
+    seed: 0

@@ -1,0 +1,94 @@
+# Long-SFT variant of safety_truth_n4_r10_position_only_cum.yaml.
+#
+# Combines three independent design choices:
+#
+#   1. Position-only reweight  (loss_reweight: position_only)
+#      - Routing is canonical (p_i = G_i).
+#      - SFT loss runs at unit weight on the full canonical-routed
+#        corpus, so the LoRA gets maximum effective sample size and
+#        gradient signal on the agent's strongholds.
+#      - Position centroid uses (1-G) weights, so trait-space drift
+#        still matches ∇_{x_i} u_i exactly.
+#
+#   2. Long SFT budget  (num_train_epochs: 3, batch_size: 512,
+#                        per_device_batch_size: 16, logging_steps: 1)
+#      - Roughly 6× more training data per round and 2× larger
+#        micro-batch than the default budget; net ~3× more optimizer
+#        steps per round per agent. Same configuration used by the
+#        existing safety_truth_n4_r10_strategic_long.yaml runs, so a
+#        side-by-side comparison at matched sigma/seed isolates the
+#        rule-of-update difference (strategic routing vs canonical +
+#        position-only reweight) from the SFT compute difference.
+#
+#   3. Cumulative LoRA  (cumulative_lora: true)
+#      - Each round loads the agent's prior adapter and continues
+#        training rather than restarting from base. Specialisation
+#        accumulates across rounds.
+#
+# Writes to results/safety_truth_n4_r10_position_only_long_cum/ so the
+# non-long position_only_cum and the strategic_long_cum runs stay
+# intact for A/B comparison.
+#
+# Base config for scripts/run_position_only_long_sweeps.sh, which sweeps
+# n_rounds ∈ {10, 20, 40} and sigma_fraction ∈ {0.25, 0.5, 0.75, 1, 1.5}.
+
+task: closed_loop
+seed: 0
+output_dir: results/safety_truth_n4_r10_position_only_long_cum
+policy: proportional
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 32
+  kde_bandwidth: 0.08
+  threshold: 0.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  n_rounds: 10
+  # Long-SFT batch: 512 queries per round (vs default 256).
+  batch_size: 512
+  blend: 0.5
+  # Canonical routing — each agent receives queries proportional to G_i.
+  routing_weight: G
+  # (1-G) factor applied ONLY to the centroid update; SFT loss runs at
+  # unit weight. Trait-space drift matches ∇_{x_i} u_i exactly.
+  loss_reweight: position_only
+  # Per-round adapter archiving for scripts/probe_sft_capability.py.
+  save_per_round: true
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/safety_truth_n4_r10_position_only_long_cum/agents
+    max_seq_length: 1024
+    # Long-SFT: larger micro-batch (16 vs default 8).
+    per_device_batch_size: 16
+    gradient_accumulation_steps: 2
+    # Long-SFT: 3 epochs (vs default 1).
+    num_train_epochs: 3.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    # Long-SFT: per-step capture for the capability probe.
+    logging_steps: 1
+    cumulative_lora: true
+    seed: 0

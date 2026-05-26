@@ -155,8 +155,12 @@ def sft_train_agent(
     eval_prompts: Sequence[str],
     project: Callable[[Sequence[str]], np.ndarray],
     blend: float = 1.0,
+    position_step: Optional[dict[str, Any]] = None,
     formatting_func: Optional[Callable[[str, Optional[str]], str]] = None,
     out_dir_override: Optional[str] = None,
+    sample_weights: Optional[Sequence[float]] = None,
+    eval_weights: Optional[Sequence[float]] = None,
+    skip_position_update: bool = False,
 ) -> dict[str, Any]:
     """Run one LoRA SFT round for a single agent and refresh its position.
 
@@ -177,8 +181,15 @@ def sft_train_agent(
     :param project: Trait-space projector (from
         :class:`infl_ens.data.trait_space.TraitSpace.project`).
     :type project: Callable[[Sequence[str]], numpy.ndarray]
-    :param blend: EMA coefficient for the position update, in ``[0, 1]``.
+    :param blend: EMA blend ceiling for the position update, in ``[0, 1]``.
     :type blend: float
+    :param position_step: Optional adaptive step policy
+        (``closed_loop.position_step``); see
+        :mod:`infl_ens.utils.position_step`.
+    :type position_step: dict | None
+    :param skip_position_update: If ``True``, train LoRA only and leave
+        ``agent.position`` unchanged (caller updates position separately).
+    :type skip_position_update: bool
     :param formatting_func: Optional ``(prompt, response) -> str`` hook
         overriding the default Qwen2.5 chat template.
     :type formatting_func: Callable[[str, str | None], str] | None
@@ -204,6 +215,16 @@ def sft_train_agent(
     if responses is not None and len(responses) != len(prompts):
         raise ValueError(
             f"responses length {len(responses)} != prompts length {len(prompts)}"
+        )
+    if sample_weights is not None and len(sample_weights) != len(prompts):
+        raise ValueError(
+            f"sample_weights length {len(sample_weights)} != "
+            f"prompts length {len(prompts)}"
+        )
+    if eval_weights is not None and len(eval_weights) != len(eval_prompts):
+        raise ValueError(
+            f"eval_weights length {len(eval_weights)} != "
+            f"eval_prompts length {len(eval_prompts)}"
         )
 
     try:
@@ -351,8 +372,22 @@ def sft_train_agent(
     trainer.model.save_pretrained(str(out_dir))
     tokenizer.save_pretrained(str(out_dir))
 
-    # Refresh the agent's trait-space position from the eval corpus.
-    agent.update_position_from_corpus(list(eval_prompts), project, blend=blend)
+    # Refresh the agent's trait-space position from the eval corpus. When
+    # eval_weights are provided we pass them through as ``scores`` so the
+    # post-SFT position is the (1-G)-weighted centroid that the closed-loop
+    # dispatcher expects. This is what makes ``loss_reweight: one_minus_G``
+    # and ``loss_reweight: position_only`` produce different position
+    # dynamics from ``loss_reweight: null``.
+    if skip_position_update:
+        blend_eff = float("nan")
+    else:
+        blend_eff = agent.update_position_from_corpus(
+            list(eval_prompts),
+            project,
+            blend=blend,
+            position_step=position_step,
+            scores=list(eval_weights) if eval_weights is not None else None,
+        )
     agent.metadata["lora_dir"] = str(out_dir)
     agent.metadata["base_model"] = cfg.base_model
 
@@ -364,6 +399,7 @@ def sft_train_agent(
         "output_dir": str(out_dir),
         "n_train": len(prompts),
         "train_loss": float(getattr(result, "training_loss", float("nan"))),
+        "position_blend_effective": float(blend_eff),
         "log_history": log_history,
         "loaded_prior_lora": str(prior_lora) if prior_lora is not None else None,
     }

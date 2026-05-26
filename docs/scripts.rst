@@ -24,6 +24,16 @@ mirrors the corresponding section of :doc:`structure`.
      - Side-by-side comparison of grid :math:`u_i`, empirical-pool
        :math:`\hat u_i`, and finite-batch proportional share.
        ``--mode {toy,safety}``.
+   * - ``compare_reweighted_drift.py``
+     - Numerical alignment check for three routing/SFT rules against the
+       closed-form gradient: (a) strategic routing
+       :math:`p_i^{strat}\propto G_i(1-G_i)`, unweighted SFT;
+       (b) canonical routing :math:`p_i = G_i` with per-query SFT weight
+       :math:`w_i = 1 - G_i(b)` ("canonical + reweight"); (c) canonical
+       routing with unweighted centroid ("naive"). Reports per-agent
+       cosine similarity with :math:`\nabla_{x_i} u_i`, the
+       effective-sample-size ratio between (b) and (a), and a
+       Monte-Carlo finite-batch confirmation. Pure NumPy, no GPU.
    * - ``compare_theory_vs_sft.py``
      - Rebuilds the trait space from a closed-loop run's config,
        initialises agents from ``history.json`` round 0, runs
