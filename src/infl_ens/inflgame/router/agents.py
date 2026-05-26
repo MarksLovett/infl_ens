@@ -12,6 +12,9 @@ from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
+from infl_ens.data.position_blend import apply_position_update
+from infl_ens.data.trait_space import position_from_corpus
+
 
 @dataclass
 class RouterAgent:
@@ -105,7 +108,7 @@ class RouterAgent:
         :type blend: float
         :param position_step: Optional adaptive step policy from
             ``closed_loop.position_step`` (see
-            :func:`infl_ens.utils.position_step.apply_position_update`).
+            :func:`infl_ens.data.position_blend.apply_position_update`).
         :type position_step: dict | None
         :returns: Effective blend coefficient used for this update.
         :rtype: float
@@ -113,9 +116,6 @@ class RouterAgent:
         """
         if not 0.0 <= blend <= 1.0:
             raise ValueError(f"blend must be in [0, 1], got {blend}")
-        # Local import to avoid a circular dep through inflgame.router.__init__.
-        from infl_ens.data.trait_space import position_from_corpus
-        from infl_ens.utils.position_step import apply_position_update
 
         new_pos = position_from_corpus(queries, project, scores=scores)
         self.position, beta_eff = apply_position_update(

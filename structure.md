@@ -17,6 +17,7 @@ infl_ens/
 │       │   ├── __main__.py                       single CLI for the data submodule
 │       │   ├── encoders.py                       SentenceTransformer / HF embedding wrappers
 │       │   ├── trait_space.py                    TraitSpace + build_trait_space + position_from_corpus
+│       │   ├── position_blend.py                 EMA blend toward corpus centroid (apply_position_update)
 │       │   └── benchmarks/
 │       │       ├── __init__.py
 │       │       ├── base.py                       BenchmarkSplit container
@@ -38,7 +39,7 @@ infl_ens/
 │       └── utils/
 │           ├── __init__.py
 │           ├── agent_init.py                     mean_noise, pairs_near_theory, theory_gradient inits
-│           ├── position_step.py                  adaptive EMA blend / expected_pool centroid
+│           ├── position_step.py                  blend schedule + expected_pool centroid (re-exports position_blend)
 │           └── resource.py                       weighted_mean, weighted_covariance, σ₀*
 ├── scripts/
 │   ├── download_beavertails.py                   one-off download (HF datasets)
@@ -90,6 +91,7 @@ infl_ens/
 | `__main__.py` | Single CLI: `python -m infl_ens.data {preview,build-safety-trait-space}` | `main` |
 | `encoders.py` | Sentence-embedding callables for trait-space construction | `SentenceTransformerEncoder`, `HuggingFaceEncoder` |
 | `trait_space.py` | Trait space :math:`\mathbb{B}` and resource distribution :math:`B(b)` | `TraitSpace`, `build_trait_space`, `position_from_corpus` |
+| `position_blend.py` | EMA toward trait-space centroid after corpus projection | `apply_position_update`, `effective_blend`, `parse_position_step` |
 
 ### `src/infl_ens/data/benchmarks/`
 
