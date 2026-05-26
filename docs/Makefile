@@ -19,7 +19,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
-	rm -rf "$(BUILDDIR)" "$(SOURCEDIR)/api/_autosummary"
+	rm -rf "$(BUILDDIR)" "$(SOURCEDIR)/_autosummary" "$(SOURCEDIR)/api/_autosummary"
 
 html:
 	@$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)/html" $(SPHINXOPTS) $(O)
