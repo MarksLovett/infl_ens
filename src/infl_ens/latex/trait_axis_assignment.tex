@@ -178,11 +178,18 @@ c^{(\gamma)}=1-(1-c)^\gamma,\qquad\gamma>0.
 \]
 It is applied \emph{after} quantile normalization (pre-CDF it would be a
 no-op, since the CDF absorbs any per-axis monotone map) and maps
-\([0,1]\to[0,1]\), preserving the box guarantee. Historically stretch
-compensated clip-induced saturation; the quantile stage removes that
-saturation, so \(\gamma\neq 1\) is now a deliberate marginal-shaping
-choice rather than a fix. The runtime projector returns the stretched
-vector \(b^\ast\).
+\([0,1]\to[0,1]\), preserving the box guarantee. The runtime projector
+returns the stretched vector \(b^\ast\).
+
+Historically the stretch compensated clip-induced saturation, and under
+the clipped pipeline it measurably helped: on the seven-axis corpus the
+harm axis improved from \(\mathrm{KS}=0.295\) to \(0.154\) against
+\(U[0,1]\). The quantile stage removes that saturation, which inverts
+the trade-off --- with the CDF active the same stretch degrades the harm
+axis from \(0.011\) to \(0.157\), and the six axes at \(\gamma=2.5\)
+from \(0.012\text{--}0.051\) to \(0.315\text{--}0.357\). Default is
+therefore \(\gamma=1\) (no stretch); non-unit values are a deliberate
+marginal-shaping choice, not a correction.
 
 \section{Runtime projection of a new prompt}
 Given query \(q\):

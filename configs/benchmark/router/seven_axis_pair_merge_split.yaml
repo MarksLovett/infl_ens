@@ -70,14 +70,14 @@ trait_space:
     overrefusal: 1.0
     injection: 1.0
     policy_violation: 1.0
-  coordinate_stretch_gamma: 1.5
-  coordinate_stretch_gammas:
-    hallucination: 2.5
-    jailbreak: 2.5
-    privacy: 2.5
-    overrefusal: 2.5
-    injection: 2.5
-    policy_violation: 2.5
+  # Stretch disabled. The concave stretch existed to counteract the
+  # saturation the old clip-based calibration produced (82-97% of prompt
+  # mass pinned to the box faces on four of these axes). The quantile
+  # normalizer removes that saturation, so the stretch no longer
+  # compensates for anything -- it re-skews otherwise uniform marginals
+  # (measured: KS 0.011-0.051 without it, 0.315-0.357 with it).
+  # 1.0 is also the code default; kept explicit as a record of the change.
+  coordinate_stretch_gamma: 1.0
 
 agents:
   - name: clone-0

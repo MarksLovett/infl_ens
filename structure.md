@@ -427,8 +427,7 @@ infl_ens/
 | `benchmark/router/six_axis_baseline_replay_split_r24.yaml` | Pooled baseline replay for 24-round split run |
 | `evaluation/six_axis_run_eval.yaml` | Final-round eval on all 6 safety benchmarks for merge adapters |
 | `evaluation/six_axis_split_eval_train.yaml` | Final-round eval on train partition (cap 1000/benchmark) |
-| `benchmark/router/seven_axis_pair_merge_split.yaml` | 14 routers, 7 pair merges, 70/10/20 seven-axis split |
-| `benchmark/router/seven_axis_pair_merge_split_nostretch.yaml` | Same as above but `coordinate_stretch_gamma(s)` dropped, so the router sees the quantile normalizer's near-uniform marginals directly. Stretch-free comparison arm. |
+| `benchmark/router/seven_axis_pair_merge_split.yaml` | 14 routers, 7 pair merges, 70/10/20 seven-axis split. Stretch-free (`coordinate_stretch_gamma: 1.0`): the quantile normalizer removes the saturation the stretch used to compensate for. |
 | `benchmark/router/seven_axis_collapse_dead_axes.yaml` | 5-axis collapse track (drops jailbreak + injection); 10 clones / 5 merges |
 | `benchmark/router/seven_axis_collapse_near_theory.yaml` | Collapse track with merge-pair-near init + theory pre-warmup |
 | `benchmark/router/seven_axis_collapse_hypercube_ga.yaml` | Collapse from hypercube GA positions; SFT-only collapsed-pair merge |
