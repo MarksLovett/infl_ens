@@ -22,13 +22,21 @@
 #   SMOKE=1 bash scripts/run_trait_representation_on_doob.sh    # 2-axis gate,
 #       # runs in the foreground on the cheap safety_truth config first
 #
+# Comparing arms (each gets its own figures / log / tmux session):
+#   ARM=trait_repr_nostretch \
+#   CONFIG=configs/benchmark/router/seven_axis_pair_merge_split_nostretch.yaml \
+#       bash scripts/run_trait_representation_on_doob.sh
+#
 # Environment variables:
 #   CONFIG       Router YAML (default: seven-axis pair-merge split).
+#   ARM          Arm name; sets scripts/figures/<ARM>, results/<ARM>, and the
+#                tmux session (default: trait_repr).
 #   REMOTE       SSH target (default: mlovett@doob.dartmouth.edu).
 #   REMOTE_REPO  Path on the remote (default: infl_ens).
 #   MODE         launch (default) | status | pull
 #   SMOKE=1      Run the cheap 2-axis validation instead of the full job.
 #   MAX_PROMPTS  Prompts sampled for the figures (default: 8000).
+#   SPLIT_MANIFEST  Optional split manifest for train/val/test scatter colors.
 #   SKIP_SYNC=1  Skip the scp code push.
 
 set -euo pipefail
@@ -39,9 +47,16 @@ REMOTE="${REMOTE:-mlovett@doob.dartmouth.edu}"
 REMOTE_REPO="${REMOTE_REPO:-infl_ens}"
 MODE="${MODE:-launch}"
 MAX_PROMPTS="${MAX_PROMPTS:-8000}"
-TMUX_SESSION="${TMUX_SESSION:-trait-repr}"
-FIG_SUBDIR="scripts/figures/trait_repr"
-LOG="results/trait_repr/run.log"
+# ARM names the experiment arm; each arm gets its own figures, log, and
+# tmux session so arms can be compared without overwriting each other.
+ARM="${ARM:-trait_repr}"
+# Which GPU to pin the encode to; lets independent arms run in parallel
+# on separate cards instead of contending for one.
+GPU="${GPU:-0}"
+TMUX_SESSION="${TMUX_SESSION:-${ARM//_/-}}"
+FIG_SUBDIR="scripts/figures/${ARM}"
+RESULT_DIR="results/${ARM}"
+LOG="${RESULT_DIR}/run.log"
 
 if [[ "${SMOKE:-0}" == "1" ]]; then
     CONFIG="configs/benchmark/router/safety_truth.yaml"
@@ -70,14 +85,14 @@ fi
 
 if [[ "${MODE}" == "pull" ]]; then
     echo "[pull] figures + summary -> local ${FIG_SUBDIR}/"
-    mkdir -p "${FIG_SUBDIR}" results/trait_repr
+    mkdir -p "${FIG_SUBDIR}" "${RESULT_DIR}"
     # Figures and the JSON summary only; never the LoRA adapters or the
     # trait-space cache (those stay where they were computed).
     scp "${REMOTE}:${REMOTE_REPO}/${FIG_SUBDIR}/*.pdf" "${FIG_SUBDIR}/" 2>/dev/null || true
     scp "${REMOTE}:${REMOTE_REPO}/${FIG_SUBDIR}/*.png" "${FIG_SUBDIR}/" 2>/dev/null || true
     scp "${REMOTE}:${REMOTE_REPO}/${FIG_SUBDIR}/trait_repr_summary.json" \
         "${FIG_SUBDIR}/" 2>/dev/null || true
-    scp "${REMOTE}:${REMOTE_REPO}/${LOG}" results/trait_repr/ 2>/dev/null || true
+    scp "${REMOTE}:${REMOTE_REPO}/${LOG}" "${RESULT_DIR}/" 2>/dev/null || true
     echo "[pull] local contents:"
     ls -la "${FIG_SUBDIR}/" || true
     exit 0
@@ -95,7 +110,7 @@ if [[ "${SKIP_SYNC:-0}" != "1" ]]; then
 
     echo "[sync] ensure remote tree exists"
     ssh "${REMOTE}" "mkdir -p ${REMOTE_REPO} && cd ${REMOTE_REPO} && \
-        mkdir -p src scripts configs tests results scripts/figures ${FIG_SUBDIR} results/trait_repr"
+        mkdir -p src scripts configs tests results scripts/figures ${FIG_SUBDIR} ${RESULT_DIR}"
 
     echo "[sync] purge remote __pycache__ so stale .pyc cannot shadow new code"
     ssh "${REMOTE}" "find ${REMOTE_REPO}/src ${REMOTE_REPO}/scripts -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null; true"
@@ -142,7 +157,7 @@ echo "[remote] launching full job in tmux session '${TMUX_SESSION}' (log: ${LOG}
 ssh "${REMOTE}" bash -s <<REMOTE_EOF
 set -euo pipefail
 cd "${REMOTE_REPO}"
-mkdir -p results/trait_repr ${FIG_SUBDIR}
+mkdir -p ${RESULT_DIR} ${FIG_SUBDIR}
 
 if tmux has-session -t ${TMUX_SESSION} 2>/dev/null; then
     echo "[remote] tmux session '${TMUX_SESSION}' ALREADY EXISTS; not starting another."
@@ -150,14 +165,14 @@ if tmux has-session -t ${TMUX_SESSION} 2>/dev/null; then
     exit 0
 fi
 
-cat > results/trait_repr/_job.sh <<'JOB'
+cat > ${RESULT_DIR}/_job.sh <<'JOB'
 set -euo pipefail
 export PYTHONPATH=src
 # Pin to a single GPU. HuggingFaceEncoder defaults to device_map="auto",
 # which otherwise splits this ~16GB (bf16-decompressed) model across every
 # visible card and pays a PCIe hop per layer. device_map is not part of
 # the config, so this does not affect the cache fingerprint.
-export CUDA_VISIBLE_DEVICES="\${CUDA_VISIBLE_DEVICES:-0}"
+export CUDA_VISIBLE_DEVICES="__GPU__"
 PY="\${PY:-.venv/bin/python}"
 
 echo "=== \$(date -Is) starting ==="
@@ -202,14 +217,14 @@ fi
 echo "=== \$(date -Is) DONE ==="
 JOB
 
-sed -i "s|__CONFIG__|${CONFIG}|g; s|__MAX_PROMPTS__|${MAX_PROMPTS}|g; s|__FIGDIR__|${FIG_SUBDIR}|g" \
-    results/trait_repr/_job.sh
+sed -i "s|__CONFIG__|${CONFIG}|g; s|__MAX_PROMPTS__|${MAX_PROMPTS}|g; s|__FIGDIR__|${FIG_SUBDIR}|g; s|__GPU__|${GPU}|g" \
+    ${RESULT_DIR}/_job.sh
 
 # Window 0 runs the job under 'tee' so the log persists even if the
 # session is killed; window 1 watches the GPU. Mirrors the pattern in
 # scripts/tmux_monitor_seeds.sh.
 tmux new-session -d -s ${TMUX_SESSION} -n job \
-    "bash results/trait_repr/_job.sh 2>&1 | tee ${LOG}; echo; echo '[job finished - press any key]'; read -n 1"
+    "bash ${RESULT_DIR}/_job.sh 2>&1 | tee ${LOG}; echo; echo '[job finished - press any key]'; read -n 1"
 tmux new-window -t ${TMUX_SESSION} -n gpu "watch -n 5 nvidia-smi"
 tmux select-window -t ${TMUX_SESSION}:job
 
@@ -227,5 +242,5 @@ echo "  WATCH LIVE :  ssh -t ${REMOTE} 'tmux attach -t ${TMUX_SESSION}'"
 echo "                (window 0 = job, window 1 = nvidia-smi;"
 echo "                 Ctrl-b n switches window, Ctrl-b d detaches)"
 echo
-echo "  monitor    :  MODE=status bash scripts/run_trait_representation_on_doob.sh"
-echo "  collect    :  MODE=pull   bash scripts/run_trait_representation_on_doob.sh"
+echo "  monitor    :  ARM=${ARM} MODE=status bash scripts/run_trait_representation_on_doob.sh"
+echo "  collect    :  ARM=${ARM} MODE=pull   bash scripts/run_trait_representation_on_doob.sh"
