@@ -189,20 +189,31 @@ def plot_marginals(
     *,
     stats_legacy: dict[str, Any],
     stats_new: dict[str, Any],
+    pre_stretch: Optional[np.ndarray] = None,
+    stats_pre_stretch: Optional[dict[str, Any]] = None,
     title: Optional[str] = None,
 ):
-    """Per-axis marginal histograms, legacy row over new row.
+    """Per-axis marginal histograms, one row per representation.
+
+    When the config enables a post-normalization stretch, the pure-CDF
+    row is drawn between the legacy and final rows so the stretch's
+    effect on the marginals is visible rather than conflated with the
+    normalizer's.
 
     :param legacy: Legacy coordinates, shape ``(N, L)``.
     :type legacy: numpy.ndarray
-    :param new: Quantile-normalized coordinates, shape ``(N, L)``.
+    :param new: Final coordinates the router sees, shape ``(N, L)``.
     :type new: numpy.ndarray
     :param labels: Axis names.
     :type labels: Sequence[str]
     :param stats_legacy: Summary stats for the legacy arm.
     :type stats_legacy: dict
-    :param stats_new: Summary stats for the new arm.
+    :param stats_new: Summary stats for the final arm.
     :type stats_new: dict
+    :param pre_stretch: Optional pure-CDF coordinates before stretch.
+    :type pre_stretch: numpy.ndarray | None
+    :param stats_pre_stretch: Summary stats for the pure-CDF arm.
+    :type stats_pre_stretch: dict | None
     :param title: Optional figure suptitle.
     :type title: str | None
     :returns: The figure.
@@ -210,15 +221,20 @@ def plot_marginals(
     """
     import matplotlib.pyplot as plt
 
+    rows = [("legacy: clip to [0,1]", legacy, stats_legacy, "#d62728")]
+    if pre_stretch is not None and stats_pre_stretch is not None:
+        rows.append(("quantile CDF only", pre_stretch, stats_pre_stretch, "#2ca02c"))
+        rows.append(("CDF + stretch (routed)", new, stats_new, "#1f77b4"))
+    else:
+        rows.append(("new: quantile CDF", new, stats_new, "#1f77b4"))
+
     n_axes = len(labels)
     fig, axarr = plt.subplots(
-        2, n_axes, figsize=(2.6 * n_axes, 5.6), sharex=True, squeeze=False,
+        len(rows), n_axes,
+        figsize=(2.6 * n_axes, 2.8 * len(rows)),
+        sharex=True, squeeze=False,
     )
     bins = np.linspace(0.0, 1.0, 41)
-    rows = (
-        ("legacy: clip to [0,1]", legacy, stats_legacy, "#d62728"),
-        ("new: quantile CDF", new, stats_new, "#1f77b4"),
-    )
     for row, (row_label, coords, stats, color) in enumerate(rows):
         for j, name in enumerate(labels):
             ax = axarr[row][j]
@@ -406,13 +422,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     legacy = _legacy_coordinates(emb, artifacts.axes, artifacts.gammas)
     pre = _pre_normalizer_coordinates(emb, artifacts.axes, artifacts.linear_transform)
-    new = artifacts.normalizer.transform(pre)
-    if not np.all(artifacts.gammas == 1.0):
-        new = 1.0 - np.power(1.0 - np.clip(new, 0.0, 1.0), artifacts.gammas)
+    # Pure normalizer output, before any post-CDF stretch. Isolating this
+    # separates the normalizer's uniformity from the stretch's deliberate
+    # re-skew of it.
+    cdf_only = np.clip(artifacts.normalizer.transform(pre), 0.0, 1.0)
+    has_stretch = not np.all(artifacts.gammas == 1.0)
+    if has_stretch:
+        new = 1.0 - np.power(1.0 - cdf_only, artifacts.gammas)
+    else:
+        new = cdf_only
     new = np.clip(new, 0.0, 1.0)
 
     stats_legacy = _representation_stats(legacy, labels)
     stats_new = _representation_stats(new, labels)
+    stats_cdf_only = _representation_stats(cdf_only, labels) if has_stretch else None
 
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -422,6 +445,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         legacy, new, labels,
         stats_legacy=stats_legacy,
         stats_new=stats_new,
+        pre_stretch=cdf_only if has_stretch else None,
+        stats_pre_stretch=stats_cdf_only,
         title=f"{prefix}: trait marginals, clipped vs quantile",
     )
     written = save_figure(fig, out_dir / "trait_marginals_old_vs_new", dpi=args.dpi)
@@ -459,22 +484,45 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "coordinate_stretch_gammas": artifacts.gammas.tolist(),
         "legacy": stats_legacy,
         "new": stats_new,
+        "cdf_only": stats_cdf_only,
     }
     summary_path = out_dir / "trait_repr_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(f"[repr] wrote {summary_path}")
 
     print("\n=== representation summary ===")
-    print(f"{'axis':<20} {'legacy sat':>11} {'new sat':>9} {'legacy KS':>10} {'new KS':>8}")
-    for a, b in zip(stats_legacy["per_axis"], stats_new["per_axis"]):
-        print(
+    header = (
+        f"{'axis':<20} {'legacy sat':>11} {'new sat':>9} "
+        f"{'legacy KS':>10} {'new KS':>8}"
+    )
+    if stats_cdf_only is not None:
+        header += f" {'cdfKS':>7} {'gamma':>6}"
+    print(header)
+    for idx, (a, b) in enumerate(
+        zip(stats_legacy["per_axis"], stats_new["per_axis"]),
+    ):
+        line = (
             f"{a['axis']:<20} {a['frac_saturated']:>10.1%} "
             f"{b['frac_saturated']:>8.1%} {a['ks_vs_uniform']:>10.3f} "
-            f"{b['ks_vs_uniform']:>8.3f}",
+            f"{b['ks_vs_uniform']:>8.3f}"
         )
+        if stats_cdf_only is not None:
+            c = stats_cdf_only["per_axis"][idx]
+            line += f" {c['ks_vs_uniform']:>7.3f} {artifacts.gammas[idx]:>6.2f}"
+        print(line)
     print(f"\nnew in_unit_box={stats_new['in_unit_box']} "
           f"max_ks={stats_new['max_ks_vs_uniform']:.3f} "
           f"max_sat={stats_new['max_frac_saturated']:.1%}")
+    if stats_cdf_only is not None:
+        print(
+            f"pre-stretch (pure CDF): max_ks="
+            f"{stats_cdf_only['max_ks_vs_uniform']:.3f} "
+            f"max_sat={stats_cdf_only['max_frac_saturated']:.1%}",
+        )
+        print(
+            "  -> any residual non-uniformity in the routed coordinates is "
+            "the post-CDF stretch, not the normalizer.",
+        )
     return 0
 
 
