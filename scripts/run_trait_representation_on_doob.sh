@@ -153,10 +153,16 @@ fi
 cat > results/trait_repr/_job.sh <<'JOB'
 set -euo pipefail
 export PYTHONPATH=src
+# Pin to a single GPU. HuggingFaceEncoder defaults to device_map="auto",
+# which otherwise splits this ~16GB (bf16-decompressed) model across every
+# visible card and pays a PCIe hop per layer. device_map is not part of
+# the config, so this does not affect the cache fingerprint.
+export CUDA_VISIBLE_DEVICES="\${CUDA_VISIBLE_DEVICES:-0}"
 PY="\${PY:-.venv/bin/python}"
 
 echo "=== \$(date -Is) starting ==="
 echo "[job] python: \$(\${PY} --version)"
+echo "[job] CUDA_VISIBLE_DEVICES=\${CUDA_VISIBLE_DEVICES}"
 
 echo "=== \$(date -Is) pytest ==="
 \${PY} -m pytest tests/test_trait_normalize.py tests/test_safety_trait_space.py \

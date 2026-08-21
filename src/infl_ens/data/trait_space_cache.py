@@ -34,9 +34,54 @@ _CACHE_VERSION = 3
 _MANIFEST_NAME = "manifest.json"
 _ARRAYS_NAME = "arrays.npz"
 
+#: ``trait_space`` keys that control *where* the cache lives or *how fast*
+#: the encode runs, but not the geometry of the resulting trait space.
+#: Excluding them from the fingerprint keeps one cache entry shared across
+#: configs that differ only in throughput or storage location, so tuning
+#: the batch size never forces a re-encode.
+_FINGERPRINT_IGNORED_KEYS = frozenset(
+    {
+        "encoder_batch_size",
+        "cache",
+        "cache_dir",
+        "cache_path",
+    },
+)
+
+
+def _fingerprint_trait_space_block(ts_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Strip throughput/location-only keys from a ``trait_space`` block.
+
+    Batch size and cache location change how quickly the encode runs and
+    where its output is stored, never the coordinates it produces, so
+    they must not participate in the cache identity.
+
+    :param ts_cfg: The config's ``trait_space`` block.
+    :type ts_cfg: dict
+    :returns: Copy carrying only geometry-affecting settings.
+    :rtype: dict
+    """
+    trimmed = {
+        k: v for k, v in ts_cfg.items() if k not in _FINGERPRINT_IGNORED_KEYS
+    }
+    encoder = trimmed.get("encoder")
+    if isinstance(encoder, dict):
+        trimmed["encoder"] = {
+            k: v
+            for k, v in encoder.items()
+            if k not in ("batch_size", "device_map")
+        }
+    return trimmed
+
 
 def trait_space_fingerprint(cfg: dict[str, Any]) -> str:
     """Hash the benchmark list and trait-space block of a router config.
+
+    Only settings that change the resulting geometry are hashed:
+    :data:`_FINGERPRINT_IGNORED_KEYS` (batch size and cache location) are
+    excluded, as are the encoder mapping's ``batch_size`` / ``device_map``
+    entries. Tuning throughput therefore reuses an existing cache instead
+    of forcing a fresh encode.
 
     When ``trait_space.linear_transform`` names a transform file, the
     file *content* is hashed too, so editing the transform JSON in place
@@ -49,7 +94,7 @@ def trait_space_fingerprint(cfg: dict[str, Any]) -> str:
     """
     payload = {
         "benchmarks": cfg.get("benchmarks", []),
-        "trait_space": cfg.get("trait_space", {}),
+        "trait_space": _fingerprint_trait_space_block(cfg.get("trait_space") or {}),
     }
     rel = (cfg.get("trait_space") or {}).get("linear_transform")
     if rel:

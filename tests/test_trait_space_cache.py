@@ -179,6 +179,61 @@ def test_full_chain_cache_roundtrip(tmp_path: Path) -> None:
     assert got.max() <= 1.0
 
 
+def test_fingerprint_ignores_throughput_and_location_keys() -> None:
+    """Batch size and cache location must not change the cache identity."""
+    cfg = {
+        "benchmarks": [{"kind": "beavertails"}],
+        "trait_space": {
+            "encoder": "some/model",
+            "encoder_batch_size": 2,
+            "cache": True,
+            "cache_dir": "data/trait_space_cache",
+            "n_grid": 3,
+        },
+    }
+    base = trait_space_fingerprint(cfg)
+
+    for key, value in (
+        ("encoder_batch_size", 64),
+        ("cache", False),
+        ("cache_dir", "/tmp/elsewhere"),
+        ("cache_path", "/tmp/explicit"),
+    ):
+        variant = {**cfg, "trait_space": {**cfg["trait_space"], key: value}}
+        assert trait_space_fingerprint(variant) == base, key
+
+    # Nested encoder mappings: batch_size / device_map are also throughput.
+    mapping = {
+        "benchmarks": cfg["benchmarks"],
+        "trait_space": {
+            "encoder": {"model_name": "some/model", "batch_size": 2},
+            "n_grid": 3,
+        },
+    }
+    faster = {
+        "benchmarks": cfg["benchmarks"],
+        "trait_space": {
+            "encoder": {
+                "model_name": "some/model",
+                "batch_size": 64,
+                "device_map": "cuda:0",
+            },
+            "n_grid": 3,
+        },
+    }
+    assert trait_space_fingerprint(mapping) == trait_space_fingerprint(faster)
+
+    # Geometry-affecting settings still must change the fingerprint.
+    for key, value in (
+        ("n_grid", 8),
+        ("coordinate_residualize", True),
+        ("coordinate_stretch_gamma", 2.0),
+        ("quantile_knots", 51),
+    ):
+        variant = {**cfg, "trait_space": {**cfg["trait_space"], key: value}}
+        assert trait_space_fingerprint(variant) != base, key
+
+
 def test_build_kwargs_defaults() -> None:
     """Config extraction includes the new normalizer/transform keys."""
     kwargs = _trait_space_build_kwargs({"trait_space": {}})

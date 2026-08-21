@@ -53,7 +53,10 @@ benchmarks:
 
 trait_space:
   encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
-  encoder_batch_size: 2
+  # Throughput only: excluded from the cache fingerprint, so this can be
+  # tuned per host without invalidating an existing encode. 32 fits
+  # comfortably at max_length=512 on an 80GB card.
+  encoder_batch_size: 32
   cache: true
   cache_dir: data/trait_space_cache
   n_grid: 3
