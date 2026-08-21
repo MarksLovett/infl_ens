@@ -58,3 +58,6 @@ lm_head.weight | UNEXPECTED |  |
 Notes:
 - UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
 Decompressing model:   0%|          | 0/252 [00:00<?, ?it/s]Decompressing model:   0%|          | 1/252 [00:00<00:42,  5.96it/s]Decompressing model:  17%|█▋        | 42/252 [00:00<00:01, 189.12it/s]Decompressing model:  33%|███▎      | 83/252 [00:00<00:00, 275.68it/s]Decompressing model:  49%|████▉     | 123/252 [00:00<00:00, 319.53it/s]Decompressing model:  64%|██████▍   | 161/252 [00:00<00:00, 335.57it/s]Decompressing model:  80%|████████  | 202/252 [00:00<00:00, 359.20it/s]Decompressing model:  96%|█████████▋| 243/252 [00:00<00:00, 374.62it/s]Decompressing model: 100%|██████████| 252/252 [00:00<00:00, 314.04it/s]
+wrote scripts/figures/trait_repr_nostretch/seven_axis_resource_density.png
+wrote scripts/figures/trait_repr_nostretch/seven_axis_resource_density.pdf
+=== 2026-08-21T18:04:08-04:00 DONE ===
