@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""VERIFY_ONLY: apply frozen transforms to seed-0 trait vectors; check moments."""
+"""VERIFY_ONLY: apply frozen transforms to seed-0 pre-normalizer trait vectors.
+
+Checks realized moments on pre-CDF coordinates (where standardize/whiten
+semantics live) and that the downstream quantile stage restores
+near-uniform ``[0, 1]`` marginals.
+"""
 
 from __future__ import annotations
 
@@ -9,9 +14,31 @@ from pathlib import Path
 
 import numpy as np
 
+from infl_ens.data.benchmarks.safety_trait_space import (
+    build_safety_trait_space_bundle,
+    project_pre_normalizer_coordinates,
+)
 from infl_ens.data.splits import flatten_partition_prompts, load_split_manifest
 from infl_ens.data.trait_linear_transform import FrozenLinearTransform, realized_moments
-from infl_ens.training.__main__ import _load_splits, _load_yaml, _make_trait_space
+from infl_ens.data.trait_normalize import fit_quantile_normalizer
+from infl_ens.data.trait_space_cache import (
+    _trait_space_build_kwargs,
+    make_trait_space_encoder,
+)
+from infl_ens.training.__main__ import _load_splits, _load_yaml
+
+
+def _max_ks_uniform(coords: np.ndarray) -> float:
+    """Max per-axis KS statistic of columns against U[0, 1]."""
+    x = np.asarray(coords, dtype=float)
+    n = x.shape[0]
+    grid = np.arange(1, n + 1) / n
+    worst = 0.0
+    for j in range(x.shape[1]):
+        v = np.sort(x[:, j])
+        ks = float(np.max(np.maximum(np.abs(grid - v), np.abs(v - (grid - 1.0 / n)))))
+        worst = max(worst, ks)
+    return worst
 
 
 def _seed0_prompts(cfg_path: Path, manifest_path: Path) -> list[str]:
@@ -49,8 +76,14 @@ def main() -> int:
     prompts = _seed0_prompts(args.router_config, args.eval_manifest)
     cfg = _load_yaml(args.router_config)
     splits = _load_splits(cfg)
-    space = _make_trait_space(cfg, splits)
-    raw = np.asarray(space.project(prompts), dtype=float)
+    encoder = make_trait_space_encoder(cfg)
+    build_kwargs = _trait_space_build_kwargs(cfg)
+    build_kwargs["linear_transform"] = None
+    bundle = build_safety_trait_space_bundle(splits, encoder, **build_kwargs)
+    raw = np.asarray(
+        project_pre_normalizer_coordinates(encoder, bundle.axes, prompts),
+        dtype=float,
+    )
 
     results: dict = {
         "n_prompts": len(prompts),
@@ -72,15 +105,26 @@ def main() -> int:
             ok = False
         transformed = transform.apply(raw)
         moments = realized_moments(transformed)
+        # The production pipeline always quantile-normalizes after the
+        # transform; verify the post-CDF marginals are uniform in [0, 1].
+        normalized = fit_quantile_normalizer(transformed).transform(transformed)
+        post_cdf_ks = _max_ks_uniform(normalized)
+        in_box = bool(np.all((normalized >= 0.0) & (normalized <= 1.0)))
         results["arms"][name] = {
             "fit_source": transform.fit_source,
             "oracle_labels_used": False,
             "moments": moments,
+            "post_cdf_max_ks_vs_uniform": post_cdf_ks,
+            "post_cdf_in_unit_box": in_box,
         }
         print(f"=== {name} on seed-0 ({len(prompts)} prompts) ===")
         print(f"fit_source: {transform.fit_source}")
         print(f"per_axis_variance: {[round(v, 3) for v in moments['per_axis_variance']]}")
         print(f"mean_abs_offdiag_corr: {moments['mean_abs_offdiag_corr']:.4f}")
+        print(f"post_cdf_max_ks_vs_uniform: {post_cdf_ks:.4f}  in_unit_box={in_box}")
+        if not in_box or post_cdf_ks > 0.1:
+            print("WARNING: post-CDF marginals not near-uniform in [0, 1]")
+            ok = False
         if name == "whiten" and moments["mean_abs_offdiag_corr"] > 0.15:
             print("WARNING: whitening did not fully decorrelate seed-0 holdout")
         if name == "standardize":

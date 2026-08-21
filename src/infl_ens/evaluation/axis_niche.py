@@ -337,13 +337,9 @@ def run_axis_niche_diagnostic(
 
     cfg = _load_yaml(router_config)
     splits = _load_splits(cfg)
-    from infl_ens.data.encoders import SentenceTransformerEncoder
+    from infl_ens.data.trait_space_cache import make_trait_space_encoder
 
-    ts_cfg = cfg.get("trait_space", {})
-    encoder = SentenceTransformerEncoder(
-        model_name=ts_cfg.get("encoder", "sentence-transformers/all-MiniLM-L6-v2"),
-        batch_size=int(ts_cfg.get("encoder_batch_size", 256)),
-    )
+    encoder = make_trait_space_encoder(cfg)
 
     blocks: list[np.ndarray] = []
     origin_blocks: list[np.ndarray] = []

@@ -1,7 +1,7 @@
 """Persist and reload benchmark-derived :class:`TraitSpace` artifacts.
 
 Builds a content-addressed cache under ``data/trait_space_cache/`` so
-theory-only router runs can skip repeated sentence-transformer encoding
+theory-only router runs can skip repeated Hugging Face encoding
 when benchmark and trait-space settings are unchanged.
 """
 
@@ -21,17 +21,25 @@ from infl_ens.data.benchmarks.safety_trait_space import (
     _make_learned_projector,
     build_safety_trait_space_bundle,
 )
-from infl_ens.data.encoders import SentenceTransformerEncoder
-from infl_ens.data.trait_linear_transform import load_transform_from_cfg
+from infl_ens.data.encoders import DEFAULT_ENCODER_MODEL, HuggingFaceEncoder
+from infl_ens.data.trait_linear_transform import (
+    FrozenLinearTransform,
+    load_transform_from_cfg,
+)
+from infl_ens.data.trait_normalize import AxisQuantileMap, QuantileNormalizer
 from infl_ens.data.trait_space import TraitSpace
 
-_CACHE_VERSION = 1
+_CACHE_VERSION = 3
 _MANIFEST_NAME = "manifest.json"
 _ARRAYS_NAME = "arrays.npz"
 
 
 def trait_space_fingerprint(cfg: dict[str, Any]) -> str:
     """Hash the benchmark list and trait-space block of a router config.
+
+    When ``trait_space.linear_transform`` names a transform file, the
+    file *content* is hashed too, so editing the transform JSON in place
+    invalidates the cache rather than silently reusing stale geometry.
 
     :param cfg: Full router or training config.
     :type cfg: dict
@@ -42,6 +50,15 @@ def trait_space_fingerprint(cfg: dict[str, Any]) -> str:
         "benchmarks": cfg.get("benchmarks", []),
         "trait_space": cfg.get("trait_space", {}),
     }
+    rel = (cfg.get("trait_space") or {}).get("linear_transform")
+    if rel:
+        path = Path(str(rel))
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[3] / path
+        try:
+            payload["linear_transform_content"] = path.read_text(encoding="utf-8")
+        except OSError:
+            payload["linear_transform_content"] = None
     raw = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:16]
 
@@ -112,6 +129,36 @@ def _axis_from_manifest(entry: dict[str, Any], arrays: np.lib.npyio.NpzFile, idx
     )
 
 
+def _normalizer_from_cache(
+    manifest: dict[str, Any],
+    arrays: np.lib.npyio.NpzFile,
+    n_axes: int,
+) -> QuantileNormalizer:
+    """Reconstruct the quantile normalizer from manifest metadata and arrays.
+
+    :param manifest: Loaded cache manifest.
+    :type manifest: dict
+    :param arrays: Loaded ``arrays.npz`` handle.
+    :type arrays: numpy.lib.npyio.NpzFile
+    :param n_axes: Number of trait axes.
+    :type n_axes: int
+    :returns: Reconstructed normalizer.
+    :rtype: QuantileNormalizer
+    """
+    maps = tuple(
+        AxisQuantileMap(
+            knots=np.asarray(arrays[f"qnorm_axis_{idx}_knots"], dtype=float),
+            cdf=np.asarray(arrays[f"qnorm_axis_{idx}_cdf"], dtype=float),
+        )
+        for idx in range(n_axes)
+    )
+    return QuantileNormalizer(
+        axis_maps=maps,
+        n_knots=int(manifest["quantile_knots"]),
+        fit_n=int(manifest["normalizer_fit_n"]),
+    )
+
+
 def save_safety_trait_space_cache(
     path: Path,
     bundle: SafetyTraitSpaceBundle,
@@ -127,7 +174,7 @@ def save_safety_trait_space_cache(
     :type bundle: SafetyTraitSpaceBundle
     :param fingerprint: Config fingerprint stored for validation.
     :type fingerprint: str
-    :param encoder_name: Sentence-transformer identifier used at build time.
+    :param encoder_name: Hugging Face model identifier used at build time.
     :type encoder_name: str
     :returns: ``None``.
     :rtype: None
@@ -141,6 +188,13 @@ def save_safety_trait_space_cache(
         "coordinate_stretch_gamma": float(bundle.coordinate_stretch_gamma),
         "coordinate_stretch_gammas": bundle.coordinate_stretch_gammas,
         "axes": [_axis_to_manifest(ax) for ax in bundle.axes],
+        "quantile_knots": int(bundle.normalizer.n_knots),
+        "normalizer_fit_n": int(bundle.normalizer.fit_n),
+        "linear_transform": (
+            bundle.linear_transform.to_dict()
+            if bundle.linear_transform is not None
+            else None
+        ),
     }
     array_payload: dict[str, np.ndarray] = {
         "grid": np.asarray(bundle.space.grid, dtype=float),
@@ -152,6 +206,9 @@ def save_safety_trait_space_cache(
             array_payload[f"axis_{idx}_residual_coef"] = np.asarray(
                 axis.residual_coef, dtype=float,
             )
+    for idx, axis_map in enumerate(bundle.normalizer.axis_maps):
+        array_payload[f"qnorm_axis_{idx}_knots"] = np.asarray(axis_map.knots, dtype=float)
+        array_payload[f"qnorm_axis_{idx}_cdf"] = np.asarray(axis_map.cdf, dtype=float)
     with (path / _MANIFEST_NAME).open("w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2, sort_keys=True)
     np.savez_compressed(path / _ARRAYS_NAME, **array_payload)
@@ -210,10 +267,19 @@ def load_safety_trait_space_cache(
         )
         grid = np.asarray(arrays["grid"], dtype=float)
         weights = np.asarray(arrays["weights"], dtype=float)
+        normalizer = _normalizer_from_cache(manifest, arrays, len(axes))
 
+    transform_payload = manifest.get("linear_transform")
+    linear_transform = (
+        FrozenLinearTransform.from_dict(transform_payload)
+        if transform_payload
+        else None
+    )
     project = _make_learned_projector(
         encoder,
         list(axes),
+        normalizer=normalizer,
+        linear_transform=linear_transform,
         coordinate_stretch_gamma=float(manifest["coordinate_stretch_gamma"]),
         coordinate_stretch_gammas=manifest.get("coordinate_stretch_gammas"),
     )
@@ -244,24 +310,41 @@ def _trait_space_build_kwargs(cfg: dict[str, Any]) -> dict[str, Any]:
         "mode_alignment_weights": ts_cfg.get("mode_alignment_weights"),
         "coordinate_stretch_gamma": float(ts_cfg.get("coordinate_stretch_gamma", 1.0)),
         "coordinate_stretch_gammas": ts_cfg.get("coordinate_stretch_gammas"),
+        "linear_transform": load_transform_from_cfg(cfg),
+        "quantile_knots": int(ts_cfg.get("quantile_knots", 1001)),
     }
 
 
-def make_trait_space_encoder(cfg: dict[str, Any]) -> SentenceTransformerEncoder:
-    """Construct the sentence encoder named in ``trait_space`` config.
+def make_trait_space_encoder(cfg: dict[str, Any]) -> HuggingFaceEncoder:
+    """Construct the Hugging Face encoder named in ``trait_space`` config.
 
     :param cfg: Router or training config.
     :type cfg: dict
-    :returns: Encoder with optional ``encoder_batch_size`` override.
-    :rtype: SentenceTransformerEncoder
+    :returns: Encoder with configuration-local overrides.  ``encoder`` may
+        be either a legacy model-name string or a mapping with
+        ``model_name``, ``batch_size``, ``max_length``, ``pooling``,
+        ``normalize``, ``torch_dtype``, ``device_map``, ``padding_side``,
+        ``attn_implementation``, and ``trust_remote_code`` fields.
+    :rtype: HuggingFaceEncoder
+    :raises TypeError: If ``trait_space.encoder`` is not a string or mapping.
     """
     ts_cfg = cfg.get("trait_space", {})
-    return SentenceTransformerEncoder(
-        model_name=ts_cfg.get(
-            "encoder", "sentence-transformers/all-MiniLM-L6-v2",
-        ),
-        batch_size=int(ts_cfg.get("encoder_batch_size", 256)),
-    )
+    raw_encoder = ts_cfg.get("encoder", DEFAULT_ENCODER_MODEL)
+    if isinstance(raw_encoder, str):
+        encoder_cfg: dict[str, Any] = {"model_name": raw_encoder}
+    elif isinstance(raw_encoder, dict):
+        encoder_cfg = dict(raw_encoder)
+    else:
+        raise TypeError(
+            "trait_space.encoder must be a Hugging Face model-name string "
+            f"or mapping, got {type(raw_encoder).__name__}",
+        )
+
+    if "model_name" not in encoder_cfg:
+        encoder_cfg["model_name"] = DEFAULT_ENCODER_MODEL
+    if "batch_size" not in encoder_cfg and "encoder_batch_size" in ts_cfg:
+        encoder_cfg["batch_size"] = int(ts_cfg["encoder_batch_size"])
+    return HuggingFaceEncoder(**encoder_cfg)
 
 
 def build_or_load_safety_trait_space(
@@ -286,28 +369,20 @@ def build_or_load_safety_trait_space(
     build_kwargs = _trait_space_build_kwargs(cfg)
     use_cache = bool(ts_cfg.get("cache", False))
     if not use_cache:
-        space = build_safety_trait_space_bundle(
+        return build_safety_trait_space_bundle(
             splits, encoder, **build_kwargs,
         ).space
-        transform = load_transform_from_cfg(cfg)
-        if transform is not None:
-            space = transform.apply_trait_space(space)
-        return space
 
     fingerprint = trait_space_fingerprint(cfg)
     cache_path = trait_space_cache_path(cfg)
     if cache_path.is_dir():
         try:
-            space = load_safety_trait_space_cache(
+            return load_safety_trait_space_cache(
                 cache_path,
                 encoder,
                 expected_fingerprint=fingerprint,
                 expected_encoder=encoder.model_name,
             )
-            transform = load_transform_from_cfg(cfg)
-            if transform is not None:
-                space = transform.apply_trait_space(space)
-            return space
         except (FileNotFoundError, ValueError, OSError, KeyError):
             pass
 
@@ -318,8 +393,67 @@ def build_or_load_safety_trait_space(
         fingerprint=fingerprint,
         encoder_name=encoder.model_name,
     )
-    space = bundle.space
-    transform = load_transform_from_cfg(cfg)
-    if transform is not None:
-        space = transform.apply_trait_space(space)
-    return space
+    return bundle.space
+
+
+def coordinate_chain_from_cache(
+    cfg: dict[str, Any],
+) -> Callable[[np.ndarray], np.ndarray]:
+    """Build the transform → CDF → stretch chain from a built cache.
+
+    Used to migrate legacy pre-normalization coordinates (e.g. stored
+    ``fixed_positions`` files) into the final normalized geometry without
+    re-encoding any text. Requires the config's trait-space cache to have
+    been built at the current cache version.
+
+    :param cfg: Router or training config with ``trait_space.cache``.
+    :type cfg: dict
+    :returns: Callable mapping ``(L,)`` or ``(M, L)`` pre-normalizer
+        coordinates into ``[0, 1]^L``.
+    :rtype: Callable[[numpy.ndarray], numpy.ndarray]
+    :raises FileNotFoundError: If the cache directory is missing or
+        incomplete.
+    :raises ValueError: If the cache version is unsupported.
+    """
+    path = trait_space_cache_path(cfg)
+    manifest_path = path / _MANIFEST_NAME
+    arrays_path = path / _ARRAYS_NAME
+    if not manifest_path.is_file() or not arrays_path.is_file():
+        raise FileNotFoundError(
+            "coordinate_chain_from_cache needs a built trait-space cache at "
+            f"{path}; run the closed-loop task once with trait_space.cache "
+            "enabled to create it"
+        )
+    with manifest_path.open("r", encoding="utf-8") as fh:
+        manifest = json.load(fh)
+    if int(manifest.get("version", -1)) != _CACHE_VERSION:
+        raise ValueError(
+            f"unsupported trait-space cache version {manifest.get('version')!r} "
+            f"at {path}"
+        )
+    with np.load(arrays_path, allow_pickle=False) as arrays:
+        normalizer = _normalizer_from_cache(manifest, arrays, len(manifest["axes"]))
+    transform_payload = manifest.get("linear_transform")
+    transform = (
+        FrozenLinearTransform.from_dict(transform_payload)
+        if transform_payload
+        else None
+    )
+    names = [str(entry["name"]) for entry in manifest["axes"]]
+    default_gamma = float(manifest["coordinate_stretch_gamma"])
+    overrides = manifest.get("coordinate_stretch_gammas") or {}
+    gammas = np.asarray(
+        [float(overrides.get(name, default_gamma)) for name in names],
+        dtype=float,
+    )
+
+    def chain(coords: np.ndarray) -> np.ndarray:
+        x = np.asarray(coords, dtype=float)
+        if transform is not None:
+            x = transform.apply(x)
+        x = normalizer.transform(x)
+        if not np.all(gammas == 1.0):
+            x = 1.0 - np.power(1.0 - np.clip(x, 0.0, 1.0), gammas)
+        return np.clip(x, 0.0, 1.0)
+
+    return chain

@@ -36,7 +36,7 @@ benchmarks:
     max_records: 5000
 
 trait_space:
-  encoder: sentence-transformers/all-MiniLM-L6-v2
+  encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
   n_grid: 32
   kde_bandwidth: 0.08
   threshold: 0.5

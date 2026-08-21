@@ -253,6 +253,8 @@ _EXPECTED_REEXPORTS: dict[str, tuple[str, ...]] = {
         "position_from_corpus",
         "SentenceTransformerEncoder",
         "HuggingFaceEncoder",
+        "FrozenLinearTransform",
+        "QuantileNormalizer",
     ),
     "infl_ens.data.benchmarks": (
         "BenchmarkSplit",

@@ -8,9 +8,8 @@ This subpackage groups the *data side* of the influencer-game pipeline:
 - :func:`position_from_corpus` projects a fresh corpus of queries into a
   pre-built trait space (used by closed-loop trainers to refresh agent
   positions between rounds).
-- :class:`SentenceTransformerEncoder` and :class:`HuggingFaceEncoder`
-  are production-ready encoder backends. Heavy imports (``torch``,
-  ``transformers``, ``sentence_transformers``) are deferred until the
+- :class:`HuggingFaceEncoder` is the direct Hugging Face embedding backend.
+  Heavy imports (``torch`` and ``transformers``) are deferred until the
   encoder is *constructed*, so importing this subpackage stays cheap.
 - :mod:`infl_ens.data.benchmarks` provides labelled benchmark loaders
   for BeaverTails (harm axis) and HaluEval (hallucination axis).
@@ -22,11 +21,9 @@ state, no side effects at import time.
 from __future__ import annotations
 
 from infl_ens.data import benchmarks
-from infl_ens.data.encoders import (
-    HuggingFaceEncoder,
-    SentenceTransformerEncoder,
-)
+from infl_ens.data.encoders import HuggingFaceEncoder
 from infl_ens.data.trait_linear_transform import FrozenLinearTransform
+from infl_ens.data.trait_normalize import QuantileNormalizer
 from infl_ens.data.trait_space import (
     TraitSpace,
     build_trait_space,
@@ -36,7 +33,7 @@ from infl_ens.data.trait_space import (
 __all__ = [
     "FrozenLinearTransform",
     "HuggingFaceEncoder",
-    "SentenceTransformerEncoder",
+    "QuantileNormalizer",
     "TraitSpace",
     "benchmarks",
     "build_trait_space",

@@ -1,0 +1,24 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments (remote runners use .venv/)
+.venv/
+venv/
+
+# Datasets and the fingerprinted trait-space cache live on the compute
+# host (doob) and are transferred out-of-band, never through git.
+# Leading slash anchors this to the repo root so the src/infl_ens/data
+# package is NOT matched.
+/data/
+
+# Sphinx build output
+docs/_build/
+
+# Editor / OS noise
+.DS_Store
+*.swp

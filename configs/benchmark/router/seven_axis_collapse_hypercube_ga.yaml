@@ -47,8 +47,8 @@ benchmarks:
     max_records: 5000
 
 trait_space:
-  encoder: sentence-transformers/all-MiniLM-L6-v2
-  encoder_batch_size: 256
+  encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
+  encoder_batch_size: 2
   cache: true
   cache_dir: data/trait_space_cache
   n_grid: 3

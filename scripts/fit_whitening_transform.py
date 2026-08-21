@@ -9,17 +9,25 @@ from pathlib import Path
 
 import numpy as np
 
+from infl_ens.data.benchmarks.safety_trait_space import (
+    build_safety_trait_space_bundle,
+    project_pre_normalizer_coordinates,
+)
 from infl_ens.data.splits import load_split_manifest
 from infl_ens.data.trait_linear_transform import (
     fit_standardize,
     fit_whiten,
     matrix_distance,
 )
-from infl_ens.training.__main__ import _load_splits, _load_yaml, _make_trait_space
+from infl_ens.data.trait_space_cache import (
+    _trait_space_build_kwargs,
+    make_trait_space_encoder,
+)
+from infl_ens.training.__main__ import _load_splits, _load_yaml
 
 FIT_SOURCE = (
-    "full-corpus trait covariance (seed-1 manifest union), unsupervised, "
-    "label-blind; no oracle labels used"
+    "full-corpus pre-normalizer trait covariance (seed-1 manifest union), "
+    "unsupervised, label-blind; no oracle labels used"
 )
 
 
@@ -70,10 +78,19 @@ def main() -> int:
 
     cfg = _load_yaml(args.router_config)
     splits = _load_splits(cfg)
-    space = _make_trait_space(cfg, splits)
+    encoder = make_trait_space_encoder(cfg)
+    build_kwargs = _trait_space_build_kwargs(cfg)
+    # Transforms are fit on PRE-normalizer coordinates (before any frozen
+    # linear transform and before the quantile stage), so force the
+    # config's own transform off for the fit build.
+    build_kwargs["linear_transform"] = None
+    bundle = build_safety_trait_space_bundle(splits, encoder, **build_kwargs)
 
     fit_prompts = _all_manifest_prompts(args.router_config, args.fit_manifest, repo)
-    fit_coords = np.asarray(space.project(fit_prompts), dtype=float)
+    fit_coords = np.asarray(
+        project_pre_normalizer_coordinates(encoder, bundle.axes, fit_prompts),
+        dtype=float,
+    )
 
     standardize = fit_standardize(fit_coords, fit_source=FIT_SOURCE)
     whiten = fit_whiten(fit_coords, fit_source=FIT_SOURCE)
@@ -89,7 +106,10 @@ def main() -> int:
         rob_prompts = _all_manifest_prompts(
             args.router_config, args.robustness_manifest, repo,
         )
-        rob_coords = np.asarray(space.project(rob_prompts), dtype=float)
+        rob_coords = np.asarray(
+            project_pre_normalizer_coordinates(encoder, bundle.axes, rob_prompts),
+            dtype=float,
+        )
         whiten_s0 = fit_whiten(
             rob_coords,
             fit_source="seed-0 trait vectors (robustness only; not used in arms)",

@@ -64,16 +64,16 @@ dependencies = [
 
 [project.optional-dependencies]
 # Heavy ML stack — required for the SFT trainer and the sentence-
-# transformer encoders. Triggered by:
+# Hugging Face encoders. Triggered by:
 #   pip install "infl_ens[ml]"
 ml = [
     "torch>=2.1",
-    "transformers>=4.40",
+    "transformers>=4.51",
     "datasets>=2.18",
     "peft>=0.10",
     "trl>=0.8",
     "accelerate>=0.30",
-    "sentence-transformers>=2.6",
+    "compressed-tensors",
     "huggingface-hub>=0.22",
 ]
 

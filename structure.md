@@ -19,6 +19,7 @@ infl_ens/
 │       │   ├── trait_space.py                    TraitSpace + build_trait_space + position_from_corpus
 │       │   ├── trait_space_cache.py              fingerprinted on-disk cache + build_or_load helper
 │       │   ├── trait_linear_transform.py           frozen unsupervised affine trait transforms
+│       │   ├── trait_normalize.py                per-axis quantile (empirical-CDF) normalizer to [0,1]^L
 │       │   ├── position_blend.py                 EMA blend toward corpus centroid (apply_position_update)
 │       │   └── benchmarks/
 │       │       ├── __init__.py
@@ -170,6 +171,8 @@ infl_ens/
 │   ├── test_evaluation.py                        offline tests for adapter discovery + eval I/O
 │   ├── test_toxicchat_loader.py                  offline tests with synthetic ToxicChat CSV fixture
 │   ├── test_new_benchmark_loaders.py             offline tests for OR-Bench, injection, Do-Not-Answer
+│   ├── test_encoders.py                          offline tests for Hugging Face embedding extraction
+│   ├── test_trait_normalize.py                   offline tests for the quantile normalizer
 │   └── test_safety_trait_space.py                offline tests using a toy encoder
 ├── data/                                         gitignored
 └── results/                                      gitignored
@@ -181,12 +184,13 @@ infl_ens/
 
 | File | Role | Key public symbols |
 |---|---|---|
-| `__init__.py` | Re-exports | `TraitSpace`, `build_trait_space`, `position_from_corpus`, `SentenceTransformerEncoder`, `HuggingFaceEncoder`, `benchmarks` |
+| `__init__.py` | Re-exports | `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `benchmarks` |
 | `__main__.py` | Single CLI: `python -m infl_ens.data {preview,build-safety-trait-space}` | `main` |
-| `encoders.py` | Sentence-embedding callables for trait-space construction | `SentenceTransformerEncoder`, `HuggingFaceEncoder` |
+| `encoders.py` | Direct Hugging Face embedding backend for trait-space construction | `HuggingFaceEncoder` |
 | `trait_space.py` | Trait space :math:`\mathbb{B}` and resource distribution :math:`B(b)` | `TraitSpace`, `build_trait_space`, `position_from_corpus` |
-| `trait_space_cache.py` | Persist/reload safety trait spaces; config fingerprint + `build_or_load_safety_trait_space` | `build_or_load_safety_trait_space`, `trait_space_fingerprint`, `save_safety_trait_space_cache`, `load_safety_trait_space_cache` |
-| `trait_linear_transform.py` | Frozen unsupervised affine maps on trait grid + `project` (dynamics + G) | `FrozenLinearTransform`, `fit_standardize`, `fit_whiten`, `apply_trait_space` |
+| `trait_space_cache.py` | Persist/reload safety trait spaces; config fingerprint + `build_or_load_safety_trait_space` | `build_or_load_safety_trait_space`, `trait_space_fingerprint`, `save_safety_trait_space_cache`, `load_safety_trait_space_cache`, `coordinate_chain_from_cache` |
+| `trait_linear_transform.py` | Frozen unsupervised affine trait transforms (optional pre-normalizer pipeline stage) | `FrozenLinearTransform`, `fit_standardize`, `fit_whiten`, `apply_trait_space` |
+| `trait_normalize.py` | Always-on per-axis quantile (empirical-CDF) normalization to `[0,1]^L` | `QuantileNormalizer`, `AxisQuantileMap`, `fit_quantile_normalizer` |
 | `position_blend.py` | EMA toward trait-space centroid after corpus projection | `apply_position_update`, `effective_blend`, `parse_position_step` |
 | `splits.py` | Stratified train/val/test partitions per benchmark; exact train-coverage batch planning | `DataSplitManifest`, `build_split_manifest`, `load_split_manifest`, `apply_manifest_partition`, `choose_exact_train_coverage` |
 
@@ -462,6 +466,8 @@ infl_ens/
 | `test_merge_training.py` | Offline tests for `sft_merge_groups` parsing and batch merge |
 | `test_safety_trait_space.py` | Offline tests for `build_safety_trait_space` |
 | `test_trait_space_cache.py` | Embedding dedupe + on-disk trait-space cache roundtrip |
+| `test_trait_normalize.py` | Quantile-normalizer monotonicity, ties, out-of-range clamping, JSON roundtrip |
+| `test_encoders.py` | Offline tests for direct Hugging Face embedding extraction and configuration |
 | `test_jbb_behaviors_loader.py` | Offline tests for JBB-Behaviors CSV parsing |
 | `test_toxicchat_loader.py` | Offline tests for ToxicChat CSV parsing and score modes |
 | `test_new_benchmark_loaders.py` | Offline tests for OR-Bench, prompt-injection, and Do-Not-Answer loaders |
@@ -470,7 +476,7 @@ infl_ens/
 ## `__init__.py` re-export summary
 
 - `src/infl_ens/__init__.py`: minimal — does not import subpackages eagerly.
-- `src/infl_ens/data/__init__.py`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `SentenceTransformerEncoder`, `HuggingFaceEncoder`, `benchmarks`.
+- `src/infl_ens/data/__init__.py`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `FrozenLinearTransform`, `QuantileNormalizer`, `benchmarks`.
 - `src/infl_ens/data/benchmarks/__init__.py`: `BenchmarkSplit`, `load_beavertails`, `load_halueval`, `load_jbb_behaviors`, `load_toxicchat`, `load_ai4privacy`, `load_orbench`, `load_prompt_injection`, `load_do_not_answer`, `build_safety_trait_space`, `LearnedAxis`, `BEAVERTAILS_CATEGORIES`, `HALUEVAL_TASKS`, `TOXICCHAT_SCORE_MODES`, `PII_SCORE_MODES`, `ORBENCH_CONFIGS`.
 - `src/infl_ens/inflgame/__init__.py`: re-exports the `router` subpackage.
 - `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `expected_utilities`, `utility_gradient`.

@@ -34,7 +34,7 @@ from infl_ens.data.benchmarks import (
     load_beavertails,
     load_halueval,
 )
-from infl_ens.data.encoders import SentenceTransformerEncoder
+from infl_ens.data.encoders import DEFAULT_ENCODER_MODEL, HuggingFaceEncoder
 
 
 def _print_split(split: BenchmarkSplit) -> None:
@@ -75,7 +75,11 @@ def _cmd_build_safety_trait_space(args: argparse.Namespace) -> int:
     :returns: Process exit code.
     :rtype: int
     """
-    encoder = SentenceTransformerEncoder(model_name=args.encoder)
+    encoder = HuggingFaceEncoder(
+        model_name=args.encoder,
+        batch_size=args.encoder_batch_size,
+        max_length=args.encoder_max_length,
+    )
     splits: list[BenchmarkSplit] = []
     if args.beavertails:
         splits.append(load_beavertails(args.beavertails, max_records=args.max_records))
@@ -131,8 +135,9 @@ def _build_parser() -> argparse.ArgumentParser:
                      help="Path to BeaverTails JSONL file or directory.")
     bld.add_argument("--halueval", type=str, default=None,
                      help="Path to HaluEval task file or directory.")
-    bld.add_argument("--encoder", type=str,
-                     default="sentence-transformers/all-MiniLM-L6-v2")
+    bld.add_argument("--encoder", type=str, default=DEFAULT_ENCODER_MODEL)
+    bld.add_argument("--encoder-batch-size", type=int, default=2)
+    bld.add_argument("--encoder-max-length", type=int, default=512)
     bld.add_argument("--n-grid", type=int, default=32)
     bld.add_argument("--kde-bandwidth", type=float, default=None)
     bld.add_argument("--max-records", type=int, default=5000)

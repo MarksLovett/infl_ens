@@ -9,7 +9,7 @@ from typing import Any, Optional, Sequence
 import numpy as np
 
 from infl_ens.data.benchmarks import build_safety_trait_space
-from infl_ens.data.encoders import SentenceTransformerEncoder
+from infl_ens.data.trait_space_cache import make_trait_space_encoder
 from infl_ens.data.trait_space import TraitSpace, position_from_corpus
 from infl_ens.evaluation.benchmarks import load_benchmark_splits
 
@@ -31,11 +31,7 @@ def build_trait_space_from_config(cfg: dict[str, Any], repo_root: Path) -> Trait
         entries.append(resolved)
     splits = load_benchmark_splits(entries)
     ts_cfg = cfg.get("trait_space", {})
-    encoder = SentenceTransformerEncoder(
-        model_name=ts_cfg.get(
-            "encoder", "sentence-transformers/all-MiniLM-L6-v2",
-        ),
-    )
+    encoder = make_trait_space_encoder(cfg)
     return build_safety_trait_space(
         splits,
         encoder,

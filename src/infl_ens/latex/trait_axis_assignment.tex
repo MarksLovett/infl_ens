@@ -26,12 +26,20 @@ The assignment pipeline is:
 \;\xrightarrow{\;E\;}
 e_q
 \;\xrightarrow{\;\text{learned axes}\;}
-c^{\mathrm{base}}
-\;\xrightarrow{\;\text{residualize}\;}
+s
+\;\xrightarrow{\;\text{residualize (opt.)}\;}
+r
+\;\xrightarrow{\;\text{linear transform (opt.)}\;}
+t
+\;\xrightarrow{\;\text{quantile CDF}\;}
 c
-\;\xrightarrow{\;\text{stretch}\;}
+\;\xrightarrow{\;\text{stretch (opt.)}\;}
 b^\ast\in[0,1]^L.
 \]
+Only axis learning and the final quantile normalization are always active;
+every other stage is a config-toggled option that defaults to \emph{off}.
+The quantile stage guarantees \(b^\ast\in[0,1]^L\) with near-uniform
+calibration marginals regardless of which optional transforms are active.
 Implementation entry points:
 \texttt{build\_safety\_trait\_space\_bundle}
 (\texttt{src/infl\_ens/data/benchmarks/safety\_trait\_space.py})
@@ -72,12 +80,13 @@ its \textbf{prompt} text.
 
 \section{Embedding}
 Let \(E\) be a frozen sentence encoder
-(\texttt{sentence-transformers/all-MiniLM-L6-v2} in the seven-axis config).
+(\texttt{drawais/Qwen3-Embedding-8B-AWQ-INT4} in the seven-axis config).
 A string \(t\) maps to
 \[
 e = E(t)\in\mathbb{R}^D.
 \]
-There is no L2-normalization in the learned-axis path. Unique strings are encoded
+The encoder L2-normalizes pooled embeddings by default
+(\texttt{HuggingFaceEncoder(normalize=True)}). Unique strings are encoded
 once and cached.
 
 \section{Learning one axis direction}
@@ -102,22 +111,24 @@ S_{\mathrm{reg}}=(1-\alpha)S_w+\alpha\,\tfrac{\mathrm{tr}(S_w)}{D}\,I,
 Then Gram--Schmidt-orthogonalize \(\tilde w\) against previously learned directions
 and unit-normalize to obtain \(w_\ell\).
 
-\section{Calibration to \([0,1]\)}
+\section{Affine calibration (no clipping)}
 Project the negative and positive sets onto \(w_\ell\). Set
 \[
 \ell_\ell=\mathrm{percentile}_{q}(w_\ell^\top\mathcal{N}_\ell),
 \qquad
 h_\ell=\mathrm{percentile}_{100-q}(w_\ell^\top\mathcal{P}_\ell),
 \]
-with \(q=5\) (code default). The base coordinate is
+with \(q=5\) (code default). The unclipped affine score is
 \[
-c^{\mathrm{base}}_\ell
+s_\ell
 =
-\mathrm{clip}_{[0,1]}
-\Bigl(
-\frac{w_\ell^\top e-\ell_\ell}{h_\ell-\ell_\ell}
-\Bigr).
+\frac{w_\ell^\top e-\ell_\ell}{h_\ell-\ell_\ell}.
 \]
+This monotone rescale preserves axis orientation and keeps downstream
+transform fits in a sane numeric range; it is absorbed by the quantile
+normalization below, so no clipping is applied here. (Clipping before
+CDF fitting would pile ties at the box faces and destroy marginal
+uniformity.)
 
 \section{Mode alignment (optional)}
 To mix \emph{label} separation with \emph{benchmark-of-origin} separation, form a
@@ -134,32 +145,62 @@ injection, and policy (pure mode directions for those five).
 With \texttt{coordinate\_residualize: true}, later axes are decorrelated from earlier
 ones. On the calibration corpus, for \(j>0\), fit
 \[
-\hat c_j = a_j + c_{0:j}^\top\beta_j
+\hat s_j = a_j + r_{0:j}^\top\beta_j
 \]
-by least squares on base scores, set residual \(r_j=c^{\mathrm{base}}_j-\hat c_j\),
-and recalibrate \(r_j\) with that axis's labels to obtain the final pre-stretch
-coordinate \(c_j\in[0,1]\). Order follows the benchmark list (harm first, policy last).
+by least squares on \emph{unclipped} affine scores, set residual
+\(r_j=s_j-\hat s_j\), and affinely rescale \(r_j\) with that axis's labels
+(orientation-preserving, still unclipped). Order follows the benchmark
+list (harm first, policy last).
 
-\section{Stretch}
+\section{Frozen linear transform (optional)}
+With \texttt{trait\_space.linear\_transform} set, a frozen unsupervised
+affine map (standardize or ZCA whiten,
+\texttt{trait\_linear\_transform.py}) is applied to the residualized
+scores \emph{before} quantile normalization. Its unbounded output is
+renormalized by the quantile stage, so the \([0,1]^L\) guarantee holds
+with or without the transform.
+
+\section{Quantile normalization (always on)}
+Each axis is mapped through a frozen interpolated empirical CDF fitted on
+the calibration corpus's unclipped pre-normalizer coordinates
+(\texttt{trait\_normalize.py}). Knots sit at a fixed quantile grid
+(\texttt{quantile\_knots}, default 1001); tied knot values collapse to a
+single knot at the mean of their tied CDF positions (midpoint-of-jump);
+sentinel knots just outside the observed range pin the CDF to exactly 0
+and 1 so out-of-range queries saturate smoothly. The result is
+\(c\in[0,1]^L\) with near-uniform marginals on the calibration
+distribution.
+
+\section{Stretch (optional, discouraged)}
 A concave stretch pushes moderate values toward one:
 \[
 c^{(\gamma)}=1-(1-c)^\gamma,\qquad\gamma>0.
 \]
-Seven-axis defaults: \(\gamma=1.5\) for harm; \(\gamma=2.5\) for the other six axes.
-The runtime projector returns the stretched vector \(b^\ast\).
+It is applied \emph{after} quantile normalization (pre-CDF it would be a
+no-op, since the CDF absorbs any per-axis monotone map) and maps
+\([0,1]\to[0,1]\), preserving the box guarantee. Historically stretch
+compensated clip-induced saturation; the quantile stage removes that
+saturation, so \(\gamma\neq 1\) is now a deliberate marginal-shaping
+choice rather than a fix. The runtime projector returns the stretched
+vector \(b^\ast\).
 
 \section{Runtime projection of a new prompt}
 Given query \(q\):
 \begin{enumerate}[leftmargin=1.4em]
   \item Embed \(e_q=E(q)\) (prompt text only).
-  \item For each axis: base score \(w_\ell^\top e_q\), then residualize if enabled.
-  \item Apply per-axis stretch; clip to \([0,1]^L\).
+  \item For each axis: unclipped affine score \(s_\ell\), then residualize
+        if enabled.
+  \item Apply the frozen linear transform if enabled.
+  \item Map each axis through its frozen empirical CDF (always).
+  \item Apply per-axis stretch if enabled; clip to \([0,1]^L\) as a
+        numerical guard.
 \end{enumerate}
 This is \texttt{TraitSpace.project}. It does \emph{not} snap to the KDE grid.
 
 \section{Resource density \(B(b)\) (not per-prompt assignment)}
-Separately, calibration coordinates are smoothed onto a Cartesian grid to form the
-resource measure \(B\) used for expected utilities:
+Separately, the \emph{normalized} calibration coordinates are smoothed onto a
+Cartesian grid over \([0,1]^L\) to form the resource measure \(B\) used for
+expected utilities:
 \[
 B(b_k)\propto\sum_n\exp\Bigl(-\tfrac12\frac{\|b_k-c_n\|^2}{h^2}\Bigr),
 \qquad\sum_k B(b_k)=1.
@@ -195,6 +236,8 @@ which axis geometry becomes a training curriculum.
 
 \section*{Source files}
 \texttt{safety\_trait\_space.py},
+\texttt{trait\_normalize.py},
+\texttt{trait\_linear\_transform.py},
 \texttt{trait\_space.py},
 \texttt{trait\_space\_cache.py},
 \texttt{configs/benchmark/router/seven\_axis\_pair\_merge\_split.yaml}.

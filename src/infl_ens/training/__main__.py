@@ -422,6 +422,21 @@ def _init_agents_closed_loop(
                 f"{fixed_path} must contain a positions mapping or "
                 "final_positions mapping"
             )
+        positions_space = str(cl.get("fixed_positions_space", "normalized"))
+        if positions_space not in ("normalized", "pre_normalized"):
+            raise ValueError(
+                "closed_loop.fixed_positions_space must be 'normalized' or "
+                f"'pre_normalized', got {positions_space!r}"
+            )
+        chain = None
+        if positions_space == "pre_normalized":
+            # Legacy migration: stored coordinates predate the always-on
+            # quantile normalizer, so push them through the cached
+            # transform → CDF → stretch chain. Approximate — regenerate
+            # the theory solve for exact comparisons.
+            from infl_ens.data.trait_space_cache import coordinate_chain_from_cache
+
+            chain = coordinate_chain_from_cache(cfg)
         seed = int(cfg.get("seed", 0))
         rng_local = np.random.default_rng(seed)
         agents: list[RouterAgent] = []
@@ -432,11 +447,8 @@ def _init_agents_closed_loop(
                 missing.append(name)
                 continue
             pos = np.asarray(positions[name], dtype=float)
-            from infl_ens.data.trait_linear_transform import load_transform_from_cfg
-
-            transform = load_transform_from_cfg(cfg, repo_root=repo_root)
-            if transform is not None:
-                pos = transform.apply(pos)
+            if chain is not None:
+                pos = chain(pos)
             if pos.shape != (space.L,):
                 raise ValueError(
                     f"{fixed_path}: position for {name!r} must have shape "
@@ -452,6 +464,7 @@ def _init_agents_closed_loop(
         log_meta = {
             "init_mode": "fixed_positions",
             "fixed_positions": str(fixed_path),
+            "fixed_positions_space": positions_space,
             "init_noise": init_noise,
             "theory_end": {a.name: a.position.tolist() for a in agents},
         }

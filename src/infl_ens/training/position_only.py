@@ -34,8 +34,7 @@ import numpy as np
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
-from infl_ens.data.benchmarks import build_safety_trait_space
-from infl_ens.data.encoders import SentenceTransformerEncoder  # noqa: E402
+from infl_ens.data.trait_space_cache import build_or_load_safety_trait_space  # noqa: E402
 from infl_ens.data.trait_space import TraitSpace, position_from_corpus  # noqa: E402
 from infl_ens.evaluation.benchmarks import load_benchmark_splits  # noqa: E402
 from infl_ens.inflgame.router import InfluencerRouter, RouterAgent  # noqa: E402
@@ -76,24 +75,9 @@ def _load_splits(cfg: dict[str, Any], repo_root: Path) -> list:
 
 
 def _build_trait_space(cfg: dict[str, Any], repo_root: Path) -> TraitSpace:
-    splits = _load_splits(cfg, repo_root)
-    ts_cfg = cfg.get("trait_space", {})
-    encoder = SentenceTransformerEncoder(
-        model_name=ts_cfg.get(
-            "encoder", "sentence-transformers/all-MiniLM-L6-v2",
-        ),
-    )
-    return build_safety_trait_space(
-        splits, encoder,
-        n_grid=int(ts_cfg.get("n_grid", 32)),
-        kde_bandwidth=ts_cfg.get("kde_bandwidth"),
-        threshold=float(ts_cfg.get("threshold", 0.5)),
-        coordinate_residualize=bool(ts_cfg.get("coordinate_residualize", False)),
-        mode_alignment_weight=float(ts_cfg.get("mode_alignment_weight", 0.0)),
-        mode_alignment_weights=ts_cfg.get("mode_alignment_weights"),
-        coordinate_stretch_gamma=float(ts_cfg.get("coordinate_stretch_gamma", 1.0)),
-        coordinate_stretch_gammas=ts_cfg.get("coordinate_stretch_gammas"),
-    )
+    # Route through the shared production builder so simulation and
+    # training use identical cache, transform, and normalizer geometry.
+    return build_or_load_safety_trait_space(cfg, _load_splits(cfg, repo_root))
 
 
 def _sigma_from_cfg(

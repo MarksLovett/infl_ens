@@ -14,18 +14,23 @@ The safety benchmarks define axes that the router uses as the trait space
 
 Each axis is a unit-norm direction :math:`\\mathbf{w}` in embedding space.
 For any new query :math:`q`, we compute the embedding :math:`e_q` and the
-projected coordinate
+unclipped affine score
 
 .. math::
 
-    c \\;=\\; \\mathrm{clip}_{[0,1]}\\Big( \\frac{\\mathbf{w}^\\top e_q - c_-}{c_+ - c_-} \\Big),
+    s \\;=\\; \\frac{\\mathbf{w}^\\top e_q - c_-}{c_+ - c_-},
 
 where :math:`c_-, c_+` are robust per-axis calibration percentiles (the
 5th percentile of negatives and 95th percentile of positives). Learned
 directions are Gram-Schmidt orthogonalised as they are added so overlapping
 benchmark signals do not collapse the resource distribution onto a diagonal.
-The resource distribution :math:`B(b)` is then estimated by KDE on the
-calibration corpus, as in
+Scores then pass through optional config-toggled transforms (coordinate
+residualization, a frozen standardize/whiten linear transform) and finally
+an always-on per-axis quantile normalization
+(:class:`~infl_ens.data.trait_normalize.QuantileNormalizer`) that
+guarantees coordinates in :math:`[0, 1]^L` with near-uniform calibration
+marginals. The resource distribution :math:`B(b)` is estimated by KDE on
+the *normalized* calibration coordinates, as in
 :func:`infl_ens.data.trait_space.build_trait_space`.
 
 This is a *learned-anchor* variant of the anchor mode in
@@ -41,6 +46,8 @@ from typing import Callable, Optional, Sequence
 import numpy as np
 
 from infl_ens.data.benchmarks.base import BenchmarkSplit
+from infl_ens.data.trait_linear_transform import FrozenLinearTransform
+from infl_ens.data.trait_normalize import QuantileNormalizer, fit_quantile_normalizer
 from infl_ens.data.trait_space import TraitSpace, _kde_on_grid
 
 
@@ -52,16 +59,25 @@ class SafetyTraitSpaceBundle:
     :type space: TraitSpace
     :param axes: Learned axis directions and calibration metadata.
     :type axes: tuple[LearnedAxis, ...]
-    :param coordinate_stretch_gamma: Default post-calibration stretch exponent.
+    :param normalizer: Frozen per-axis quantile normalizer fitted on the
+        calibration corpus (always-on final pipeline stage).
+    :type normalizer: QuantileNormalizer
+    :param coordinate_stretch_gamma: Default post-normalization stretch
+        exponent.
     :type coordinate_stretch_gamma: float
     :param coordinate_stretch_gammas: Optional per-axis stretch overrides.
     :type coordinate_stretch_gammas: dict[str, float] | None
+    :param linear_transform: Optional frozen standardize/whiten transform
+        applied between residualization and quantile normalization.
+    :type linear_transform: FrozenLinearTransform | None
     """
 
     space: TraitSpace
     axes: tuple[LearnedAxis, ...]
+    normalizer: QuantileNormalizer
     coordinate_stretch_gamma: float
     coordinate_stretch_gammas: Optional[dict[str, float]] = None
+    linear_transform: Optional[FrozenLinearTransform] = None
 
 
 class _TextEmbeddingCache:
@@ -129,6 +145,22 @@ class LearnedAxis:
     residual_lo: Optional[float] = None
     residual_hi: Optional[float] = None
 
+    def project_raw_scores(self, embeddings: np.ndarray) -> np.ndarray:
+        """Project embeddings to the unclipped affine axis score.
+
+        The affine rescale keeps the calibration lo/hi orientation (lo
+        maps to 0, hi maps to 1) but does **not** clip; the pipeline's
+        quantile normalizer must be fitted on these unclipped scores.
+
+        :param embeddings: Embedding matrix, shape ``(N, D)``.
+        :type embeddings: numpy.ndarray
+        :returns: Per-row unclipped score, shape ``(N,)``.
+        :rtype: numpy.ndarray
+        """
+        raw = embeddings @ self.direction
+        span = max(self.hi - self.lo, 1e-12)
+        return (raw - self.lo) / span
+
     def project_base_scores(self, embeddings: np.ndarray) -> np.ndarray:
         """Project embeddings to the base calibrated coordinate.
 
@@ -137,9 +169,7 @@ class LearnedAxis:
         :returns: Per-row coordinate in ``[0, 1]``, shape ``(N,)``.
         :rtype: numpy.ndarray
         """
-        raw = embeddings @ self.direction
-        span = max(self.hi - self.lo, 1e-12)
-        return np.clip((raw - self.lo) / span, 0.0, 1.0)
+        return np.clip(self.project_raw_scores(embeddings), 0.0, 1.0)
 
     def project_scores(self, embeddings: np.ndarray) -> np.ndarray:
         """Project a batch of embeddings to ``[0, 1]`` along this axis.
@@ -485,20 +515,53 @@ def _coordinate_stretch_vector(
     return gammas
 
 
+def _finalize_coordinates(
+    pre: np.ndarray,
+    normalizer: QuantileNormalizer,
+    gammas: np.ndarray,
+) -> np.ndarray:
+    """Apply the always-on quantile normalization and optional stretch.
+
+    :param pre: Pre-normalizer coordinates, shape ``(N, L)``.
+    :type pre: numpy.ndarray
+    :param normalizer: Fitted per-axis quantile normalizer.
+    :type normalizer: QuantileNormalizer
+    :param gammas: Per-axis stretch exponents, shape ``(L,)``.
+    :type gammas: numpy.ndarray
+    :returns: Final coordinates in ``[0, 1]^L``, shape ``(N, L)``.
+    :rtype: numpy.ndarray
+    """
+    coords = normalizer.transform(pre)
+    if not np.all(gammas == 1.0):
+        coords = 1.0 - np.power(1.0 - np.clip(coords, 0.0, 1.0), gammas)
+    return np.clip(coords, 0.0, 1.0)
+
+
 def _make_learned_projector(
     encoder: Callable[[Sequence[str]], np.ndarray],
     axes: list[LearnedAxis],
     *,
+    normalizer: QuantileNormalizer,
+    linear_transform: Optional[FrozenLinearTransform] = None,
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
 ) -> Callable[[Sequence[str]], np.ndarray]:
     """Closure used as the trait-space ``project`` callable.
 
+    The chain is: unclipped affine axis scores → optional coordinate
+    residualization → optional frozen linear transform → quantile
+    normalization (always) → optional per-axis stretch → clip guard.
+
     :param encoder: Sentence encoder.
     :type encoder: Callable[[Sequence[str]], numpy.ndarray]
     :param axes: Per-dimension learned axes.
     :type axes: list[LearnedAxis]
-    :param coordinate_stretch_gamma: Optional post-calibration stretch
+    :param normalizer: Fitted per-axis quantile normalizer (final stage).
+    :type normalizer: QuantileNormalizer
+    :param linear_transform: Optional frozen standardize/whiten transform
+        applied before quantile normalization.
+    :type linear_transform: FrozenLinearTransform | None
+    :param coordinate_stretch_gamma: Optional post-normalization stretch
         applied independently to each coordinate. Values greater than ``1``
         move resource mass farther along each axis.
     :type coordinate_stretch_gamma: float
@@ -517,107 +580,114 @@ def _make_learned_projector(
 
     def project(queries: Sequence[str]) -> np.ndarray:
         emb = np.asarray(encoder(list(queries)), dtype=float)
-        base = np.stack(
-            [axis.project_base_scores(emb) for axis in axes], axis=1,
-        )
-        coords = base.copy()
-        for j, axis in enumerate(axes):
-            if axis.residual_coef is None:
-                continue
-            if j == 0:
-                continue
-            pred = axis.residual_intercept + coords[:, :j] @ axis.residual_coef
-            resid = base[:, j] - pred
-            lo = axis.residual_lo if axis.residual_lo is not None else axis.lo
-            hi = axis.residual_hi if axis.residual_hi is not None else axis.hi
-            span = max(float(hi) - float(lo), 1e-12)
-            coords[:, j] = np.clip((resid - float(lo)) / span, 0.0, 1.0)
-        if np.all(gammas == 1.0):
-            return coords
-        return 1.0 - np.power(1.0 - np.clip(coords, 0.0, 1.0), gammas)
+        pre = _pre_normalizer_coordinates(emb, axes, linear_transform)
+        return _finalize_coordinates(pre, normalizer, gammas)
 
     return project
 
 
-def _project_learned_coordinates(
-    embeddings: np.ndarray,
-    axes: Sequence[LearnedAxis],
-    *,
-    coordinate_stretch_gamma: float = 1.0,
-    coordinate_stretch_gammas: Optional[dict[str, float]] = None,
-) -> np.ndarray:
-    """Map precomputed embeddings to calibrated trait coordinates.
-
-    :param embeddings: Sentence embeddings, shape ``(N, D)``.
-    :type embeddings: numpy.ndarray
-    :param axes: Learned axes including optional residualization metadata.
-    :type axes: Sequence[LearnedAxis]
-    :param coordinate_stretch_gamma: Default per-axis stretch exponent.
-    :type coordinate_stretch_gamma: float
-    :param coordinate_stretch_gammas: Optional per-axis stretch overrides.
-    :type coordinate_stretch_gammas: dict[str, float] | None
-    :returns: Coordinates in ``[0, 1]^L``, shape ``(N, L)``.
-    :rtype: numpy.ndarray
-    """
-    gammas = _coordinate_stretch_vector(
-        axes,
-        coordinate_stretch_gamma=coordinate_stretch_gamma,
-        coordinate_stretch_gammas=coordinate_stretch_gammas,
-    )
-    base = _base_coordinate_matrix(embeddings, axes)
-    coords = base.copy()
-    for j, axis in enumerate(axes):
-        if axis.residual_coef is None or j == 0:
-            continue
-        pred = axis.residual_intercept + coords[:, :j] @ axis.residual_coef
-        resid = base[:, j] - pred
-        lo = axis.residual_lo if axis.residual_lo is not None else axis.lo
-        hi = axis.residual_hi if axis.residual_hi is not None else axis.hi
-        span = max(float(hi) - float(lo), 1e-12)
-        coords[:, j] = np.clip((resid - float(lo)) / span, 0.0, 1.0)
-    if np.all(gammas == 1.0):
-        return coords
-    return 1.0 - np.power(1.0 - np.clip(coords, 0.0, 1.0), gammas)
-
-
-def _base_coordinate_matrix(embeddings: np.ndarray, axes: Sequence[LearnedAxis]) -> np.ndarray:
-    """Project embeddings through each axis before coordinate residualization.
+def _raw_coordinate_matrix(embeddings: np.ndarray, axes: Sequence[LearnedAxis]) -> np.ndarray:
+    """Project embeddings through each axis without clipping.
 
     :param embeddings: Embedding matrix, shape ``(N, D)``.
     :type embeddings: numpy.ndarray
     :param axes: Learned axes.
     :type axes: Sequence[LearnedAxis]
-    :returns: Base calibrated coordinates, shape ``(N, L)``.
+    :returns: Unclipped affine axis scores, shape ``(N, L)``.
     :rtype: numpy.ndarray
     """
-    return np.stack([axis.project_base_scores(embeddings) for axis in axes], axis=1)
+    return np.stack([axis.project_raw_scores(embeddings) for axis in axes], axis=1)
 
 
 def _apply_axis_residual(
-    base_col: np.ndarray,
+    raw_col: np.ndarray,
     prior_coords: np.ndarray,
     axis: LearnedAxis,
 ) -> np.ndarray:
     """Apply a fitted coordinate residualizer to one axis column.
 
-    :param base_col: Base calibrated coordinate for this axis.
-    :type base_col: numpy.ndarray
-    :param prior_coords: Already-finalized prior coordinates, shape
+    The residual is affinely rescaled by the residual calibration
+    endpoints (orientation-preserving) but **not** clipped — the quantile
+    normalizer downstream owns the ``[0, 1]`` guarantee.
+
+    :param raw_col: Unclipped affine score for this axis.
+    :type raw_col: numpy.ndarray
+    :param prior_coords: Already-residualized prior columns, shape
         ``(N, j)``.
     :type prior_coords: numpy.ndarray
     :param axis: Axis carrying residualization coefficients.
     :type axis: LearnedAxis
-    :returns: Residualized coordinate in ``[0, 1]``.
+    :returns: Unclipped residualized score.
     :rtype: numpy.ndarray
     """
     if axis.residual_coef is None or prior_coords.shape[1] == 0:
-        return base_col
+        return raw_col
     pred = axis.residual_intercept + prior_coords @ axis.residual_coef
-    resid = base_col - pred
+    resid = raw_col - pred
     lo = axis.residual_lo if axis.residual_lo is not None else axis.lo
     hi = axis.residual_hi if axis.residual_hi is not None else axis.hi
     span = max(float(hi) - float(lo), 1e-12)
-    return np.clip((resid - float(lo)) / span, 0.0, 1.0)
+    return (resid - float(lo)) / span
+
+
+def _pre_normalizer_coordinates(
+    embeddings: np.ndarray,
+    axes: Sequence[LearnedAxis],
+    linear_transform: Optional[FrozenLinearTransform] = None,
+) -> np.ndarray:
+    """Map precomputed embeddings to unclipped pre-normalizer coordinates.
+
+    This is the single code path for everything upstream of the quantile
+    normalizer: unclipped affine axis scores → residualization (active
+    only for axes carrying ``residual_coef``) → optional frozen linear
+    transform.
+
+    :param embeddings: Sentence embeddings, shape ``(N, D)``.
+    :type embeddings: numpy.ndarray
+    :param axes: Learned axes including optional residualization metadata.
+    :type axes: Sequence[LearnedAxis]
+    :param linear_transform: Optional frozen standardize/whiten transform.
+    :type linear_transform: FrozenLinearTransform | None
+    :returns: Unclipped coordinates, shape ``(N, L)``.
+    :rtype: numpy.ndarray
+    """
+    raw = _raw_coordinate_matrix(embeddings, axes)
+    coords = raw.copy()
+    for j, axis in enumerate(axes):
+        if axis.residual_coef is None or j == 0:
+            continue
+        coords[:, j] = _apply_axis_residual(raw[:, j], coords[:, :j], axis)
+    if linear_transform is not None:
+        coords = linear_transform.apply(coords)
+    return coords
+
+
+def project_pre_normalizer_coordinates(
+    encoder: Callable[[Sequence[str]], np.ndarray],
+    axes: Sequence[LearnedAxis],
+    texts: Sequence[str],
+    *,
+    linear_transform: Optional[FrozenLinearTransform] = None,
+) -> np.ndarray:
+    """Project texts to unclipped pre-normalizer coordinates.
+
+    Public entry point for fitting unsupervised transforms (e.g.
+    ``scripts/fit_whitening_transform.py``) on the same coordinates the
+    quantile normalizer sees, rather than on the normalized output.
+
+    :param encoder: Sentence encoder.
+    :type encoder: Callable[[Sequence[str]], numpy.ndarray]
+    :param axes: Learned axes.
+    :type axes: Sequence[LearnedAxis]
+    :param texts: Prompts to project.
+    :type texts: Sequence[str]
+    :param linear_transform: Optional frozen transform to include.
+    :type linear_transform: FrozenLinearTransform | None
+    :returns: Unclipped coordinates, shape ``(len(texts), L)``.
+    :rtype: numpy.ndarray
+    """
+    emb = np.asarray(encoder(list(texts)), dtype=float)
+    return _pre_normalizer_coordinates(emb, axes, linear_transform)
 
 
 def _fit_coordinate_residualizers(
@@ -634,7 +704,9 @@ def _fit_coordinate_residualizers(
     Each axis ``j > 0`` is linearly regressed against the already-finalized
     coordinates ``0..j-1`` on the calibration prompt corpus. Its coordinate
     becomes the residual, recalibrated with the axis's labelled split so the
-    semantic positive class still maps high.
+    semantic positive class still maps high. Fitting and application use
+    **unclipped** affine scores; the downstream quantile normalizer owns
+    the ``[0, 1]`` guarantee.
 
     :param axes: Learned axes before coordinate residualization.
     :type axes: list[LearnedAxis]
@@ -655,28 +727,28 @@ def _fit_coordinate_residualizers(
     if len(axes) <= 1:
         return axes
 
-    cal_base = _base_coordinate_matrix(cal_emb, axes)
-    final_cal = cal_base.copy()
+    cal_raw = _raw_coordinate_matrix(cal_emb, axes)
+    final_cal = cal_raw.copy()
     out: list[LearnedAxis] = [axes[0]]
 
     for j in range(1, len(axes)):
         design = np.column_stack([np.ones(final_cal.shape[0]), final_cal[:, :j]])
-        coef_full, *_ = np.linalg.lstsq(design, cal_base[:, j], rcond=None)
+        coef_full, *_ = np.linalg.lstsq(design, cal_raw[:, j], rcond=None)
         intercept = float(coef_full[0])
         coef = np.asarray(coef_full[1:], dtype=float)
 
         split = splits[j]
         split_emb = np.asarray(split_prompt_embeddings[j], dtype=float)
-        split_base = _base_coordinate_matrix(split_emb, axes)
-        split_prior = split_base.copy()
+        split_raw = _raw_coordinate_matrix(split_emb, axes)
+        split_prior = split_raw.copy()
         for k in range(1, j):
             split_prior[:, k] = _apply_axis_residual(
-                split_base[:, k],
+                split_raw[:, k],
                 split_prior[:, :k],
                 out[k],
             )
         pred = intercept + split_prior[:, :j] @ coef
-        resid = split_base[:, j] - pred
+        resid = split_raw[:, j] - pred
         labels = split.scores >= threshold
         lo, hi = _calibration_bounds(
             resid[labels],
@@ -694,7 +766,7 @@ def _fit_coordinate_residualizers(
             residual_hi=hi,
         )
         out.append(ax)
-        final_cal[:, j] = _apply_axis_residual(cal_base[:, j], final_cal[:, :j], ax)
+        final_cal[:, j] = _apply_axis_residual(cal_raw[:, j], final_cal[:, :j], ax)
 
     return out
 
@@ -712,12 +784,17 @@ def build_safety_trait_space_bundle(
     mode_alignment_weights: Optional[dict[str, float]] = None,
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
+    linear_transform: Optional[FrozenLinearTransform] = None,
+    quantile_knots: int = 1001,
 ) -> SafetyTraitSpaceBundle:
     """Construct a multi-axis :class:`TraitSpace` from labelled benchmarks.
 
-    One axis is learned per :class:`BenchmarkSplit`. After axis fitting,
-    the resource distribution :math:`B(b)` is estimated by isotropic
-    Gaussian KDE on a uniform grid over :math:`[0, 1]^L`, using either the
+    One axis is learned per :class:`BenchmarkSplit`. After axis fitting
+    and any optional transforms, a per-axis quantile normalizer is fitted
+    on the calibration corpus so projected coordinates always lie in
+    :math:`[0, 1]^L`. The resource distribution :math:`B(b)` is estimated
+    by isotropic Gaussian KDE on a uniform grid over :math:`[0, 1]^L`
+    from the *normalized* calibration coordinates, using either the
     concatenated benchmark prompts or a separately supplied calibration
     corpus.
 
@@ -763,6 +840,13 @@ def build_safety_trait_space_bundle(
         keyed by axis name. Values override ``coordinate_stretch_gamma`` for
         matching axes.
     :type coordinate_stretch_gammas: dict[str, float] | None
+    :param linear_transform: Optional frozen standardize/whiten transform
+        applied between residualization and quantile normalization. Its
+        unbounded output is renormalized by the quantile stage.
+    :type linear_transform: FrozenLinearTransform | None
+    :param quantile_knots: Quantile-grid size for the always-on per-axis
+        empirical-CDF normalizer.
+    :type quantile_knots: int
     :returns: Trait space plus learned-axis artifacts for caching.
     :rtype: SafetyTraitSpaceBundle
     :raises ValueError: If ``splits`` is empty.
@@ -838,20 +922,24 @@ def build_safety_trait_space_bundle(
         )
 
     stretch_gamma = float(coordinate_stretch_gamma)
+    pre = _pre_normalizer_coordinates(cal_emb, axes, linear_transform)
+    normalizer = fit_quantile_normalizer(pre, n_knots=int(quantile_knots))
     project = _make_learned_projector(
         encoder,
         axes,
+        normalizer=normalizer,
+        linear_transform=linear_transform,
         coordinate_stretch_gamma=stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
     )
     axis_labels = tuple(a.name for a in axes)
     L = len(axes)
-    coords = _project_learned_coordinates(
-        cal_emb,
+    gammas = _coordinate_stretch_vector(
         axes,
         coordinate_stretch_gamma=stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
     )
+    coords = _finalize_coordinates(pre, normalizer, gammas)
 
     grid_axes = [np.linspace(0.0, 1.0, n_grid) for _ in range(L)]
     mesh = np.meshgrid(*grid_axes, indexing="ij")
@@ -872,8 +960,10 @@ def build_safety_trait_space_bundle(
     return SafetyTraitSpaceBundle(
         space=space,
         axes=tuple(axes),
+        normalizer=normalizer,
         coordinate_stretch_gamma=stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
+        linear_transform=linear_transform,
     )
 
 
@@ -890,6 +980,8 @@ def build_safety_trait_space(
     mode_alignment_weights: Optional[dict[str, float]] = None,
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
+    linear_transform: Optional[FrozenLinearTransform] = None,
+    quantile_knots: int = 1001,
 ) -> TraitSpace:
     """Construct a multi-axis :class:`TraitSpace` from labelled benchmarks.
 
@@ -918,6 +1010,10 @@ def build_safety_trait_space(
     :type coordinate_stretch_gamma: float
     :param coordinate_stretch_gammas: Per-axis stretch overrides.
     :type coordinate_stretch_gammas: dict[str, float] | None
+    :param linear_transform: Optional frozen standardize/whiten transform.
+    :type linear_transform: FrozenLinearTransform | None
+    :param quantile_knots: Quantile-grid size for the final normalizer.
+    :type quantile_knots: int
     :returns: A :class:`TraitSpace` of dimension ``L = len(splits)``.
     :rtype: TraitSpace
     :raises ValueError: If ``splits`` is empty.
@@ -934,4 +1030,6 @@ def build_safety_trait_space(
         mode_alignment_weights=mode_alignment_weights,
         coordinate_stretch_gamma=coordinate_stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
+        linear_transform=linear_transform,
+        quantile_knots=quantile_knots,
     ).space
