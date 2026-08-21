@@ -46,7 +46,12 @@ from infl_ens.data.benchmarks.safety_trait_space import (  # noqa: E402
     _pre_normalizer_coordinates,
     _raw_coordinate_matrix,
 )
+from infl_ens.data.benchmarks.safety_trait_space import (  # noqa: E402
+    build_safety_trait_space_bundle,
+)
 from infl_ens.data.trait_space_cache import (  # noqa: E402
+    _trait_space_build_kwargs,
+    artifacts_from_bundle,
     build_or_load_safety_trait_space,
     load_cache_artifacts,
     make_trait_space_encoder,
@@ -376,18 +381,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     splits = load_benchmark_splits(entries)
     print(f"[repr] loaded {len(splits)} benchmark splits")
 
-    # Builds and caches the trait space; this is the expensive encode.
-    space = build_or_load_safety_trait_space(cfg, splits)
+    # Build the trait space; this is the expensive encode. When the config
+    # enables caching we go through the cached path so the encode is
+    # reusable by later runs, then reload the frozen artifacts. Otherwise
+    # build the bundle directly and take the artifacts from it.
+    encoder = make_trait_space_encoder(cfg)
+    if bool((cfg.get("trait_space") or {}).get("cache", False)):
+        space = build_or_load_safety_trait_space(cfg, splits)
+        artifacts = load_cache_artifacts(cfg)
+    else:
+        bundle = build_safety_trait_space_bundle(
+            splits, encoder, **_trait_space_build_kwargs(cfg),
+        )
+        space = bundle.space
+        artifacts = artifacts_from_bundle(bundle)
     print(f"[repr] trait space ready: L={space.L}, K={space.K}")
-
-    artifacts = load_cache_artifacts(cfg)
     labels = list(artifacts.axis_labels)
 
     prompts, split_ids, split_names = _stratified_sample(
         splits, args.max_prompts, args.seed,
     )
     print(f"[repr] encoding {len(prompts)} sampled prompts (single pass)")
-    encoder = make_trait_space_encoder(cfg)
     emb = np.asarray(encoder(prompts), dtype=float)
 
     legacy = _legacy_coordinates(emb, artifacts.axes, artifacts.gammas)

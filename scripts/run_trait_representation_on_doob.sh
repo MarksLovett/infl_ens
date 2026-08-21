@@ -39,6 +39,7 @@ REMOTE="${REMOTE:-mlovett@doob.dartmouth.edu}"
 REMOTE_REPO="${REMOTE_REPO:-infl_ens}"
 MODE="${MODE:-launch}"
 MAX_PROMPTS="${MAX_PROMPTS:-8000}"
+TMUX_SESSION="${TMUX_SESSION:-trait-repr}"
 FIG_SUBDIR="scripts/figures/trait_repr"
 LOG="results/trait_repr/run.log"
 
@@ -51,7 +52,10 @@ fi
 # status / pull modes: no sync, no launch.
 # ----------------------------------------------------------------------
 if [[ "${MODE}" == "status" ]]; then
-    echo "[status] tail of ${LOG} on ${REMOTE}"
+    echo "[status] tmux sessions on ${REMOTE}"
+    ssh "${REMOTE}" "tmux ls 2>/dev/null || echo '(no tmux sessions - job finished or not started)'"
+    echo
+    echo "[status] tail of ${LOG}"
     ssh "${REMOTE}" "cd ${REMOTE_REPO} && tail -n 30 ${LOG} 2>/dev/null || echo 'no log yet'"
     echo
     echo "[status] GPU"
@@ -59,6 +63,8 @@ if [[ "${MODE}" == "status" ]]; then
     echo
     echo "[status] figures produced so far"
     ssh "${REMOTE}" "cd ${REMOTE_REPO} && ls -la ${FIG_SUBDIR}/ 2>/dev/null || echo 'none yet'"
+    echo
+    echo "  WATCH LIVE: ssh -t ${REMOTE} 'tmux attach -t ${TMUX_SESSION}'"
     exit 0
 fi
 
@@ -132,14 +138,15 @@ REMOTE_EOF
     exit 0
 fi
 
-echo "[remote] launching full job detached (log: ${LOG})"
+echo "[remote] launching full job in tmux session '${TMUX_SESSION}' (log: ${LOG})"
 ssh "${REMOTE}" bash -s <<REMOTE_EOF
 set -euo pipefail
 cd "${REMOTE_REPO}"
 mkdir -p results/trait_repr ${FIG_SUBDIR}
 
-if pgrep -f "plot_trait_representation.py" >/dev/null 2>&1; then
-    echo "[remote] a trait-representation job is ALREADY RUNNING; not starting another."
+if tmux has-session -t ${TMUX_SESSION} 2>/dev/null; then
+    echo "[remote] tmux session '${TMUX_SESSION}' ALREADY EXISTS; not starting another."
+    echo "[remote] attach with: tmux attach -t ${TMUX_SESSION}"
     exit 0
 fi
 
@@ -186,14 +193,27 @@ JOB
 sed -i "s|__CONFIG__|${CONFIG}|g; s|__MAX_PROMPTS__|${MAX_PROMPTS}|g; s|__FIGDIR__|${FIG_SUBDIR}|g" \
     results/trait_repr/_job.sh
 
-nohup bash results/trait_repr/_job.sh > ${LOG} 2>&1 &
-echo "[remote] launched pid \$!"
-sleep 3
+# Window 0 runs the job under 'tee' so the log persists even if the
+# session is killed; window 1 watches the GPU. Mirrors the pattern in
+# scripts/tmux_monitor_seeds.sh.
+tmux new-session -d -s ${TMUX_SESSION} -n job \
+    "bash results/trait_repr/_job.sh 2>&1 | tee ${LOG}; echo; echo '[job finished - press any key]'; read -n 1"
+tmux new-window -t ${TMUX_SESSION} -n gpu "watch -n 5 nvidia-smi"
+tmux select-window -t ${TMUX_SESSION}:job
+
+echo "[remote] tmux session '${TMUX_SESSION}' started"
+tmux ls
+sleep 5
 echo "--- first lines of log ---"
-head -n 15 ${LOG} 2>/dev/null || true
+head -n 20 ${LOG} 2>/dev/null || echo "(log still starting)"
 REMOTE_EOF
 
 echo
-echo "Launched. The cache rebuild takes hours (full Qwen3-8B encode)."
-echo "  monitor : MODE=status bash scripts/run_trait_representation_on_doob.sh"
-echo "  collect : MODE=pull   bash scripts/run_trait_representation_on_doob.sh"
+echo "Launched in tmux. The cache rebuild takes hours (full Qwen3-8B encode)."
+echo
+echo "  WATCH LIVE :  ssh -t ${REMOTE} 'tmux attach -t ${TMUX_SESSION}'"
+echo "                (window 0 = job, window 1 = nvidia-smi;"
+echo "                 Ctrl-b n switches window, Ctrl-b d detaches)"
+echo
+echo "  monitor    :  MODE=status bash scripts/run_trait_representation_on_doob.sh"
+echo "  collect    :  MODE=pull   bash scripts/run_trait_representation_on_doob.sh"

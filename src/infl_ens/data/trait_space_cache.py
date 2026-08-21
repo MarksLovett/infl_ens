@@ -420,6 +420,35 @@ class CachedTraitArtifacts:
     axis_labels: tuple[str, ...]
 
 
+def artifacts_from_bundle(bundle: SafetyTraitSpaceBundle) -> CachedTraitArtifacts:
+    """Adapt a freshly built bundle to the cached-artifacts container.
+
+    Lets callers treat cached and uncached builds uniformly.
+
+    :param bundle: Bundle returned by
+        :func:`~infl_ens.data.benchmarks.safety_trait_space.build_safety_trait_space_bundle`.
+    :type bundle: SafetyTraitSpaceBundle
+    :returns: The same artifacts in cache-loader form.
+    :rtype: CachedTraitArtifacts
+    """
+    from infl_ens.data.benchmarks.safety_trait_space import _coordinate_stretch_vector
+
+    gammas = _coordinate_stretch_vector(
+        bundle.axes,
+        coordinate_stretch_gamma=bundle.coordinate_stretch_gamma,
+        coordinate_stretch_gammas=bundle.coordinate_stretch_gammas,
+    )
+    return CachedTraitArtifacts(
+        axes=tuple(bundle.axes),
+        normalizer=bundle.normalizer,
+        linear_transform=bundle.linear_transform,
+        gammas=gammas,
+        axis_labels=tuple(
+            bundle.space.axis_labels or tuple(a.name for a in bundle.axes)
+        ),
+    )
+
+
 def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
     """Reload learned axes, normalizer, transform, and stretch from cache.
 
