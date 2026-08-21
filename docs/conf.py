@@ -180,6 +180,7 @@ _SUBPACKAGES_TO_PREFLIGHT: List[str] = [
     "infl_ens.inflgame",
     "infl_ens.inflgame.router",
     "infl_ens.training",
+    "infl_ens.evaluation",
     "infl_ens.utils",
 ]
 
@@ -274,6 +275,16 @@ _EXPECTED_REEXPORTS: dict[str, tuple[str, ...]] = {
         "train_router_positions",
         # SFTTrainingConfig / sft_train_agent are lazy via __getattr__
         # and intentionally not listed here.
+    ),
+    "infl_ens.evaluation": (
+        "AdapterEvalConfig",
+        "BenchmarkEvalResult",
+        "EvalJobConfig",
+        "load_benchmark_splits",
+        "evaluate_adapter_on_splits",
+        "evaluate_run_adapters",
+        "run_eval_job",
+        "discover_adapters",
     ),
     "infl_ens.utils": (
         "weighted_mean",

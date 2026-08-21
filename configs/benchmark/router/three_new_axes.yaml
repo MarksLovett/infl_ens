@@ -1,0 +1,52 @@
+# Three new prompt-level safety axes: over-refusal, injection, policy violation.
+
+task: router_training
+seed: 0
+output_dir: results/three_new_axes_preview
+policy: proportional
+
+benchmarks:
+  - kind: orbench
+    path: data/orbench
+    configs: [or-bench-80k, or-bench-toxic]
+    max_records: 5000
+  - kind: prompt_injection
+    path: data/prompt_injection
+    max_records: null
+  - kind: do_not_answer
+    path: data/do_not_answer
+    include_benign: true
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 24
+  kde_bandwidth: 0.08
+  threshold: 0.5
+  coordinate_residualize: true
+  mode_alignment_weight: 0.35
+  mode_alignment_weights:
+    overrefusal: 1.0
+    injection: 1.0
+    policy_violation: 1.0
+  coordinate_stretch_gamma: 1.5
+  coordinate_stretch_gammas:
+    overrefusal: 2.5
+    injection: 2.5
+    policy_violation: 2.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+training:
+  init_noise: 0.01
+  learning_rate: 0.005
+  n_steps: 5000
+  tol: 1.0e-8
+  clip_to_box: true

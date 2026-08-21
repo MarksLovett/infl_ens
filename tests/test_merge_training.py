@@ -1,0 +1,81 @@
+"""Tests for pair-merge closed-loop helpers."""
+
+from __future__ import annotations
+
+import pytest
+
+import numpy as np
+
+from infl_ens.training.merge_training import (
+    closed_loop_weight_args,
+    merge_routed_batch,
+    merge_train_name,
+    parse_sft_merge_groups,
+    resolve_dynamic_merge_groups,
+)
+from infl_ens.inflgame.router.agents import RouterAgent
+
+
+def test_parse_sft_merge_groups() -> None:
+    cl = {
+        "sft_merge_groups": [
+            {"train_as": "merge-low", "names": ["clone-0", "clone-1"]},
+            {"train_as": "merge-high", "names": ["clone-2", "clone-3"]},
+        ],
+    }
+    groups = parse_sft_merge_groups(cl, ["clone-0", "clone-1", "clone-2", "clone-3"])
+    assert groups == [
+        ("merge-low", ["clone-0", "clone-1"]),
+        ("merge-high", ["clone-2", "clone-3"]),
+    ]
+
+
+def test_parse_sft_merge_groups_rejects_overlap() -> None:
+    cl = {"sft_merge_groups": [["clone-0", "clone-1"], ["clone-1", "clone-2"]]}
+    with pytest.raises(ValueError, match="partition"):
+        parse_sft_merge_groups(cl, ["clone-0", "clone-1", "clone-2", "clone-3"])
+
+
+def test_merge_routed_batch_concatenates() -> None:
+    prompts = {"a": ["p1"], "b": ["p2", "p3"]}
+    responses = {"a": ["r1"], "b": ["r2", "r3"]}
+    mp, mr, w = merge_routed_batch(prompts, responses, ["a", "b"])
+    assert mp == ["p1", "p2", "p3"]
+    assert mr == ["r1", "r2", "r3"]
+    assert w is None
+
+
+def test_resolve_dynamic_merge_groups_22() -> None:
+    agents = [
+        RouterAgent("clone-0", position=np.array([0.9, 0.6])),
+        RouterAgent("clone-1", position=np.array([0.1, 0.8])),
+        RouterAgent("clone-2", position=np.array([0.9, 0.6])),
+        RouterAgent("clone-3", position=np.array([0.1, 0.8])),
+    ]
+    groups, unpaired, meta = resolve_dynamic_merge_groups(
+        agents,
+        ["clone-0", "clone-1", "clone-2", "clone-3"],
+        distance_threshold=0.05,
+    )
+    assert meta["layout"] == "2,2"
+    assert meta["pairing_method"] == "harm_22"
+    assert len(groups) == 2
+    assert unpaired == []
+    train_names = {g[0] for g in groups}
+    assert "merge-clone-0-clone-2" in train_names
+    assert "merge-clone-1-clone-3" in train_names
+
+
+def test_merge_train_name_stable() -> None:
+    assert merge_train_name(["clone-1", "clone-0"]) == "merge-clone-0-clone-1"
+
+
+def test_closed_loop_weight_args_position_only() -> None:
+    sw, ew, skip = closed_loop_weight_args(
+        "position_only", "expected_pool", [0.5, 0.5],
+    )
+    assert sw is None and ew is None and skip is True
+    sw, ew, skip = closed_loop_weight_args(
+        "position_only", "batch", [0.5, 0.5],
+    )
+    assert sw is None and ew == [0.5, 0.5] and skip is False

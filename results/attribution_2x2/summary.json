@@ -1,0 +1,76 @@
+{
+  "cells": [
+    {
+      "cell": "ga_theory_pre",
+      "pooled_nll": 1.9457460591664868,
+      "learned_expected_nll": 1.954495889447387,
+      "oracle_nll": 1.916579083216368,
+      "delta_vs_pooled": 0.00874983028090015,
+      "oracle_minus_learned": -0.037916806231018896,
+      "within_merge_l2": {
+        "merge-harm": 0.0,
+        "merge-hallucination": 0.0,
+        "merge-privacy": 0.0,
+        "merge-overrefusal": 0.0,
+        "merge-policy": 0.0
+      },
+      "mean_pairwise_l2": 0.9181825356558313,
+      "min_pairwise_l2": 0.0,
+      "geometry_phase": "post_theory_pre"
+    },
+    {
+      "cell": "ga_no_theory_pre",
+      "pooled_nll": 1.9457460591664868,
+      "learned_expected_nll": 1.9550691510177387,
+      "oracle_nll": 1.9189940246437054,
+      "delta_vs_pooled": 0.009323091851251908,
+      "oracle_minus_learned": -0.03607512637403332,
+      "within_merge_l2": {
+        "merge-harm": 0.0,
+        "merge-hallucination": 0.0,
+        "merge-privacy": 0.0,
+        "merge-overrefusal": 0.0,
+        "merge-policy": 0.0
+      },
+      "mean_pairwise_l2": 0.979925563909307,
+      "min_pairwise_l2": 0.0,
+      "geometry_phase": "post_init"
+    },
+    {
+      "cell": "random_theory_pre",
+      "pooled_nll": 1.9457460591664868,
+      "learned_expected_nll": 2.081280619061758,
+      "oracle_nll": 2.0122100889386743,
+      "delta_vs_pooled": 0.13553455989527108,
+      "oracle_minus_learned": -0.06907053012308362,
+      "within_merge_l2": {
+        "merge-harm": 0.0,
+        "merge-hallucination": 0.0,
+        "merge-privacy": 0.0,
+        "merge-overrefusal": 0.0,
+        "merge-policy": 0.0
+      },
+      "mean_pairwise_l2": 0.0,
+      "min_pairwise_l2": 0.0,
+      "geometry_phase": null
+    },
+    {
+      "cell": "random_no_theory_pre",
+      "pooled_nll": 1.9457460591664868,
+      "learned_expected_nll": 2.0813194200766576,
+      "oracle_nll": 2.012360231996329,
+      "delta_vs_pooled": 0.1355733609101708,
+      "oracle_minus_learned": -0.06895918808032864,
+      "within_merge_l2": {
+        "merge-harm": 0.0,
+        "merge-hallucination": 0.0,
+        "merge-privacy": 0.0,
+        "merge-overrefusal": 0.0,
+        "merge-policy": 0.0
+      },
+      "mean_pairwise_l2": 0.0,
+      "min_pairwise_l2": 0.0,
+      "geometry_phase": "post_init"
+    }
+  ]
+}

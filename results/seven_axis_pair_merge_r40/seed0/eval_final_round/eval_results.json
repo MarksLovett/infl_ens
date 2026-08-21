@@ -1,0 +1,556 @@
+{
+  "generated_at": "2026-07-08T02:43:10.109441+00:00",
+  "meta": {
+    "task": "run_eval",
+    "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "adapter_dir": null,
+    "run_dir": "results/seven_axis_pair_merge_r40/seed0",
+    "benchmarks": [
+      {
+        "kind": "beavertails",
+        "path": "data/beavertails/30k_train.jsonl",
+        "max_records": null
+      },
+      {
+        "kind": "halueval",
+        "path": "data/halueval",
+        "tasks": [
+          "qa",
+          "dialogue"
+        ],
+        "max_records": null
+      },
+      {
+        "kind": "toxicchat",
+        "path": "data/toxicchat",
+        "score_mode": "jailbreaking",
+        "human_annotated_only": false,
+        "max_records": null
+      },
+      {
+        "kind": "ai4privacy",
+        "path": "data/ai4privacy",
+        "score_mode": "density",
+        "english_only": true,
+        "max_records": null
+      },
+      {
+        "kind": "orbench",
+        "path": "data/orbench",
+        "configs": [
+          "or-bench-80k",
+          "or-bench-toxic"
+        ],
+        "max_records": null
+      },
+      {
+        "kind": "prompt_injection",
+        "path": "data/prompt_injection",
+        "max_records": null
+      },
+      {
+        "kind": "do_not_answer",
+        "path": "data/do_not_answer",
+        "include_benign": true,
+        "max_records": null
+      }
+    ],
+    "eval": {
+      "max_seq_length": 1024,
+      "forward_batch_size": 8,
+      "max_eval_records": 256
+    }
+  },
+  "results": [
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.8979425148358497,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.4895982545985844,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.169821720632342,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 2.4987727517580685,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 2.6763905782845026,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 2.8522358006045794,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.207685089875887,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-generalist/round-39",
+      "agent": "merge-generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.9201171253443843,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.488017561310842,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.230619978815241,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 2.506390006574058,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 2.9303639646708834,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 3.0862932968863603,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.5138631072760584,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-hallucination/round-39",
+      "agent": "merge-hallucination",
+      "round": 39
+    },
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.7932946099756983,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.5602169518458875,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.2107890961694723,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 2.119363538777103,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 2.7927184261861635,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 2.9156618741480855,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.315781421325196,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-harm/round-39",
+      "agent": "merge-harm",
+      "round": 39
+    },
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.8678300937564476,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.4698403788683123,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.1654849128527682,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 2.3144192995066377,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 2.7989229762661765,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 2.831351545211979,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.3712178679519993,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-injection/round-39",
+      "agent": "merge-injection",
+      "round": 39
+    },
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.948242342583362,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.6567505209701614,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.256200533593469,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 2.3786030786571852,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 1.99563709518229,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 3.141712315601744,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.575145378339912,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-overrefusal/round-39",
+      "agent": "merge-overrefusal",
+      "round": 39
+    },
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.8503626449792363,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.5274934322518896,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.197581381160474,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 2.1196993809367255,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 2.620151381347174,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 2.8054129781297292,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.059019338294769,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-policy/round-39",
+      "agent": "merge-policy",
+      "round": 39
+    },
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 2.0737710785725363,
+      "n_examples": 256,
+      "n_tokens": 24959,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 2.7766029107957113,
+      "n_examples": 256,
+      "n_tokens": 20050,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.335315416794652,
+      "n_examples": 256,
+      "n_tokens": 63013,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 1.7038172483689986,
+      "n_examples": 256,
+      "n_tokens": 24252,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    },
+    {
+      "benchmark": "orbench",
+      "axis_name": "overrefusal",
+      "mean_nll": 2.995215309322938,
+      "n_examples": 256,
+      "n_tokens": 6426,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_name": "injection",
+      "mean_nll": 3.3080507727293855,
+      "n_examples": 256,
+      "n_tokens": 8826,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_name": "policy_violation",
+      "mean_nll": 2.9290506008856982,
+      "n_examples": 256,
+      "n_tokens": 4241,
+      "adapter_dir": "/home/mlovett/infl_ens/results/seven_axis_pair_merge_r40/seed0/agents/merge-privacy/round-39",
+      "agent": "merge-privacy",
+      "round": 39
+    }
+  ]
+}

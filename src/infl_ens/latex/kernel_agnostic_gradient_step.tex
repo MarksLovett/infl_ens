@@ -1,0 +1,76 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\begin{document}
+
+\section*{Kernel-Agnostic Gradient-Matched Position Step}
+
+Let agent \(i\) have influence kernel \(k(x_i,b) > 0\), and define
+\begin{equation*}
+f_i(b) := k(x_i,b), \qquad
+G_i(\mathbf{x},b) := \frac{f_i(b)}{\sum_j f_j(b)}.
+\end{equation*}
+Its utility is
+\begin{equation*}
+u_i(\mathbf{x}) := \sum_b B(b)\,G_i(\mathbf{x},b).
+\end{equation*}
+
+Define the score of the kernel with respect to position:
+\begin{equation*}
+s_i(b) := \nabla_{x_i}\log k(x_i,b).
+\end{equation*}
+Then
+\begin{equation*}
+\nabla_{x_i} G_i(b)
+=
+G_i(b)\bigl(1-G_i(b)\bigr)\,s_i(b),
+\end{equation*}
+and therefore
+\begin{equation*}
+\nabla_{x_i}u_i
+=
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)\,s_i(b).
+\end{equation*}
+
+\subsection*{Position-only style Monte-Carlo estimator}
+
+Under canonical routing \(p_i(b) \propto B(b)G_i(b)\), samples routed to
+agent \(i\) are distributed according to that density. For routed samples
+\(\{b_m\}_{m \in \mathcal{Q}_i}\), define
+\begin{equation*}
+w_m := 1 - G_i(b_m), \qquad
+d_i :=
+\frac{\sum_{m \in \mathcal{Q}_i} w_m\,s_i(b_m)}
+     {\sum_{m \in \mathcal{Q}_i} w_m + \varepsilon}.
+\end{equation*}
+Because routing contributes one factor \(G_i\), and \(w_m\) contributes the
+factor \((1-G_i)\), we have
+\begin{equation*}
+\mathbb{E}[d_i]
+\propto
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)\,s_i(b)
+=
+\nabla_{x_i}u_i.
+\end{equation*}
+So \(d_i\) is gradient-matched in expectation for any differentiable kernel.
+
+\subsection*{Generic update rule}
+
+Use
+\begin{equation*}
+x_i^{+} = x_i + \eta\,P_i\,d_i,
+\end{equation*}
+where \(\eta > 0\) is step size and \(P_i \succ 0\) is an optional
+preconditioner (take \(P_i = I\) by default).
+
+\subsection*{Gaussian special case}
+
+For multivariate Gaussian kernels,
+\begin{equation*}
+s_i(b) = \Sigma^{-1}(b-x_i),
+\end{equation*}
+which recovers the earlier position-only centroid form up to metric and
+normalization factors.
+
+\end{document}

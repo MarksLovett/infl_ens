@@ -1,0 +1,1263 @@
+{
+  "per_seed": [
+    {
+      "seed": 0,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed0",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-high-harm",
+        "clone-1": "corner-low-harm",
+        "clone-2": "corner-high-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7808427611360351,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.4751056152768247,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8377734632773768,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.366427370380659,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.780008479235697,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.4148199347690995,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8350175665119657,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.4173761584847595,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7713068628326982,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.462399054149847,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8289905723309223,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4214245498720612,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-2",
+          "members": [
+            "clone-0",
+            "clone-2"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432505,
+            0.6049908381343571
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-3",
+          "members": [
+            "clone-1",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630772,
+            0.8149779964833938
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed1",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-high-harm",
+        "clone-1": "corner-low-harm",
+        "clone-2": "corner-low-harm",
+        "clone-3": "corner-high-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.773626207791014,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.4563142046347366,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8280296946952717,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.3880169417322703,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8312254797134373,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.394908203819367,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.785652182039295,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.443397805505889,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7764793281297213,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.486578396631992,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.823593353378468,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4452635967239273,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-3",
+          "members": [
+            "clone-0",
+            "clone-3"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432509,
+            0.6049908381343571
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-2",
+          "members": [
+            "clone-1",
+            "clone-2"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630782,
+            0.8149779964833939
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed2",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-low-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-low-harm",
+        "clone-3": "corner-high-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8272512202895126,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.3990372171574847,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7845449719542172,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.4856397247746633,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8491851941339605,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.4119616168023117,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7805372667083146,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.456363386449977,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8434230072471418,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4817038404017175,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7826651333278887,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.499381367749678,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-2",
+          "members": [
+            "clone-0",
+            "clone-2"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630783,
+            0.8149779964833939
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-3",
+          "members": [
+            "clone-1",
+            "clone-3"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.909726994843251,
+            0.6049908381343572
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 3,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed3",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-low-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-low-harm",
+        "clone-3": "corner-high-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8364341770775723,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.4236310491389017,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.776733813563178,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.4674676341712773,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.858256084941528,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.4012317203442977,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.778480944297577,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.435668780580388,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.838296870387277,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4379124307440367,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7665148529348047,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.473317623786696,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-2",
+          "members": [
+            "clone-0",
+            "clone-2"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630919,
+            0.8149779964833932
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-3",
+          "members": [
+            "clone-1",
+            "clone-3"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432531,
+            0.6049908381343567
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 4,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed4",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-high-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-low-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7805069665100897,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.4571177801937014,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7862262310793422,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.46607535384813,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8369595198151758,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.3809421016130323,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8368398549249707,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.403453203678611,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.78281819097354,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4537081552776323,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8297660875530128,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.438421244923802,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-1",
+          "members": [
+            "clone-0",
+            "clone-1"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432541,
+            0.6049908381343564
+          ]
+        },
+        {
+          "train_name": "merge-clone-2-clone-3",
+          "members": [
+            "clone-2",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630945,
+            0.8149779964833931
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 5,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed5",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-high-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-low-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7904203794661686,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.4711488215704818,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7763215392738967,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.429194371649866,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8357768720600085,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.4156469054572653,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8360071458216722,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.38443204994048,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.776877648878683,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.449889049957406,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8238400573790607,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4296894830999536,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-1",
+          "members": [
+            "clone-0",
+            "clone-1"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.909726994843258,
+            0.6049908381343561
+          ]
+        },
+        {
+          "train_name": "merge-clone-2-clone-3",
+          "members": [
+            "clone-2",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.0763239367563111,
+            0.8149779964833928
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 6,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed6",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-low-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-high-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.849567822718834,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.3564933205419196,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7768350154349386,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.453997002339435,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7798263104678862,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.458667770709396,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8480114965908874,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.438619874779431,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.830891686155675,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.3962156961571655,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.765175182361204,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.477471034476404,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-3",
+          "members": [
+            "clone-0",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630866,
+            0.8149779964833932
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-2",
+          "members": [
+            "clone-1",
+            "clone-2"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432523,
+            0.6049908381343568
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed7",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-high-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-low-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7831344480258144,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.4306107861757997,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7750270344215575,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.4417579595415972,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.831299067948136,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.422545273114307,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8322956256897316,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.423650990704155,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7744569135610344,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4683038801825177,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8165961232072207,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.4665439094781636,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-1",
+          "members": [
+            "clone-0",
+            "clone-1"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432523,
+            0.6049908381343567
+          ]
+        },
+        {
+          "train_name": "merge-clone-2-clone-3",
+          "members": [
+            "clone-2",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630869,
+            0.8149779964833932
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 8,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed8",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-low-harm",
+        "clone-1": "corner-high-harm",
+        "clone-2": "corner-high-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8408788067535669,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.371652196109115,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7788330135039225,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.4622302905790514,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7761917547296535,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.482349177573743,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.844600488883967,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.3751655732036716,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8379153618375763,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.388222824674839,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7625482049231271,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.471506809011807,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-3",
+          "members": [
+            "clone-0",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630783,
+            0.8149779964833938
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-2",
+          "members": [
+            "clone-1",
+            "clone-2"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432511,
+            0.6049908381343572
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 9,
+      "run_dir": "/home/mlovett/infl_ens/results/proximity_plus_specialists_r40/seed9",
+      "round": 39,
+      "init_mode": "theory_gradient",
+      "clone_corner_roles": {
+        "clone-0": "corner-high-harm",
+        "clone-1": "corner-low-harm",
+        "clone-2": "corner-high-harm",
+        "clone-3": "corner-low-harm"
+      },
+      "clone_scores": [
+        {
+          "label": "clone-0",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7784632712929027,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-0",
+          "benchmark": "halueval",
+          "mean_nll": 2.466641346997725,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "beavertails",
+          "mean_nll": 1.840724321583597,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-1",
+          "benchmark": "halueval",
+          "mean_nll": 2.3642144676421704,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7721579045779359,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-2",
+          "benchmark": "halueval",
+          "mean_nll": 2.4462874289605794,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8411448925407154,
+          "n_examples": 128
+        },
+        {
+          "label": "clone-3",
+          "benchmark": "halueval",
+          "mean_nll": 2.3934805804268953,
+          "n_examples": 128
+        }
+      ],
+      "merge_by_corner": [
+        {
+          "label": "corner-high-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.7680938550593486,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-high-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.473154451215615,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "beavertails",
+          "mean_nll": 1.8331611068926101,
+          "n_examples": 128
+        },
+        {
+          "label": "corner-low-harm",
+          "benchmark": "halueval",
+          "mean_nll": 2.433652391054359,
+          "n_examples": 128
+        }
+      ],
+      "merge_meta": [
+        {
+          "train_name": "merge-clone-0-clone-2",
+          "members": [
+            "clone-0",
+            "clone-2"
+          ],
+          "corner_role": "corner-high-harm",
+          "centroid": [
+            0.9097269948432528,
+            0.6049908381343566
+          ]
+        },
+        {
+          "train_name": "merge-clone-1-clone-3",
+          "members": [
+            "clone-1",
+            "clone-3"
+          ],
+          "corner_role": "corner-low-harm",
+          "centroid": [
+            0.07632393675630891,
+            0.8149779964833933
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "n_seeds": 10,
+    "aggregate": [
+      {
+        "label": "clone-0",
+        "benchmark": "beavertails",
+        "mean_nll": 1.804112606106151,
+        "std_nll": 0.030389308417429647,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-0",
+        "benchmark": "halueval",
+        "mean_nll": 2.430775233779669,
+        "std_nll": 0.04255644684158756,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-1",
+        "benchmark": "beavertails",
+        "mean_nll": 1.7961049098787298,
+        "std_nll": 0.027604584529559658,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-1",
+        "benchmark": "halueval",
+        "mean_nll": 2.432502111665912,
+        "std_nll": 0.04425151246419054,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-2",
+        "benchmark": "beavertails",
+        "mean_nll": 1.8150886667623418,
+        "std_nll": 0.033805953613289266,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-2",
+        "benchmark": "halueval",
+        "mean_nll": 2.42293601331634,
+        "std_nll": 0.030933056977828454,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-3",
+        "benchmark": "beavertails",
+        "mean_nll": 1.8218587464009097,
+        "std_nll": 0.02824459858597924,
+        "n_seeds": 10
+      },
+      {
+        "label": "clone-3",
+        "benchmark": "halueval",
+        "mean_nll": 2.4171608403754257,
+        "std_nll": 0.027190379390406867,
+        "n_seeds": 10
+      },
+      {
+        "label": "corner-high-harm",
+        "benchmark": "beavertails",
+        "mean_nll": 1.772693617298205,
+        "std_nll": 0.007130523982122911,
+        "n_seeds": 10
+      },
+      {
+        "label": "corner-high-harm",
+        "benchmark": "halueval",
+        "mean_nll": 2.4715709822439593,
+        "std_nll": 0.014617333278429671,
+        "n_seeds": 10
+      },
+      {
+        "label": "corner-low-harm",
+        "benchmark": "beavertails",
+        "mean_nll": 1.8306474226368965,
+        "std_nll": 0.008013820433291323,
+        "n_seeds": 10
+      },
+      {
+        "label": "corner-low-harm",
+        "benchmark": "halueval",
+        "mean_nll": 2.4339049967130024,
+        "std_nll": 0.028277281891604878,
+        "n_seeds": 10
+      }
+    ],
+    "specialists_mean_by_corner": [
+      {
+        "corner_role": "corner-high-harm",
+        "benchmark": "beavertails",
+        "mean_nll_specialists_at_corner": 1.7797185247754719,
+        "std_nll": 0.004536892354351518,
+        "n_clone_scores": 20
+      },
+      {
+        "corner_role": "corner-high-harm",
+        "benchmark": "halueval",
+        "mean_nll_specialists_at_corner": 2.455042758815118,
+        "std_nll": 0.018460421598405885,
+        "n_clone_scores": 20
+      },
+      {
+        "corner_role": "corner-low-harm",
+        "benchmark": "beavertails",
+        "mean_nll_specialists_at_corner": 1.8388639397985944,
+        "std_nll": 0.007896437027471875,
+        "n_clone_scores": 20
+      },
+      {
+        "corner_role": "corner-low-harm",
+        "benchmark": "halueval",
+        "mean_nll_specialists_at_corner": 2.3966443407535554,
+        "std_nll": 0.023095986884493942,
+        "n_clone_scores": 20
+      }
+    ]
+  }
+}

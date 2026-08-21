@@ -1,0 +1,86 @@
+{
+  "generated_at": "2026-06-05T14:56:04.570106+00:00",
+  "meta": {
+    "task": "run_eval",
+    "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "adapter_dir": null,
+    "run_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed8",
+    "benchmarks": [
+      {
+        "kind": "beavertails",
+        "path": "data/beavertails/30k_train.jsonl",
+        "max_records": 5000
+      },
+      {
+        "kind": "halueval",
+        "path": "data/halueval",
+        "tasks": [
+          "qa",
+          "dialogue"
+        ],
+        "max_records": 5000
+      },
+      {
+        "kind": "toxicchat",
+        "path": "data/toxicchat",
+        "score_mode": "jailbreaking",
+        "human_annotated_only": false,
+        "max_records": 5000
+      },
+      {
+        "kind": "ai4privacy",
+        "path": "data/ai4privacy",
+        "score_mode": "density",
+        "english_only": true,
+        "max_records": 5000
+      }
+    ],
+    "eval": {
+      "max_seq_length": 1024,
+      "forward_batch_size": 8,
+      "max_eval_records": 256
+    }
+  },
+  "results": [
+    {
+      "benchmark": "beavertails",
+      "axis_name": "harm",
+      "mean_nll": 1.5654215838701762,
+      "n_examples": 256,
+      "n_tokens": 25016,
+      "adapter_dir": "/home/mlovett/infl_ens/results/ai4privacy_fixed_theory_generalist_r40/seed8/agents/generalist/round-39",
+      "agent": "generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "halueval",
+      "axis_name": "hallucination",
+      "mean_nll": 1.5280518188694632,
+      "n_examples": 256,
+      "n_tokens": 10802,
+      "adapter_dir": "/home/mlovett/infl_ens/results/ai4privacy_fixed_theory_generalist_r40/seed8/agents/generalist/round-39",
+      "agent": "generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_name": "jailbreak",
+      "mean_nll": 1.5119382510476593,
+      "n_examples": 256,
+      "n_tokens": 58379,
+      "adapter_dir": "/home/mlovett/infl_ens/results/ai4privacy_fixed_theory_generalist_r40/seed8/agents/generalist/round-39",
+      "agent": "generalist",
+      "round": 39
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_name": "privacy",
+      "mean_nll": 1.5398813367054087,
+      "n_examples": 256,
+      "n_tokens": 24694,
+      "adapter_dir": "/home/mlovett/infl_ens/results/ai4privacy_fixed_theory_generalist_r40/seed8/agents/generalist/round-39",
+      "agent": "generalist",
+      "round": 39
+    }
+  ]
+}

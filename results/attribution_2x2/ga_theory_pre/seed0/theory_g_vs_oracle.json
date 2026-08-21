@@ -1,0 +1,84 @@
+{
+  "sigma": 0.22068031198063498,
+  "n_prompts": 4631,
+  "g_argmax_agreement_oracle": 0.7421723169941697,
+  "mean_g_margin": 0.22138664223924578,
+  "mean_nll_wrong_cost": 0.03486692938890089,
+  "disagree_breakdown": {
+    "n_disagree": 1194,
+    "frac_g_soft_among_disagree": 0.008375209380234505,
+    "frac_g_wrong_among_disagree": 0.9916247906197655,
+    "frac_nll_near_tie_among_disagree": 0.38274706867671693,
+    "frac_nll_clear_miss_among_disagree": 0.6172529313232831
+  },
+  "verdict": {
+    "primary": "g_miscalibrated",
+    "sigma_likely_helps": "unlikely",
+    "g_soft_share_disagree": "0.008",
+    "g_wrong_share_disagree": "0.992",
+    "nll_near_tie_share_disagree": "0.383",
+    "nll_clear_miss_share_disagree": "0.617"
+  },
+  "per_benchmark": {
+    "ai4privacy": {
+      "merge": "merge-privacy",
+      "n": 1000,
+      "g_agreement": 0.635,
+      "mean_expected_gap": 0.038788366335943625,
+      "mean_nll_wrong_cost": 0.04041796875,
+      "frac_g_soft": 0.001,
+      "frac_g_wrong": 0.364,
+      "frac_nll_near_tie": 0.142,
+      "frac_nll_clear_miss": 0.223,
+      "mean_g_margin_when_disagree": 0.8740662080317145
+    },
+    "beavertails": {
+      "merge": "merge-harm",
+      "n": 1000,
+      "g_agreement": 0.655,
+      "mean_expected_gap": 0.024889627337815412,
+      "mean_nll_wrong_cost": 0.02278515625,
+      "frac_g_soft": 0.003,
+      "frac_g_wrong": 0.342,
+      "frac_nll_near_tie": 0.206,
+      "frac_nll_clear_miss": 0.139,
+      "mean_g_margin_when_disagree": 0.9017095511765358
+    },
+    "do_not_answer": {
+      "merge": "merge-policy",
+      "n": 1000,
+      "g_agreement": 0.839,
+      "mean_expected_gap": 0.03831006363081846,
+      "mean_nll_wrong_cost": 0.0339140625,
+      "frac_g_soft": 0.001,
+      "frac_g_wrong": 0.16,
+      "frac_nll_near_tie": 0.036,
+      "frac_nll_clear_miss": 0.125,
+      "mean_g_margin_when_disagree": 0.9201660884117389
+    },
+    "halueval": {
+      "merge": "merge-hallucination",
+      "n": 1000,
+      "g_agreement": 0.772,
+      "mean_expected_gap": 0.0358196585177466,
+      "mean_nll_wrong_cost": 0.0316953125,
+      "frac_g_soft": 0.004,
+      "frac_g_wrong": 0.224,
+      "frac_nll_near_tie": 0.062,
+      "frac_nll_clear_miss": 0.166,
+      "mean_g_margin_when_disagree": 0.7957871258982008
+    },
+    "orbench": {
+      "merge": "merge-overrefusal",
+      "n": 631,
+      "g_agreement": 0.849445324881141,
+      "mean_expected_gap": 0.05988116296913604,
+      "mean_nll_wrong_cost": 0.051753169572107766,
+      "frac_g_soft": 0.001584786053882726,
+      "frac_g_wrong": 0.14896988906497624,
+      "frac_nll_near_tie": 0.017432646592709985,
+      "frac_nll_clear_miss": 0.13312202852614896,
+      "mean_g_margin_when_disagree": 0.6898039387724927
+    }
+  }
+}

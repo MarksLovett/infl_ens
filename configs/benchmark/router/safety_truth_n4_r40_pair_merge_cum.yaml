@@ -1,0 +1,65 @@
+# Four router agents (game theory + centroid updates), two physical LoRAs
+# (merged SFT per harm pair). Matches position_only_cum SFT hyperparameters.
+#
+# At deployment, copy merge-low -> clone-0 & clone-1, merge-high -> clone-2 & 3.
+
+task: closed_loop
+seed: 0
+output_dir: results/safety_truth_n4_r40_pair_merge_cum
+policy: proportional
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 32
+  kde_bandwidth: 0.08
+  threshold: 0.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  n_rounds: 40
+  batch_size: 256
+  blend: 0.5
+  init_noise: 0.0
+  init_mode: theory_gradient
+  centroid_mode: expected_pool
+  routing_weight: G
+  loss_reweight: position_only
+  save_per_round: true
+  sft_merge_groups:
+    - train_as: merge-low
+      names: [clone-0, clone-1]
+    - train_as: merge-high
+      names: [clone-2, clone-3]
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/safety_truth_n4_r40_pair_merge_cum/agents
+    max_seq_length: 1024
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 2
+    num_train_epochs: 1.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    logging_steps: 1
+    cumulative_lora: true
+    seed: 0

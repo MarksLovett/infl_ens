@@ -1,0 +1,136 @@
+{
+  "baseline_agent": "pooled-baseline",
+  "train_wins": 2,
+  "test_wins": 4,
+  "n_axes": 7,
+  "train_rows": [
+    {
+      "benchmark": "beavertails",
+      "axis_label": "Harm",
+      "specialist": "merge-harm",
+      "specialist_nll": 1.767885367865613,
+      "baseline_nll": 1.7390153748160773,
+      "delta": 0.028869993049535747,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "halueval",
+      "axis_label": "Hallucination",
+      "specialist": "merge-hallucination",
+      "specialist_nll": 1.9427424950309693,
+      "baseline_nll": 1.9327646870172008,
+      "delta": 0.009977808013768463,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_label": "Jailbreak",
+      "specialist": "merge-injection",
+      "specialist_nll": 1.1924845918094533,
+      "baseline_nll": 1.1208576568603654,
+      "delta": 0.0716269349490879,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_label": "Privacy",
+      "specialist": "merge-privacy",
+      "specialist_nll": 1.6853308430792182,
+      "baseline_nll": 1.6579789637438165,
+      "delta": 0.02735187933540173,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "orbench",
+      "axis_label": "Over-refusal",
+      "specialist": "merge-overrefusal",
+      "specialist_nll": 1.8929661275826364,
+      "baseline_nll": 2.00970258711202,
+      "delta": -0.11673645952938383,
+      "specialist_wins": true
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_label": "Injection",
+      "specialist": "merge-injection",
+      "specialist_nll": 2.756826095332459,
+      "baseline_nll": 2.705678070070021,
+      "delta": 0.05114802526243789,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_label": "Policy",
+      "specialist": "merge-policy",
+      "specialist_nll": 2.0566971505660914,
+      "baseline_nll": 2.0611618084190932,
+      "delta": -0.004464657853001874,
+      "specialist_wins": true
+    }
+  ],
+  "test_rows": [
+    {
+      "benchmark": "beavertails",
+      "axis_label": "Harm",
+      "specialist": "merge-harm",
+      "specialist_nll": 1.813861356198914,
+      "baseline_nll": 1.8178336636936008,
+      "delta": -0.003972307494686689,
+      "specialist_wins": true
+    },
+    {
+      "benchmark": "halueval",
+      "axis_label": "Hallucination",
+      "specialist": "merge-hallucination",
+      "specialist_nll": 2.0074828625258556,
+      "baseline_nll": 2.034407513935738,
+      "delta": -0.026924651409882205,
+      "specialist_wins": true
+    },
+    {
+      "benchmark": "toxicchat",
+      "axis_label": "Jailbreak",
+      "specialist": "merge-injection",
+      "specialist_nll": 1.2336423265080758,
+      "baseline_nll": 1.2209774589725508,
+      "delta": 0.012664867535524982,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "ai4privacy",
+      "axis_label": "Privacy",
+      "specialist": "merge-privacy",
+      "specialist_nll": 1.7204965356061448,
+      "baseline_nll": 1.7145547856411816,
+      "delta": 0.005941749964963217,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "orbench",
+      "axis_label": "Over-refusal",
+      "specialist": "merge-overrefusal",
+      "specialist_nll": 1.9349506002802823,
+      "baseline_nll": 2.0502185654087164,
+      "delta": -0.11526796512843407,
+      "specialist_wins": true
+    },
+    {
+      "benchmark": "prompt_injection",
+      "axis_label": "Injection",
+      "specialist": "merge-injection",
+      "specialist_nll": 2.591233882070621,
+      "baseline_nll": 2.5652857689241513,
+      "delta": 0.02594811314646961,
+      "specialist_wins": false
+    },
+    {
+      "benchmark": "do_not_answer",
+      "axis_label": "Policy",
+      "specialist": "merge-policy",
+      "specialist_nll": 2.096442998736561,
+      "baseline_nll": 2.1304111327937996,
+      "delta": -0.03396813405723842,
+      "specialist_wins": true
+    }
+  ]
+}

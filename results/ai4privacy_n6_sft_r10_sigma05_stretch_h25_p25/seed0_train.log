@@ -1,0 +1,915 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 10618.23it/s]
+theory init (theory_gradient_paired): layout=collapsed converged=None steps=None
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 7735.57it/s]
+Adding EOS to train dataset:   0%|          | 0/93 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 93/93 [00:00<00:00, 26647.78 examples/s]
+Tokenizing train dataset:   0%|          | 0/93 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 93/93 [00:00<00:00, 4060.91 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:02<00:04,  2.48s/it]                                              33%|███▎      | 1/3 [00:02<00:04,  2.48s/it] 67%|██████▋   | 2/3 [00:04<00:01,  1.97s/it]                                              67%|██████▋   | 2/3 [00:04<00:01,  1.97s/it]100%|██████████| 3/3 [00:05<00:00,  1.87s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.87s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.87s/it]100%|██████████| 3/3 [00:05<00:00,  1.95s/it]
+{'loss': '2.866', 'grad_norm': '3.234', 'learning_rate': '0.0002', 'entropy': '2.109', 'num_tokens': '2705', 'mean_token_accuracy': '0.4926', 'epoch': '0.3333'}
+{'loss': '2.481', 'grad_norm': '2.924', 'learning_rate': '0.0001333', 'entropy': '2.078', 'num_tokens': '5567', 'mean_token_accuracy': '0.4982', 'epoch': '0.6667'}
+{'loss': '2.184', 'grad_norm': '3.986', 'learning_rate': '6.667e-05', 'entropy': '2.039', 'num_tokens': '8195', 'mean_token_accuracy': '0.5114', 'epoch': '1'}
+{'train_runtime': '5.843', 'train_samples_per_second': '15.91', 'train_steps_per_second': '0.513', 'train_loss': '2.51', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9399.41it/s]
+Adding EOS to train dataset:   0%|          | 0/87 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 87/87 [00:00<00:00, 36236.79 examples/s]
+Tokenizing train dataset:   0%|          | 0/87 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 87/87 [00:00<00:00, 4283.72 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.58s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.58s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.49s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.49s/it]100%|██████████| 3/3 [00:04<00:00,  1.55s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.55s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.55s/it]100%|██████████| 3/3 [00:04<00:00,  1.54s/it]
+{'loss': '3.216', 'grad_norm': '2.905', 'learning_rate': '0.0002', 'entropy': '2.336', 'num_tokens': '3174', 'mean_token_accuracy': '0.4617', 'epoch': '0.3333'}
+{'loss': '2.917', 'grad_norm': '2.762', 'learning_rate': '0.0001333', 'entropy': '2.336', 'num_tokens': '6187', 'mean_token_accuracy': '0.4804', 'epoch': '0.6667'}
+{'loss': '2.765', 'grad_norm': '3.06', 'learning_rate': '6.667e-05', 'entropy': '2.422', 'num_tokens': '8422', 'mean_token_accuracy': '0.4608', 'epoch': '1'}
+{'train_runtime': '4.624', 'train_samples_per_second': '18.81', 'train_steps_per_second': '0.649', 'train_loss': '2.966', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10663.62it/s]
+Adding EOS to train dataset:   0%|          | 0/66 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 66/66 [00:00<00:00, 33081.27 examples/s]
+Tokenizing train dataset:   0%|          | 0/66 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 66/66 [00:00<00:00, 5791.78 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.31s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.31s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.34s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.34s/it]100%|██████████| 3/3 [00:03<00:00,  1.13s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.13s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.13s/it]100%|██████████| 3/3 [00:03<00:00,  1.18s/it]
+{'loss': '3.478', 'grad_norm': '5.957', 'learning_rate': '0.0002', 'entropy': '2.406', 'num_tokens': '1482', 'mean_token_accuracy': '0.4782', 'epoch': '0.4'}
+{'loss': '2.972', 'grad_norm': '5.969', 'learning_rate': '0.0001333', 'entropy': '2.445', 'num_tokens': '2938', 'mean_token_accuracy': '0.485', 'epoch': '0.8'}
+{'loss': '3.014', 'grad_norm': '9.532', 'learning_rate': '6.667e-05', 'entropy': '2.516', 'num_tokens': '3014', 'mean_token_accuracy': '0.4865', 'epoch': '1'}
+{'train_runtime': '3.553', 'train_samples_per_second': '18.58', 'train_steps_per_second': '0.844', 'train_loss': '3.155', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9779.29it/s]
+Adding EOS to train dataset:   0%|          | 0/91 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 91/91 [00:00<00:00, 37390.45 examples/s]
+Tokenizing train dataset:   0%|          | 0/91 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 91/91 [00:00<00:00, 4142.05 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.50s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.50s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.47s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.47s/it]100%|██████████| 3/3 [00:04<00:00,  1.58s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.58s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.58s/it]100%|██████████| 3/3 [00:04<00:00,  1.55s/it]
+{'loss': '2.701', 'grad_norm': '3.172', 'learning_rate': '0.0002', 'entropy': '2.051', 'num_tokens': '2725', 'mean_token_accuracy': '0.4964', 'epoch': '0.3333'}
+{'loss': '2.478', 'grad_norm': '3.342', 'learning_rate': '0.0001333', 'entropy': '2.09', 'num_tokens': '5303', 'mean_token_accuracy': '0.4958', 'epoch': '0.6667'}
+{'loss': '2.465', 'grad_norm': '4.061', 'learning_rate': '6.667e-05', 'entropy': '2.141', 'num_tokens': '7669', 'mean_token_accuracy': '0.4796', 'epoch': '1'}
+{'train_runtime': '4.663', 'train_samples_per_second': '19.51', 'train_steps_per_second': '0.643', 'train_loss': '2.548', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10415.27it/s]
+Adding EOS to train dataset:   0%|          | 0/97 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 97/97 [00:00<00:00, 40917.98 examples/s]
+Tokenizing train dataset:   0%|          | 0/97 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 97/97 [00:00<00:00, 4265.36 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.61s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.61s/it] 50%|█████     | 2/4 [00:03<00:03,  1.61s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.61s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.73s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.73s/it]100%|██████████| 4/4 [00:05<00:00,  1.15s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.15s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.15s/it]100%|██████████| 4/4 [00:05<00:00,  1.34s/it]
+{'loss': '3.168', 'grad_norm': '2.897', 'learning_rate': '0.0002', 'entropy': '2.406', 'num_tokens': '3159', 'mean_token_accuracy': '0.4521', 'epoch': '0.2857'}
+{'loss': '2.92', 'grad_norm': '2.625', 'learning_rate': '0.00015', 'entropy': '2.273', 'num_tokens': '6287', 'mean_token_accuracy': '0.4681', 'epoch': '0.5714'}
+{'loss': '2.605', 'grad_norm': '2.771', 'learning_rate': '0.0001', 'entropy': '2.32', 'num_tokens': '9723', 'mean_token_accuracy': '0.4901', 'epoch': '0.8571'}
+{'loss': '5.087', 'grad_norm': '6.653', 'learning_rate': '5e-05', 'entropy': '2.344', 'num_tokens': '9828', 'mean_token_accuracy': '0.4519', 'epoch': '1'}
+{'train_runtime': '5.364', 'train_samples_per_second': '18.08', 'train_steps_per_second': '0.746', 'train_loss': '3.445', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9263.12it/s]
+Adding EOS to train dataset:   0%|          | 0/78 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 78/78 [00:00<00:00, 26505.36 examples/s]
+Tokenizing train dataset:   0%|          | 0/78 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 78/78 [00:00<00:00, 4518.29 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.56s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.56s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.51s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.51s/it]100%|██████████| 3/3 [00:04<00:00,  1.34s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.34s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.34s/it]100%|██████████| 3/3 [00:04<00:00,  1.39s/it]
+{'loss': '3.653', 'grad_norm': '5.705', 'learning_rate': '0.0002', 'entropy': '2.547', 'num_tokens': '1487', 'mean_token_accuracy': '0.4441', 'epoch': '0.4'}
+{'loss': '2.95', 'grad_norm': '5.678', 'learning_rate': '0.0001333', 'entropy': '2.461', 'num_tokens': '3027', 'mean_token_accuracy': '0.4513', 'epoch': '0.8'}
+{'loss': '2.813', 'grad_norm': '9.177', 'learning_rate': '6.667e-05', 'entropy': '2.281', 'num_tokens': '3620', 'mean_token_accuracy': '0.5078', 'epoch': '1'}
+{'train_runtime': '4.174', 'train_samples_per_second': '18.69', 'train_steps_per_second': '0.719', 'train_loss': '3.139', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10067.57it/s]
+Adding EOS to train dataset:   0%|          | 0/100 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 100/100 [00:00<00:00, 35275.90 examples/s]
+Tokenizing train dataset:   0%|          | 0/100 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 100/100 [00:00<00:00, 4018.11 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.59s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.59s/it] 50%|█████     | 2/4 [00:03<00:03,  1.54s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.54s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.73s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.73s/it]100%|██████████| 4/4 [00:05<00:00,  1.32s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.32s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.32s/it]100%|██████████| 4/4 [00:05<00:00,  1.43s/it]
+{'loss': '2.279', 'grad_norm': '3.616', 'learning_rate': '0.0002', 'entropy': '2.195', 'num_tokens': '2819', 'mean_token_accuracy': '0.5107', 'epoch': '0.2857'}
+{'loss': '2.29', 'grad_norm': '2.089', 'learning_rate': '0.00015', 'entropy': '2.242', 'num_tokens': '5203', 'mean_token_accuracy': '0.5359', 'epoch': '0.5714'}
+{'loss': '2.055', 'grad_norm': '0.7581', 'learning_rate': '0.0001', 'entropy': '1.996', 'num_tokens': '7837', 'mean_token_accuracy': '0.5483', 'epoch': '0.8571'}
+{'loss': '2.304', 'grad_norm': '1.571', 'learning_rate': '5e-05', 'entropy': '2.109', 'num_tokens': '8104', 'mean_token_accuracy': '0.4943', 'epoch': '1'}
+{'train_runtime': '5.742', 'train_samples_per_second': '17.42', 'train_steps_per_second': '0.697', 'train_loss': '2.232', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9283.50it/s]
+Adding EOS to train dataset:   0%|          | 0/76 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 76/76 [00:00<00:00, 31570.48 examples/s]
+Tokenizing train dataset:   0%|          | 0/76 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 76/76 [00:00<00:00, 3861.08 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.56s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.56s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.57s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.57s/it]100%|██████████| 3/3 [00:04<00:00,  1.35s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.35s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.35s/it]100%|██████████| 3/3 [00:04<00:00,  1.41s/it]
+{'loss': '2.674', 'grad_norm': '2.868', 'learning_rate': '0.0002', 'entropy': '2.469', 'num_tokens': '3124', 'mean_token_accuracy': '0.4861', 'epoch': '0.4'}
+{'loss': '2.537', 'grad_norm': '1.373', 'learning_rate': '0.0001333', 'entropy': '2.297', 'num_tokens': '6184', 'mean_token_accuracy': '0.5175', 'epoch': '0.8'}
+{'loss': '2.122', 'grad_norm': '1.201', 'learning_rate': '6.667e-05', 'entropy': '1.945', 'num_tokens': '7290', 'mean_token_accuracy': '0.5832', 'epoch': '1'}
+{'train_runtime': '4.226', 'train_samples_per_second': '17.98', 'train_steps_per_second': '0.71', 'train_loss': '2.445', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9045.79it/s]
+Adding EOS to train dataset:   0%|          | 0/82 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 82/82 [00:00<00:00, 31226.89 examples/s]
+Tokenizing train dataset:   0%|          | 0/82 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 82/82 [00:00<00:00, 5512.98 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.46s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.46s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.55s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.55s/it]100%|██████████| 3/3 [00:04<00:00,  1.62s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.62s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.62s/it]100%|██████████| 3/3 [00:04<00:00,  1.59s/it]
+{'loss': '2.606', 'grad_norm': '6.146', 'learning_rate': '0.0002', 'entropy': '2.43', 'num_tokens': '1574', 'mean_token_accuracy': '0.4819', 'epoch': '0.3333'}
+{'loss': '2.28', 'grad_norm': '3.179', 'learning_rate': '0.0001333', 'entropy': '2.297', 'num_tokens': '3132', 'mean_token_accuracy': '0.5473', 'epoch': '0.6667'}
+{'loss': '2.166', 'grad_norm': '1.083', 'learning_rate': '6.667e-05', 'entropy': '1.98', 'num_tokens': '4125', 'mean_token_accuracy': '0.5834', 'epoch': '1'}
+{'train_runtime': '4.778', 'train_samples_per_second': '17.16', 'train_steps_per_second': '0.628', 'train_loss': '2.351', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8873.50it/s]
+Adding EOS to train dataset:   0%|          | 0/83 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 83/83 [00:00<00:00, 35808.19 examples/s]
+Tokenizing train dataset:   0%|          | 0/83 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 83/83 [00:00<00:00, 4170.94 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.48s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.48s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.47s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.47s/it]100%|██████████| 3/3 [00:04<00:00,  1.60s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.60s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.60s/it]100%|██████████| 3/3 [00:04<00:00,  1.57s/it]
+{'loss': '2.258', 'grad_norm': '4.144', 'learning_rate': '0.0002', 'entropy': '2.148', 'num_tokens': '2449', 'mean_token_accuracy': '0.5179', 'epoch': '0.3333'}
+{'loss': '2.019', 'grad_norm': '2.055', 'learning_rate': '0.0001333', 'entropy': '2.039', 'num_tokens': '4999', 'mean_token_accuracy': '0.538', 'epoch': '0.6667'}
+{'loss': '2.038', 'grad_norm': '0.7629', 'learning_rate': '6.667e-05', 'entropy': '1.945', 'num_tokens': '6791', 'mean_token_accuracy': '0.5625', 'epoch': '1'}
+{'train_runtime': '4.706', 'train_samples_per_second': '17.64', 'train_steps_per_second': '0.638', 'train_loss': '2.105', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8297.77it/s]
+Adding EOS to train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 90/90 [00:00<00:00, 35743.52 examples/s]
+Tokenizing train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 90/90 [00:00<00:00, 4109.15 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.54s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.54s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.70s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.70s/it]100%|██████████| 3/3 [00:05<00:00,  1.79s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.79s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.79s/it]100%|██████████| 3/3 [00:05<00:00,  1.75s/it]
+{'loss': '2.464', 'grad_norm': '2.142', 'learning_rate': '0.0002', 'entropy': '2.297', 'num_tokens': '3018', 'mean_token_accuracy': '0.5309', 'epoch': '0.3333'}
+{'loss': '2.382', 'grad_norm': '1.663', 'learning_rate': '0.0001333', 'entropy': '2.117', 'num_tokens': '6309', 'mean_token_accuracy': '0.5397', 'epoch': '0.6667'}
+{'loss': '2.247', 'grad_norm': '0.9071', 'learning_rate': '6.667e-05', 'entropy': '2.062', 'num_tokens': '9089', 'mean_token_accuracy': '0.565', 'epoch': '1'}
+{'train_runtime': '5.252', 'train_samples_per_second': '17.14', 'train_steps_per_second': '0.571', 'train_loss': '2.365', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8561.72it/s]
+Adding EOS to train dataset:   0%|          | 0/81 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 81/81 [00:00<00:00, 34635.40 examples/s]
+Tokenizing train dataset:   0%|          | 0/81 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 81/81 [00:00<00:00, 5601.81 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.47s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.47s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.43s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.43s/it]100%|██████████| 3/3 [00:04<00:00,  1.35s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.35s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.35s/it]100%|██████████| 3/3 [00:04<00:00,  1.38s/it]
+{'loss': '2.674', 'grad_norm': '6.505', 'learning_rate': '0.0002', 'entropy': '2.461', 'num_tokens': '1592', 'mean_token_accuracy': '0.4929', 'epoch': '0.3333'}
+{'loss': '2.541', 'grad_norm': '3.565', 'learning_rate': '0.0001333', 'entropy': '2.469', 'num_tokens': '3112', 'mean_token_accuracy': '0.5139', 'epoch': '0.6667'}
+{'loss': '2.533', 'grad_norm': '1.589', 'learning_rate': '6.667e-05', 'entropy': '2.352', 'num_tokens': '3893', 'mean_token_accuracy': '0.4965', 'epoch': '1'}
+{'train_runtime': '4.132', 'train_samples_per_second': '19.6', 'train_steps_per_second': '0.726', 'train_loss': '2.582', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9046.95it/s]
+Adding EOS to train dataset:   0%|          | 0/101 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 101/101 [00:00<00:00, 38595.55 examples/s]
+Tokenizing train dataset:   0%|          | 0/101 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 101/101 [00:00<00:00, 4095.68 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.59s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.59s/it] 50%|█████     | 2/4 [00:03<00:03,  1.83s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.83s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.86s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.86s/it]100%|██████████| 4/4 [00:06<00:00,  1.37s/it]                                             100%|██████████| 4/4 [00:06<00:00,  1.37s/it]                                             100%|██████████| 4/4 [00:06<00:00,  1.37s/it]100%|██████████| 4/4 [00:06<00:00,  1.52s/it]
+{'loss': '2.021', 'grad_norm': '0.5925', 'learning_rate': '0.0002', 'entropy': '2.023', 'num_tokens': '2591', 'mean_token_accuracy': '0.564', 'epoch': '0.2857'}
+{'loss': '2.047', 'grad_norm': '0.4973', 'learning_rate': '0.00015', 'entropy': '2.023', 'num_tokens': '5555', 'mean_token_accuracy': '0.5553', 'epoch': '0.5714'}
+{'loss': '2.066', 'grad_norm': '0.5121', 'learning_rate': '0.0001', 'entropy': '2.133', 'num_tokens': '8234', 'mean_token_accuracy': '0.5493', 'epoch': '0.8571'}
+{'loss': '2.462', 'grad_norm': '1.168', 'learning_rate': '5e-05', 'entropy': '2.344', 'num_tokens': '8639', 'mean_token_accuracy': '0.5375', 'epoch': '1'}
+{'train_runtime': '6.094', 'train_samples_per_second': '16.57', 'train_steps_per_second': '0.656', 'train_loss': '2.149', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9151.13it/s]
+Adding EOS to train dataset:   0%|          | 0/105 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 105/105 [00:00<00:00, 39718.79 examples/s]
+Tokenizing train dataset:   0%|          | 0/105 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 105/105 [00:00<00:00, 4208.09 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:05,  1.86s/it]                                              25%|██▌       | 1/4 [00:01<00:05,  1.86s/it] 50%|█████     | 2/4 [00:03<00:03,  1.66s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.66s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.88s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.88s/it]100%|██████████| 4/4 [00:06<00:00,  1.41s/it]                                             100%|██████████| 4/4 [00:06<00:00,  1.41s/it]                                             100%|██████████| 4/4 [00:06<00:00,  1.41s/it]100%|██████████| 4/4 [00:06<00:00,  1.56s/it]
+{'loss': '2.434', 'grad_norm': '0.6864', 'learning_rate': '0.0002', 'entropy': '2.18', 'num_tokens': '3394', 'mean_token_accuracy': '0.5132', 'epoch': '0.2857'}
+{'loss': '2.264', 'grad_norm': '1.353', 'learning_rate': '0.00015', 'entropy': '2.227', 'num_tokens': '6529', 'mean_token_accuracy': '0.5409', 'epoch': '0.5714'}
+{'loss': '2.253', 'grad_norm': '0.6455', 'learning_rate': '0.0001', 'entropy': '2.266', 'num_tokens': '9561', 'mean_token_accuracy': '0.546', 'epoch': '0.8571'}
+{'loss': '2.26', 'grad_norm': '1.117', 'learning_rate': '5e-05', 'entropy': '2.219', 'num_tokens': '1.044e+04', 'mean_token_accuracy': '0.5548', 'epoch': '1'}
+{'train_runtime': '6.224', 'train_samples_per_second': '16.87', 'train_steps_per_second': '0.643', 'train_loss': '2.303', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9206.40it/s]
+Adding EOS to train dataset:   0%|          | 0/88 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 88/88 [00:00<00:00, 35565.50 examples/s]
+Tokenizing train dataset:   0%|          | 0/88 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 88/88 [00:00<00:00, 5808.28 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.68s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.68s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.53s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.53s/it]100%|██████████| 3/3 [00:04<00:00,  1.64s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.64s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.64s/it]100%|██████████| 3/3 [00:04<00:00,  1.62s/it]
+{'loss': '2.311', 'grad_norm': '0.9287', 'learning_rate': '0.0002', 'entropy': '2.125', 'num_tokens': '1569', 'mean_token_accuracy': '0.5573', 'epoch': '0.3333'}
+{'loss': '2.096', 'grad_norm': '4.027', 'learning_rate': '0.0001333', 'entropy': '2.004', 'num_tokens': '3011', 'mean_token_accuracy': '0.5844', 'epoch': '0.6667'}
+{'loss': '2', 'grad_norm': '0.7822', 'learning_rate': '6.667e-05', 'entropy': '2.031', 'num_tokens': '4327', 'mean_token_accuracy': '0.5737', 'epoch': '1'}
+{'train_runtime': '4.87', 'train_samples_per_second': '18.07', 'train_steps_per_second': '0.616', 'train_loss': '2.136', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10907.62it/s]
+Adding EOS to train dataset:   0%|          | 0/68 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 68/68 [00:00<00:00, 29784.11 examples/s]
+Tokenizing train dataset:   0%|          | 0/68 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 68/68 [00:00<00:00, 3716.51 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.79s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.79s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.72s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.72s/it]100%|██████████| 3/3 [00:04<00:00,  1.41s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.41s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.41s/it]100%|██████████| 3/3 [00:04<00:00,  1.50s/it]
+{'loss': '1.971', 'grad_norm': '0.5056', 'learning_rate': '0.0002', 'entropy': '1.867', 'num_tokens': '3023', 'mean_token_accuracy': '0.5593', 'epoch': '0.4'}
+{'loss': '2.068', 'grad_norm': '0.6085', 'learning_rate': '0.0001333', 'entropy': '2.172', 'num_tokens': '5943', 'mean_token_accuracy': '0.5374', 'epoch': '0.8'}
+{'loss': '1.882', 'grad_norm': '1.121', 'learning_rate': '6.667e-05', 'entropy': '2.156', 'num_tokens': '6260', 'mean_token_accuracy': '0.5495', 'epoch': '1'}
+{'train_runtime': '4.508', 'train_samples_per_second': '15.09', 'train_steps_per_second': '0.666', 'train_loss': '1.974', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10140.44it/s]
+Adding EOS to train dataset:   0%|          | 0/73 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 73/73 [00:00<00:00, 31725.64 examples/s]
+Tokenizing train dataset:   0%|          | 0/73 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 73/73 [00:00<00:00, 4075.17 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.51s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.51s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]100%|██████████| 3/3 [00:04<00:00,  1.34s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.34s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.34s/it]100%|██████████| 3/3 [00:04<00:00,  1.40s/it]
+{'loss': '2.3', 'grad_norm': '0.7824', 'learning_rate': '0.0002', 'entropy': '2.141', 'num_tokens': '2933', 'mean_token_accuracy': '0.5539', 'epoch': '0.4'}
+{'loss': '2.136', 'grad_norm': '0.698', 'learning_rate': '0.0001333', 'entropy': '2.125', 'num_tokens': '6101', 'mean_token_accuracy': '0.5447', 'epoch': '0.8'}
+{'loss': '2.092', 'grad_norm': '1.003', 'learning_rate': '6.667e-05', 'entropy': '2', 'num_tokens': '7023', 'mean_token_accuracy': '0.5575', 'epoch': '1'}
+{'train_runtime': '4.209', 'train_samples_per_second': '17.34', 'train_steps_per_second': '0.713', 'train_loss': '2.176', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9453.56it/s]
+Adding EOS to train dataset:   0%|          | 0/77 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 77/77 [00:00<00:00, 34103.63 examples/s]
+Tokenizing train dataset:   0%|          | 0/77 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 77/77 [00:00<00:00, 5433.58 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.45s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.45s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.41s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.41s/it]100%|██████████| 3/3 [00:03<00:00,  1.23s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.23s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.23s/it]100%|██████████| 3/3 [00:03<00:00,  1.28s/it]
+{'loss': '2.066', 'grad_norm': '0.9413', 'learning_rate': '0.0002', 'entropy': '2.008', 'num_tokens': '1670', 'mean_token_accuracy': '0.5819', 'epoch': '0.4'}
+{'loss': '2.214', 'grad_norm': '0.8569', 'learning_rate': '0.0001333', 'entropy': '2.211', 'num_tokens': '3343', 'mean_token_accuracy': '0.5556', 'epoch': '0.8'}
+{'loss': '2.167', 'grad_norm': '1.204', 'learning_rate': '6.667e-05', 'entropy': '2.25', 'num_tokens': '3981', 'mean_token_accuracy': '0.552', 'epoch': '1'}
+{'train_runtime': '3.855', 'train_samples_per_second': '19.97', 'train_steps_per_second': '0.778', 'train_loss': '2.149', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9334.61it/s]
+Adding EOS to train dataset:   0%|          | 0/80 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 80/80 [00:00<00:00, 34499.72 examples/s]
+Tokenizing train dataset:   0%|          | 0/80 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 80/80 [00:00<00:00, 3915.29 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.80s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.80s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.76s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.76s/it]100%|██████████| 3/3 [00:04<00:00,  1.47s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.47s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.47s/it]100%|██████████| 3/3 [00:04<00:00,  1.56s/it]
+{'loss': '1.984', 'grad_norm': '0.4691', 'learning_rate': '0.0002', 'entropy': '2.043', 'num_tokens': '2680', 'mean_token_accuracy': '0.544', 'epoch': '0.4'}
+{'loss': '2.08', 'grad_norm': '0.9011', 'learning_rate': '0.0001333', 'entropy': '1.98', 'num_tokens': '5590', 'mean_token_accuracy': '0.53', 'epoch': '0.8'}
+{'loss': '1.974', 'grad_norm': '0.6945', 'learning_rate': '6.667e-05', 'entropy': '1.93', 'num_tokens': '6948', 'mean_token_accuracy': '0.5507', 'epoch': '1'}
+{'train_runtime': '4.67', 'train_samples_per_second': '17.13', 'train_steps_per_second': '0.642', 'train_loss': '2.013', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10262.15it/s]
+Adding EOS to train dataset:   0%|          | 0/93 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 93/93 [00:00<00:00, 37078.92 examples/s]
+Tokenizing train dataset:   0%|          | 0/93 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 93/93 [00:00<00:00, 4107.34 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.59s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.59s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.78s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.78s/it]100%|██████████| 3/3 [00:05<00:00,  1.88s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.88s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.88s/it]100%|██████████| 3/3 [00:05<00:00,  1.84s/it]
+{'loss': '2.038', 'grad_norm': '0.6852', 'learning_rate': '0.0002', 'entropy': '2.031', 'num_tokens': '3085', 'mean_token_accuracy': '0.5895', 'epoch': '0.3333'}
+{'loss': '2.118', 'grad_norm': '1.043', 'learning_rate': '0.0001333', 'entropy': '2.102', 'num_tokens': '6244', 'mean_token_accuracy': '0.5618', 'epoch': '0.6667'}
+{'loss': '2.284', 'grad_norm': '0.879', 'learning_rate': '6.667e-05', 'entropy': '2.203', 'num_tokens': '9301', 'mean_token_accuracy': '0.5206', 'epoch': '1'}
+{'train_runtime': '5.51', 'train_samples_per_second': '16.88', 'train_steps_per_second': '0.545', 'train_loss': '2.147', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 15628.99it/s]
+Adding EOS to train dataset:   0%|          | 0/87 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 87/87 [00:00<00:00, 35534.57 examples/s]
+Tokenizing train dataset:   0%|          | 0/87 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 87/87 [00:00<00:00, 5726.87 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.50s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.50s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]100%|██████████| 3/3 [00:04<00:00,  1.62s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.62s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.62s/it]100%|██████████| 3/3 [00:04<00:00,  1.59s/it]
+{'loss': '2.122', 'grad_norm': '0.8394', 'learning_rate': '0.0002', 'entropy': '2.258', 'num_tokens': '1411', 'mean_token_accuracy': '0.5758', 'epoch': '0.3333'}
+{'loss': '2.158', 'grad_norm': '1.334', 'learning_rate': '0.0001333', 'entropy': '2.145', 'num_tokens': '2906', 'mean_token_accuracy': '0.5714', 'epoch': '0.6667'}
+{'loss': '2.022', 'grad_norm': '0.8982', 'learning_rate': '6.667e-05', 'entropy': '1.949', 'num_tokens': '4061', 'mean_token_accuracy': '0.5907', 'epoch': '1'}
+{'train_runtime': '4.758', 'train_samples_per_second': '18.28', 'train_steps_per_second': '0.63', 'train_loss': '2.101', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9822.66it/s]
+Adding EOS to train dataset:   0%|          | 0/83 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 83/83 [00:00<00:00, 35264.10 examples/s]
+Tokenizing train dataset:   0%|          | 0/83 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 83/83 [00:00<00:00, 4008.33 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.63s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.63s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]100%|██████████| 3/3 [00:04<00:00,  1.64s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.64s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.64s/it]100%|██████████| 3/3 [00:04<00:00,  1.64s/it]
+{'loss': '2.062', 'grad_norm': '0.4926', 'learning_rate': '0.0002', 'entropy': '2.062', 'num_tokens': '2929', 'mean_token_accuracy': '0.5429', 'epoch': '0.3333'}
+{'loss': '2.073', 'grad_norm': '0.5831', 'learning_rate': '0.0001333', 'entropy': '2.07', 'num_tokens': '5432', 'mean_token_accuracy': '0.5403', 'epoch': '0.6667'}
+{'loss': '1.997', 'grad_norm': '0.9498', 'learning_rate': '6.667e-05', 'entropy': '2.07', 'num_tokens': '6930', 'mean_token_accuracy': '0.5784', 'epoch': '1'}
+{'train_runtime': '4.91', 'train_samples_per_second': '16.9', 'train_steps_per_second': '0.611', 'train_loss': '2.044', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9319.39it/s]
+Adding EOS to train dataset:   0%|          | 0/91 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 91/91 [00:00<00:00, 35933.13 examples/s]
+Tokenizing train dataset:   0%|          | 0/91 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 91/91 [00:00<00:00, 4068.41 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.58s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.58s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.53s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.53s/it]100%|██████████| 3/3 [00:04<00:00,  1.66s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.66s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.66s/it]100%|██████████| 3/3 [00:04<00:00,  1.63s/it]
+{'loss': '2.089', 'grad_norm': '0.5491', 'learning_rate': '0.0002', 'entropy': '2.012', 'num_tokens': '3043', 'mean_token_accuracy': '0.5611', 'epoch': '0.3333'}
+{'loss': '2.134', 'grad_norm': '1.191', 'learning_rate': '0.0001333', 'entropy': '2.18', 'num_tokens': '6152', 'mean_token_accuracy': '0.555', 'epoch': '0.6667'}
+{'loss': '2.055', 'grad_norm': '0.6322', 'learning_rate': '6.667e-05', 'entropy': '2.086', 'num_tokens': '8896', 'mean_token_accuracy': '0.5613', 'epoch': '1'}
+{'train_runtime': '4.891', 'train_samples_per_second': '18.61', 'train_steps_per_second': '0.613', 'train_loss': '2.092', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9272.94it/s]
+Adding EOS to train dataset:   0%|          | 0/78 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 78/78 [00:00<00:00, 34524.66 examples/s]
+Tokenizing train dataset:   0%|          | 0/78 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 78/78 [00:00<00:00, 5780.34 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.44s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.44s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.41s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.41s/it]100%|██████████| 3/3 [00:03<00:00,  1.26s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.26s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.26s/it]100%|██████████| 3/3 [00:03<00:00,  1.30s/it]
+{'loss': '2.046', 'grad_norm': '0.9237', 'learning_rate': '0.0002', 'entropy': '2.094', 'num_tokens': '1425', 'mean_token_accuracy': '0.598', 'epoch': '0.4'}
+{'loss': '2.074', 'grad_norm': '0.924', 'learning_rate': '0.0001333', 'entropy': '2.09', 'num_tokens': '2873', 'mean_token_accuracy': '0.5768', 'epoch': '0.8'}
+{'loss': '1.984', 'grad_norm': '0.9146', 'learning_rate': '6.667e-05', 'entropy': '2', 'num_tokens': '3517', 'mean_token_accuracy': '0.5762', 'epoch': '1'}
+{'train_runtime': '3.912', 'train_samples_per_second': '19.94', 'train_steps_per_second': '0.767', 'train_loss': '2.035', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9239.46it/s]
+Adding EOS to train dataset:   0%|          | 0/98 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 98/98 [00:00<00:00, 37915.49 examples/s]
+Tokenizing train dataset:   0%|          | 0/98 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 98/98 [00:00<00:00, 4608.51 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.51s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.51s/it] 50%|█████     | 2/4 [00:02<00:02,  1.45s/it]                                              50%|█████     | 2/4 [00:02<00:02,  1.45s/it] 75%|███████▌  | 3/4 [00:04<00:01,  1.67s/it]                                              75%|███████▌  | 3/4 [00:04<00:01,  1.67s/it]100%|██████████| 4/4 [00:05<00:00,  1.26s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.26s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.26s/it]100%|██████████| 4/4 [00:05<00:00,  1.37s/it]
+{'loss': '2.017', 'grad_norm': '0.7503', 'learning_rate': '0.0002', 'entropy': '1.926', 'num_tokens': '2365', 'mean_token_accuracy': '0.5478', 'epoch': '0.2857'}
+{'loss': '1.858', 'grad_norm': '1.266', 'learning_rate': '0.00015', 'entropy': '1.898', 'num_tokens': '4703', 'mean_token_accuracy': '0.5867', 'epoch': '0.5714'}
+{'loss': '1.943', 'grad_norm': '0.6592', 'learning_rate': '0.0001', 'entropy': '1.969', 'num_tokens': '6930', 'mean_token_accuracy': '0.5654', 'epoch': '0.8571'}
+{'loss': '1.493', 'grad_norm': '1.281', 'learning_rate': '5e-05', 'entropy': '1.625', 'num_tokens': '7117', 'mean_token_accuracy': '0.6378', 'epoch': '1'}
+{'train_runtime': '5.476', 'train_samples_per_second': '17.9', 'train_steps_per_second': '0.73', 'train_loss': '1.828', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9829.81it/s]
+Adding EOS to train dataset:   0%|          | 0/79 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 79/79 [00:00<00:00, 34769.15 examples/s]
+Tokenizing train dataset:   0%|          | 0/79 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 79/79 [00:00<00:00, 3951.32 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.58s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.58s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]100%|██████████| 3/3 [00:04<00:00,  1.32s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.32s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.32s/it]100%|██████████| 3/3 [00:04<00:00,  1.38s/it]
+{'loss': '1.977', 'grad_norm': '0.6321', 'learning_rate': '0.0002', 'entropy': '1.949', 'num_tokens': '3286', 'mean_token_accuracy': '0.5738', 'epoch': '0.4'}
+{'loss': '2.127', 'grad_norm': '0.9363', 'learning_rate': '0.0001333', 'entropy': '1.977', 'num_tokens': '6265', 'mean_token_accuracy': '0.5775', 'epoch': '0.8'}
+{'loss': '1.937', 'grad_norm': '0.8151', 'learning_rate': '6.667e-05', 'entropy': '1.992', 'num_tokens': '7755', 'mean_token_accuracy': '0.5844', 'epoch': '1'}
+{'train_runtime': '4.13', 'train_samples_per_second': '19.13', 'train_steps_per_second': '0.726', 'train_loss': '2.013', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8971.60it/s]
+Adding EOS to train dataset:   0%|          | 0/84 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 84/84 [00:00<00:00, 36105.92 examples/s]
+Tokenizing train dataset:   0%|          | 0/84 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 84/84 [00:00<00:00, 5477.30 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.40s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.40s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.47s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.47s/it]100%|██████████| 3/3 [00:04<00:00,  1.58s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.58s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.58s/it]100%|██████████| 3/3 [00:04<00:00,  1.54s/it]
+{'loss': '2.002', 'grad_norm': '0.7549', 'learning_rate': '0.0002', 'entropy': '2.055', 'num_tokens': '1517', 'mean_token_accuracy': '0.5834', 'epoch': '0.3333'}
+{'loss': '2.049', 'grad_norm': '1.072', 'learning_rate': '0.0001333', 'entropy': '2.078', 'num_tokens': '3274', 'mean_token_accuracy': '0.5671', 'epoch': '0.6667'}
+{'loss': '2.091', 'grad_norm': '0.8693', 'learning_rate': '6.667e-05', 'entropy': '2.117', 'num_tokens': '4420', 'mean_token_accuracy': '0.5587', 'epoch': '1'}
+{'train_runtime': '4.627', 'train_samples_per_second': '18.16', 'train_steps_per_second': '0.648', 'train_loss': '2.047', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8870.83it/s]
+Adding EOS to train dataset:   0%|          | 0/89 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 89/89 [00:00<00:00, 36087.88 examples/s]
+Tokenizing train dataset:   0%|          | 0/89 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 89/89 [00:00<00:00, 3993.64 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.74s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.74s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.68s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.68s/it]100%|██████████| 3/3 [00:05<00:00,  1.76s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.76s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.76s/it]100%|██████████| 3/3 [00:05<00:00,  1.74s/it]
+{'loss': '1.932', 'grad_norm': '0.5621', 'learning_rate': '0.0002', 'entropy': '1.957', 'num_tokens': '2635', 'mean_token_accuracy': '0.5439', 'epoch': '0.3333'}
+{'loss': '2.013', 'grad_norm': '0.8885', 'learning_rate': '0.0001333', 'entropy': '1.969', 'num_tokens': '5503', 'mean_token_accuracy': '0.5399', 'epoch': '0.6667'}
+{'loss': '1.878', 'grad_norm': '0.5465', 'learning_rate': '6.667e-05', 'entropy': '1.844', 'num_tokens': '7799', 'mean_token_accuracy': '0.5588', 'epoch': '1'}
+{'train_runtime': '5.233', 'train_samples_per_second': '17.01', 'train_steps_per_second': '0.573', 'train_loss': '1.941', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 15984.43it/s]
+Adding EOS to train dataset:   0%|          | 0/80 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 80/80 [00:00<00:00, 34631.47 examples/s]
+Tokenizing train dataset:   0%|          | 0/80 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 80/80 [00:00<00:00, 4088.46 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.58s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.58s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.53s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.53s/it]100%|██████████| 3/3 [00:04<00:00,  1.37s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.37s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.37s/it]100%|██████████| 3/3 [00:04<00:00,  1.42s/it]
+{'loss': '1.933', 'grad_norm': '0.5213', 'learning_rate': '0.0002', 'entropy': '1.918', 'num_tokens': '3160', 'mean_token_accuracy': '0.5978', 'epoch': '0.4'}
+{'loss': '2.143', 'grad_norm': '1.075', 'learning_rate': '0.0001333', 'entropy': '2.141', 'num_tokens': '6283', 'mean_token_accuracy': '0.5404', 'epoch': '0.8'}
+{'loss': '2.078', 'grad_norm': '1.019', 'learning_rate': '6.667e-05', 'entropy': '2.109', 'num_tokens': '7631', 'mean_token_accuracy': '0.5856', 'epoch': '1'}
+{'train_runtime': '4.249', 'train_samples_per_second': '18.83', 'train_steps_per_second': '0.706', 'train_loss': '2.051', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10425.00it/s]
+Adding EOS to train dataset:   0%|          | 0/82 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 82/82 [00:00<00:00, 27488.25 examples/s]
+Tokenizing train dataset:   0%|          | 0/82 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 82/82 [00:00<00:00, 5712.98 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.69s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.69s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.56s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.56s/it]100%|██████████| 3/3 [00:04<00:00,  1.62s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.62s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.62s/it]100%|██████████| 3/3 [00:04<00:00,  1.62s/it]
+{'loss': '2.135', 'grad_norm': '0.7773', 'learning_rate': '0.0002', 'entropy': '2.133', 'num_tokens': '1602', 'mean_token_accuracy': '0.5702', 'epoch': '0.3333'}
+{'loss': '2.143', 'grad_norm': '0.842', 'learning_rate': '0.0001333', 'entropy': '2.039', 'num_tokens': '3120', 'mean_token_accuracy': '0.5589', 'epoch': '0.6667'}
+{'loss': '1.914', 'grad_norm': '0.9111', 'learning_rate': '6.667e-05', 'entropy': '2.109', 'num_tokens': '3892', 'mean_token_accuracy': '0.6215', 'epoch': '1'}
+{'train_runtime': '4.86', 'train_samples_per_second': '16.87', 'train_steps_per_second': '0.617', 'train_loss': '2.064', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 12642.57it/s]
+Adding EOS to train dataset:   0%|          | 0/76 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 76/76 [00:00<00:00, 30283.78 examples/s]
+Tokenizing train dataset:   0%|          | 0/76 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 76/76 [00:00<00:00, 3761.62 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.89s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.89s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.72s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.72s/it]100%|██████████| 3/3 [00:04<00:00,  1.42s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.42s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.42s/it]100%|██████████| 3/3 [00:04<00:00,  1.52s/it]
+{'loss': '2.078', 'grad_norm': '0.4938', 'learning_rate': '0.0002', 'entropy': '2.039', 'num_tokens': '2715', 'mean_token_accuracy': '0.5425', 'epoch': '0.4'}
+{'loss': '1.879', 'grad_norm': '0.5522', 'learning_rate': '0.0001333', 'entropy': '2.043', 'num_tokens': '5699', 'mean_token_accuracy': '0.5643', 'epoch': '0.8'}
+{'loss': '2.008', 'grad_norm': '0.6621', 'learning_rate': '6.667e-05', 'entropy': '1.969', 'num_tokens': '6877', 'mean_token_accuracy': '0.5532', 'epoch': '1'}
+{'train_runtime': '4.56', 'train_samples_per_second': '16.67', 'train_steps_per_second': '0.658', 'train_loss': '1.988', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8603.23it/s]
+Adding EOS to train dataset:   0%|          | 0/78 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 78/78 [00:00<00:00, 32472.03 examples/s]
+Tokenizing train dataset:   0%|          | 0/78 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 78/78 [00:00<00:00, 4104.38 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.67s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.67s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]100%|██████████| 3/3 [00:04<00:00,  1.38s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.38s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.38s/it]100%|██████████| 3/3 [00:04<00:00,  1.44s/it]
+{'loss': '1.965', 'grad_norm': '0.4997', 'learning_rate': '0.0002', 'entropy': '1.984', 'num_tokens': '3136', 'mean_token_accuracy': '0.5923', 'epoch': '0.4'}
+{'loss': '1.919', 'grad_norm': '0.7322', 'learning_rate': '0.0001333', 'entropy': '1.805', 'num_tokens': '6061', 'mean_token_accuracy': '0.5942', 'epoch': '0.8'}
+{'loss': '2.121', 'grad_norm': '0.8434', 'learning_rate': '6.667e-05', 'entropy': '2.188', 'num_tokens': '7498', 'mean_token_accuracy': '0.5313', 'epoch': '1'}
+{'train_runtime': '4.337', 'train_samples_per_second': '17.99', 'train_steps_per_second': '0.692', 'train_loss': '2.002', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8555.00it/s]
+Adding EOS to train dataset:   0%|          | 0/76 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 76/76 [00:00<00:00, 34206.15 examples/s]
+Tokenizing train dataset:   0%|          | 0/76 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 76/76 [00:00<00:00, 5425.55 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.49s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.49s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.54s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.54s/it]100%|██████████| 3/3 [00:04<00:00,  1.33s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.33s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.33s/it]100%|██████████| 3/3 [00:04<00:00,  1.38s/it]
+{'loss': '1.916', 'grad_norm': '0.7099', 'learning_rate': '0.0002', 'entropy': '2.039', 'num_tokens': '1725', 'mean_token_accuracy': '0.5816', 'epoch': '0.4'}
+{'loss': '1.934', 'grad_norm': '0.7047', 'learning_rate': '0.0001333', 'entropy': '1.988', 'num_tokens': '3359', 'mean_token_accuracy': '0.5953', 'epoch': '0.8'}
+{'loss': '1.736', 'grad_norm': '0.9473', 'learning_rate': '6.667e-05', 'entropy': '1.805', 'num_tokens': '3976', 'mean_token_accuracy': '0.6314', 'epoch': '1'}
+{'train_runtime': '4.145', 'train_samples_per_second': '18.34', 'train_steps_per_second': '0.724', 'train_loss': '1.862', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9565.89it/s]
+Adding EOS to train dataset:   0%|          | 0/100 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 100/100 [00:00<00:00, 38667.87 examples/s]
+Tokenizing train dataset:   0%|          | 0/100 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 100/100 [00:00<00:00, 3961.64 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:05,  1.76s/it]                                              25%|██▌       | 1/4 [00:01<00:05,  1.76s/it] 50%|█████     | 2/4 [00:03<00:03,  1.67s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.67s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.82s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.82s/it]100%|██████████| 4/4 [00:06<00:00,  1.38s/it]                                             100%|██████████| 4/4 [00:06<00:00,  1.38s/it]                                             100%|██████████| 4/4 [00:06<00:00,  1.38s/it]100%|██████████| 4/4 [00:06<00:00,  1.52s/it]
+{'loss': '1.866', 'grad_norm': '0.4648', 'learning_rate': '0.0002', 'entropy': '1.84', 'num_tokens': '2856', 'mean_token_accuracy': '0.559', 'epoch': '0.2857'}
+{'loss': '1.888', 'grad_norm': '0.637', 'learning_rate': '0.00015', 'entropy': '1.945', 'num_tokens': '5847', 'mean_token_accuracy': '0.5747', 'epoch': '0.5714'}
+{'loss': '1.854', 'grad_norm': '0.5667', 'learning_rate': '0.0001', 'entropy': '1.805', 'num_tokens': '8749', 'mean_token_accuracy': '0.5704', 'epoch': '0.8571'}
+{'loss': '1.91', 'grad_norm': '1.009', 'learning_rate': '5e-05', 'entropy': '2.047', 'num_tokens': '9196', 'mean_token_accuracy': '0.5237', 'epoch': '1'}
+{'train_runtime': '6.073', 'train_samples_per_second': '16.47', 'train_steps_per_second': '0.659', 'train_loss': '1.879', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8557.17it/s]
+Adding EOS to train dataset:   0%|          | 0/92 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 92/92 [00:00<00:00, 37554.84 examples/s]
+Tokenizing train dataset:   0%|          | 0/92 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 92/92 [00:00<00:00, 3916.17 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.87s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.87s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.70s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.70s/it]100%|██████████| 3/3 [00:05<00:00,  1.96s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.96s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.96s/it]100%|██████████| 3/3 [00:05<00:00,  1.90s/it]
+{'loss': '2.083', 'grad_norm': '0.46', 'learning_rate': '0.0002', 'entropy': '2.094', 'num_tokens': '3436', 'mean_token_accuracy': '0.5617', 'epoch': '0.3333'}
+{'loss': '1.995', 'grad_norm': '0.9786', 'learning_rate': '0.0001333', 'entropy': '2.02', 'num_tokens': '6830', 'mean_token_accuracy': '0.5679', 'epoch': '0.6667'}
+{'loss': '2.106', 'grad_norm': '0.5652', 'learning_rate': '6.667e-05', 'entropy': '2.07', 'num_tokens': '9916', 'mean_token_accuracy': '0.5461', 'epoch': '1'}
+{'train_runtime': '5.715', 'train_samples_per_second': '16.1', 'train_steps_per_second': '0.525', 'train_loss': '2.061', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9421.64it/s]
+Adding EOS to train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 90/90 [00:00<00:00, 36227.19 examples/s]
+Tokenizing train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 90/90 [00:00<00:00, 6343.05 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.47s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.47s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.42s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.42s/it]100%|██████████| 3/3 [00:04<00:00,  1.58s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.58s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.58s/it]100%|██████████| 3/3 [00:04<00:00,  1.54s/it]
+{'loss': '1.906', 'grad_norm': '0.8621', 'learning_rate': '0.0002', 'entropy': '2.062', 'num_tokens': '1430', 'mean_token_accuracy': '0.6034', 'epoch': '0.3333'}
+{'loss': '1.97', 'grad_norm': '1.115', 'learning_rate': '0.0001333', 'entropy': '2.07', 'num_tokens': '2770', 'mean_token_accuracy': '0.6051', 'epoch': '0.6667'}
+{'loss': '2.012', 'grad_norm': '0.809', 'learning_rate': '6.667e-05', 'entropy': '2.125', 'num_tokens': '3810', 'mean_token_accuracy': '0.6082', 'epoch': '1'}
+{'train_runtime': '4.617', 'train_samples_per_second': '19.5', 'train_steps_per_second': '0.65', 'train_loss': '1.963', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9076.60it/s]
+Adding EOS to train dataset:   0%|          | 0/79 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 79/79 [00:00<00:00, 32396.36 examples/s]
+Tokenizing train dataset:   0%|          | 0/79 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 79/79 [00:00<00:00, 3928.69 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.55s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.55s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.65s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.65s/it]100%|██████████| 3/3 [00:04<00:00,  1.43s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.43s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.43s/it]100%|██████████| 3/3 [00:04<00:00,  1.48s/it]
+{'loss': '1.985', 'grad_norm': '0.5212', 'learning_rate': '0.0002', 'entropy': '2.031', 'num_tokens': '2514', 'mean_token_accuracy': '0.5518', 'epoch': '0.4'}
+{'loss': '2.064', 'grad_norm': '0.897', 'learning_rate': '0.0001333', 'entropy': '2', 'num_tokens': '5381', 'mean_token_accuracy': '0.5362', 'epoch': '0.8'}
+{'loss': '1.88', 'grad_norm': '0.9815', 'learning_rate': '6.667e-05', 'entropy': '1.844', 'num_tokens': '6747', 'mean_token_accuracy': '0.55', 'epoch': '1'}
+{'train_runtime': '4.432', 'train_samples_per_second': '17.82', 'train_steps_per_second': '0.677', 'train_loss': '1.976', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 14254.86it/s]
+Adding EOS to train dataset:   0%|          | 0/85 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 85/85 [00:00<00:00, 35552.04 examples/s]
+Tokenizing train dataset:   0%|          | 0/85 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 85/85 [00:00<00:00, 4154.23 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.61s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.61s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.62s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.62s/it]100%|██████████| 3/3 [00:05<00:00,  1.83s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.83s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.83s/it]100%|██████████| 3/3 [00:05<00:00,  1.77s/it]
+{'loss': '1.864', 'grad_norm': '0.6412', 'learning_rate': '0.0002', 'entropy': '1.93', 'num_tokens': '3119', 'mean_token_accuracy': '0.5988', 'epoch': '0.3333'}
+{'loss': '1.932', 'grad_norm': '0.8895', 'learning_rate': '0.0001333', 'entropy': '1.855', 'num_tokens': '6464', 'mean_token_accuracy': '0.5773', 'epoch': '0.6667'}
+{'loss': '1.901', 'grad_norm': '0.6421', 'learning_rate': '6.667e-05', 'entropy': '1.816', 'num_tokens': '8691', 'mean_token_accuracy': '0.5805', 'epoch': '1'}
+{'train_runtime': '5.315', 'train_samples_per_second': '15.99', 'train_steps_per_second': '0.564', 'train_loss': '1.899', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9212.20it/s]
+Adding EOS to train dataset:   0%|          | 0/87 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 87/87 [00:00<00:00, 37311.29 examples/s]
+Tokenizing train dataset:   0%|          | 0/87 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 87/87 [00:00<00:00, 6100.96 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.45s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.45s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.48s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.48s/it]100%|██████████| 3/3 [00:04<00:00,  1.65s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.65s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.65s/it]100%|██████████| 3/3 [00:04<00:00,  1.60s/it]
+{'loss': '2.101', 'grad_norm': '0.7522', 'learning_rate': '0.0002', 'entropy': '2.125', 'num_tokens': '1358', 'mean_token_accuracy': '0.5851', 'epoch': '0.3333'}
+{'loss': '2.043', 'grad_norm': '0.8088', 'learning_rate': '0.0001333', 'entropy': '2.055', 'num_tokens': '2919', 'mean_token_accuracy': '0.5775', 'epoch': '0.6667'}
+{'loss': '2.078', 'grad_norm': '0.77', 'learning_rate': '6.667e-05', 'entropy': '2.117', 'num_tokens': '4081', 'mean_token_accuracy': '0.5516', 'epoch': '1'}
+{'train_runtime': '4.798', 'train_samples_per_second': '18.13', 'train_steps_per_second': '0.625', 'train_loss': '2.074', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9041.70it/s]
+Adding EOS to train dataset:   0%|          | 0/84 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 84/84 [00:00<00:00, 33663.44 examples/s]
+Tokenizing train dataset:   0%|          | 0/84 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 84/84 [00:00<00:00, 4112.69 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.70s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.70s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.59s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.59s/it]100%|██████████| 3/3 [00:04<00:00,  1.66s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.66s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.66s/it]100%|██████████| 3/3 [00:04<00:00,  1.66s/it]
+{'loss': '1.886', 'grad_norm': '0.4457', 'learning_rate': '0.0002', 'entropy': '1.902', 'num_tokens': '3009', 'mean_token_accuracy': '0.554', 'epoch': '0.3333'}
+{'loss': '1.72', 'grad_norm': '0.5079', 'learning_rate': '0.0001333', 'entropy': '1.797', 'num_tokens': '5504', 'mean_token_accuracy': '0.5896', 'epoch': '0.6667'}
+{'loss': '1.87', 'grad_norm': '0.6594', 'learning_rate': '6.667e-05', 'entropy': '1.852', 'num_tokens': '7207', 'mean_token_accuracy': '0.5704', 'epoch': '1'}
+{'train_runtime': '4.969', 'train_samples_per_second': '16.91', 'train_steps_per_second': '0.604', 'train_loss': '1.825', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10789.58it/s]
+Adding EOS to train dataset:   0%|          | 0/102 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 102/102 [00:00<00:00, 39419.42 examples/s]
+Tokenizing train dataset:   0%|          | 0/102 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 102/102 [00:00<00:00, 4239.06 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.56s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.56s/it] 50%|█████     | 2/4 [00:03<00:03,  1.72s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.72s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.74s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.74s/it]100%|██████████| 4/4 [00:05<00:00,  1.33s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.33s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.33s/it]100%|██████████| 4/4 [00:05<00:00,  1.46s/it]
+{'loss': '2.003', 'grad_norm': '0.6486', 'learning_rate': '0.0002', 'entropy': '1.98', 'num_tokens': '3085', 'mean_token_accuracy': '0.5696', 'epoch': '0.2857'}
+{'loss': '2.089', 'grad_norm': '0.958', 'learning_rate': '0.00015', 'entropy': '2.016', 'num_tokens': '6391', 'mean_token_accuracy': '0.545', 'epoch': '0.5714'}
+{'loss': '1.96', 'grad_norm': '0.7611', 'learning_rate': '0.0001', 'entropy': '2.004', 'num_tokens': '9481', 'mean_token_accuracy': '0.5945', 'epoch': '0.8571'}
+{'loss': '2.005', 'grad_norm': '0.913', 'learning_rate': '5e-05', 'entropy': '2.062', 'num_tokens': '1.014e+04', 'mean_token_accuracy': '0.5668', 'epoch': '1'}
+{'train_runtime': '5.853', 'train_samples_per_second': '17.43', 'train_steps_per_second': '0.683', 'train_loss': '2.014', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 7653.88it/s]
+Adding EOS to train dataset:   0%|          | 0/75 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 75/75 [00:00<00:00, 34557.05 examples/s]
+Tokenizing train dataset:   0%|          | 0/75 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 75/75 [00:00<00:00, 5819.17 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.54s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.54s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.46s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.46s/it]100%|██████████| 3/3 [00:03<00:00,  1.27s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.27s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.27s/it]100%|██████████| 3/3 [00:03<00:00,  1.33s/it]
+{'loss': '1.96', 'grad_norm': '0.6708', 'learning_rate': '0.0002', 'entropy': '2.008', 'num_tokens': '1591', 'mean_token_accuracy': '0.5909', 'epoch': '0.4'}
+{'loss': '2.048', 'grad_norm': '1.054', 'learning_rate': '0.0001333', 'entropy': '1.98', 'num_tokens': '2954', 'mean_token_accuracy': '0.5838', 'epoch': '0.8'}
+{'loss': '2.108', 'grad_norm': '1.429', 'learning_rate': '6.667e-05', 'entropy': '1.984', 'num_tokens': '3431', 'mean_token_accuracy': '0.5773', 'epoch': '1'}
+{'train_runtime': '3.991', 'train_samples_per_second': '18.79', 'train_steps_per_second': '0.752', 'train_loss': '2.039', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9624.40it/s]
+Adding EOS to train dataset:   0%|          | 0/105 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 105/105 [00:00<00:00, 39279.51 examples/s]
+Tokenizing train dataset:   0%|          | 0/105 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 105/105 [00:00<00:00, 4247.01 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:05,  1.67s/it]                                              25%|██▌       | 1/4 [00:01<00:05,  1.67s/it] 50%|█████     | 2/4 [00:03<00:03,  1.64s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.64s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.77s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.77s/it]100%|██████████| 4/4 [00:05<00:00,  1.35s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.35s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.35s/it]100%|██████████| 4/4 [00:05<00:00,  1.48s/it]
+{'loss': '1.876', 'grad_norm': '0.5852', 'learning_rate': '0.0002', 'entropy': '1.883', 'num_tokens': '2694', 'mean_token_accuracy': '0.5692', 'epoch': '0.2857'}
+{'loss': '1.955', 'grad_norm': '0.7714', 'learning_rate': '0.00015', 'entropy': '1.98', 'num_tokens': '5626', 'mean_token_accuracy': '0.5484', 'epoch': '0.5714'}
+{'loss': '1.927', 'grad_norm': '0.7713', 'learning_rate': '0.0001', 'entropy': '1.93', 'num_tokens': '8129', 'mean_token_accuracy': '0.5524', 'epoch': '0.8571'}
+{'loss': '1.721', 'grad_norm': '0.9417', 'learning_rate': '5e-05', 'entropy': '1.82', 'num_tokens': '8722', 'mean_token_accuracy': '0.5993', 'epoch': '1'}
+{'train_runtime': '5.914', 'train_samples_per_second': '17.75', 'train_steps_per_second': '0.676', 'train_loss': '1.87', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9553.77it/s]
+Adding EOS to train dataset:   0%|          | 0/94 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 94/94 [00:00<00:00, 36617.87 examples/s]
+Tokenizing train dataset:   0%|          | 0/94 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 94/94 [00:00<00:00, 4011.20 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.57s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.57s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.74s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.74s/it]100%|██████████| 3/3 [00:05<00:00,  1.85s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.85s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.85s/it]100%|██████████| 3/3 [00:05<00:00,  1.80s/it]
+{'loss': '1.916', 'grad_norm': '0.5349', 'learning_rate': '0.0002', 'entropy': '1.945', 'num_tokens': '3064', 'mean_token_accuracy': '0.5916', 'epoch': '0.3333'}
+{'loss': '1.961', 'grad_norm': '0.8253', 'learning_rate': '0.0001333', 'entropy': '1.906', 'num_tokens': '6334', 'mean_token_accuracy': '0.5819', 'epoch': '0.6667'}
+{'loss': '2.006', 'grad_norm': '0.4992', 'learning_rate': '6.667e-05', 'entropy': '2.047', 'num_tokens': '9580', 'mean_token_accuracy': '0.5789', 'epoch': '1'}
+{'train_runtime': '5.409', 'train_samples_per_second': '17.38', 'train_steps_per_second': '0.555', 'train_loss': '1.961', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9875.89it/s]
+Adding EOS to train dataset:   0%|          | 0/70 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 70/70 [00:00<00:00, 32647.76 examples/s]
+Tokenizing train dataset:   0%|          | 0/70 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 70/70 [00:00<00:00, 5374.16 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.68s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.68s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.60s/it]100%|██████████| 3/3 [00:04<00:00,  1.37s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.37s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.37s/it]100%|██████████| 3/3 [00:04<00:00,  1.44s/it]
+{'loss': '1.98', 'grad_norm': '0.6158', 'learning_rate': '0.0002', 'entropy': '2.047', 'num_tokens': '1637', 'mean_token_accuracy': '0.566', 'epoch': '0.4'}
+{'loss': '2.093', 'grad_norm': '1.512', 'learning_rate': '0.0001333', 'entropy': '2.102', 'num_tokens': '3152', 'mean_token_accuracy': '0.571', 'epoch': '0.8'}
+{'loss': '1.822', 'grad_norm': '1.178', 'learning_rate': '6.667e-05', 'entropy': '1.781', 'num_tokens': '3484', 'mean_token_accuracy': '0.6166', 'epoch': '1'}
+{'train_runtime': '4.322', 'train_samples_per_second': '16.2', 'train_steps_per_second': '0.694', 'train_loss': '1.965', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9179.33it/s]
+Adding EOS to train dataset:   0%|          | 0/104 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 104/104 [00:00<00:00, 39989.70 examples/s]
+Tokenizing train dataset:   0%|          | 0/104 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 104/104 [00:00<00:00, 3986.07 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:05,  1.68s/it]                                              25%|██▌       | 1/4 [00:01<00:05,  1.68s/it] 50%|█████     | 2/4 [00:03<00:03,  1.58s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.58s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.81s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.81s/it]100%|██████████| 4/4 [00:05<00:00,  1.37s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.37s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.37s/it]100%|██████████| 4/4 [00:05<00:00,  1.49s/it]
+{'loss': '1.801', 'grad_norm': '0.5644', 'learning_rate': '0.0002', 'entropy': '1.758', 'num_tokens': '3140', 'mean_token_accuracy': '0.5758', 'epoch': '0.2857'}
+{'loss': '2.012', 'grad_norm': '1.221', 'learning_rate': '0.00015', 'entropy': '1.805', 'num_tokens': '5593', 'mean_token_accuracy': '0.5484', 'epoch': '0.5714'}
+{'loss': '1.873', 'grad_norm': '0.5244', 'learning_rate': '0.0001', 'entropy': '1.895', 'num_tokens': '8982', 'mean_token_accuracy': '0.5496', 'epoch': '0.8571'}
+{'loss': '1.585', 'grad_norm': '1.164', 'learning_rate': '5e-05', 'entropy': '1.664', 'num_tokens': '9682', 'mean_token_accuracy': '0.6185', 'epoch': '1'}
+{'train_runtime': '5.971', 'train_samples_per_second': '17.42', 'train_steps_per_second': '0.67', 'train_loss': '1.818', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9402.83it/s]
+Adding EOS to train dataset:   0%|          | 0/73 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 73/73 [00:00<00:00, 32993.99 examples/s]
+Tokenizing train dataset:   0%|          | 0/73 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 73/73 [00:00<00:00, 3885.29 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.63s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.63s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.72s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.72s/it]100%|██████████| 3/3 [00:04<00:00,  1.41s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.41s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.41s/it]100%|██████████| 3/3 [00:04<00:00,  1.49s/it]
+{'loss': '1.904', 'grad_norm': '0.4973', 'learning_rate': '0.0002', 'entropy': '2', 'num_tokens': '3158', 'mean_token_accuracy': '0.5797', 'epoch': '0.4'}
+{'loss': '1.817', 'grad_norm': '0.9096', 'learning_rate': '0.0001333', 'entropy': '1.707', 'num_tokens': '6391', 'mean_token_accuracy': '0.5999', 'epoch': '0.8'}
+{'loss': '1.999', 'grad_norm': '1.056', 'learning_rate': '6.667e-05', 'entropy': '1.992', 'num_tokens': '7340', 'mean_token_accuracy': '0.5489', 'epoch': '1'}
+{'train_runtime': '4.461', 'train_samples_per_second': '16.36', 'train_steps_per_second': '0.672', 'train_loss': '1.907', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9763.40it/s]
+Adding EOS to train dataset:   0%|          | 0/66 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 66/66 [00:00<00:00, 30809.58 examples/s]
+Tokenizing train dataset:   0%|          | 0/66 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 66/66 [00:00<00:00, 5631.08 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:02,  1.40s/it]                                              33%|███▎      | 1/3 [00:01<00:02,  1.40s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.33s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.33s/it]100%|██████████| 3/3 [00:03<00:00,  1.17s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.17s/it]                                             100%|██████████| 3/3 [00:03<00:00,  1.17s/it]100%|██████████| 3/3 [00:03<00:00,  1.22s/it]
+{'loss': '1.901', 'grad_norm': '0.6292', 'learning_rate': '0.0002', 'entropy': '2.012', 'num_tokens': '1480', 'mean_token_accuracy': '0.6031', 'epoch': '0.4'}
+{'loss': '1.958', 'grad_norm': '0.6889', 'learning_rate': '0.0001333', 'entropy': '1.957', 'num_tokens': '2951', 'mean_token_accuracy': '0.5935', 'epoch': '0.8'}
+{'loss': '2.294', 'grad_norm': '3.509', 'learning_rate': '6.667e-05', 'entropy': '2.391', 'num_tokens': '3032', 'mean_token_accuracy': '0.5316', 'epoch': '1'}
+{'train_runtime': '3.655', 'train_samples_per_second': '18.06', 'train_steps_per_second': '0.821', 'train_loss': '2.051', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8866.45it/s]
+Adding EOS to train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 90/90 [00:00<00:00, 31724.29 examples/s]
+Tokenizing train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 90/90 [00:00<00:00, 3898.86 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.53s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.53s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.54s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.54s/it]100%|██████████| 3/3 [00:04<00:00,  1.67s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.67s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.67s/it]100%|██████████| 3/3 [00:04<00:00,  1.63s/it]
+{'loss': '1.895', 'grad_norm': '0.4431', 'learning_rate': '0.0002', 'entropy': '1.867', 'num_tokens': '2987', 'mean_token_accuracy': '0.5618', 'epoch': '0.3333'}
+{'loss': '1.93', 'grad_norm': '0.5099', 'learning_rate': '0.0001333', 'entropy': '1.988', 'num_tokens': '5741', 'mean_token_accuracy': '0.5617', 'epoch': '0.6667'}
+{'loss': '1.883', 'grad_norm': '0.4984', 'learning_rate': '6.667e-05', 'entropy': '1.992', 'num_tokens': '8109', 'mean_token_accuracy': '0.5543', 'epoch': '1'}
+{'train_runtime': '4.904', 'train_samples_per_second': '18.35', 'train_steps_per_second': '0.612', 'train_loss': '1.903', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8548.40it/s]
+Adding EOS to train dataset:   0%|          | 0/103 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 103/103 [00:00<00:00, 40443.11 examples/s]
+Tokenizing train dataset:   0%|          | 0/103 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 103/103 [00:00<00:00, 4188.41 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.57s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.57s/it] 50%|█████     | 2/4 [00:03<00:03,  1.65s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.65s/it] 75%|███████▌  | 3/4 [00:05<00:01,  1.72s/it]                                              75%|███████▌  | 3/4 [00:05<00:01,  1.72s/it]100%|██████████| 4/4 [00:05<00:00,  1.33s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.33s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.33s/it]100%|██████████| 4/4 [00:05<00:00,  1.45s/it]
+{'loss': '1.998', 'grad_norm': '0.5998', 'learning_rate': '0.0002', 'entropy': '2.02', 'num_tokens': '3189', 'mean_token_accuracy': '0.569', 'epoch': '0.2857'}
+{'loss': '1.881', 'grad_norm': '0.9262', 'learning_rate': '0.00015', 'entropy': '1.875', 'num_tokens': '6588', 'mean_token_accuracy': '0.5983', 'epoch': '0.5714'}
+{'loss': '1.836', 'grad_norm': '0.6421', 'learning_rate': '0.0001', 'entropy': '1.883', 'num_tokens': '9573', 'mean_token_accuracy': '0.5943', 'epoch': '0.8571'}
+{'loss': '1.697', 'grad_norm': '1.153', 'learning_rate': '5e-05', 'entropy': '1.766', 'num_tokens': '1.024e+04', 'mean_token_accuracy': '0.593', 'epoch': '1'}
+{'train_runtime': '5.81', 'train_samples_per_second': '17.73', 'train_steps_per_second': '0.688', 'train_loss': '1.853', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9396.17it/s]
+Adding EOS to train dataset:   0%|          | 0/74 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 74/74 [00:00<00:00, 33758.81 examples/s]
+Tokenizing train dataset:   0%|          | 0/74 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 74/74 [00:00<00:00, 5581.04 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.58s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.58s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]100%|██████████| 3/3 [00:04<00:00,  1.30s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.30s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.30s/it]100%|██████████| 3/3 [00:04<00:00,  1.36s/it]
+{'loss': '1.81', 'grad_norm': '0.6421', 'learning_rate': '0.0002', 'entropy': '1.816', 'num_tokens': '1779', 'mean_token_accuracy': '0.6196', 'epoch': '0.4'}
+{'loss': '2.035', 'grad_norm': '0.7494', 'learning_rate': '0.0001333', 'entropy': '1.926', 'num_tokens': '3358', 'mean_token_accuracy': '0.6005', 'epoch': '0.8'}
+{'loss': '2.231', 'grad_norm': '1.447', 'learning_rate': '6.667e-05', 'entropy': '2.062', 'num_tokens': '3825', 'mean_token_accuracy': '0.5689', 'epoch': '1'}
+{'train_runtime': '4.093', 'train_samples_per_second': '18.08', 'train_steps_per_second': '0.733', 'train_loss': '2.025', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9477.20it/s]
+Adding EOS to train dataset:   0%|          | 0/92 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 92/92 [00:00<00:00, 38258.57 examples/s]
+Tokenizing train dataset:   0%|          | 0/92 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 92/92 [00:00<00:00, 3845.45 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.79s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.79s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.70s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.70s/it]100%|██████████| 3/3 [00:05<00:00,  1.78s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.78s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.78s/it]100%|██████████| 3/3 [00:05<00:00,  1.77s/it]
+{'loss': '1.9', 'grad_norm': '0.5438', 'learning_rate': '0.0002', 'entropy': '1.922', 'num_tokens': '3262', 'mean_token_accuracy': '0.546', 'epoch': '0.3333'}
+{'loss': '1.882', 'grad_norm': '0.8395', 'learning_rate': '0.0001333', 'entropy': '1.855', 'num_tokens': '6074', 'mean_token_accuracy': '0.539', 'epoch': '0.6667'}
+{'loss': '1.801', 'grad_norm': '0.5377', 'learning_rate': '6.667e-05', 'entropy': '1.875', 'num_tokens': '8449', 'mean_token_accuracy': '0.572', 'epoch': '1'}
+{'train_runtime': '5.301', 'train_samples_per_second': '17.36', 'train_steps_per_second': '0.566', 'train_loss': '1.861', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9736.71it/s]
+Adding EOS to train dataset:   0%|          | 0/81 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 81/81 [00:00<00:00, 35894.20 examples/s]
+Tokenizing train dataset:   0%|          | 0/81 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 81/81 [00:00<00:00, 4087.38 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.57s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.57s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.61s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.61s/it]100%|██████████| 3/3 [00:04<00:00,  1.48s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.48s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.48s/it]100%|██████████| 3/3 [00:04<00:00,  1.51s/it]
+{'loss': '1.921', 'grad_norm': '0.5757', 'learning_rate': '0.0002', 'entropy': '1.922', 'num_tokens': '3300', 'mean_token_accuracy': '0.5783', 'epoch': '0.3333'}
+{'loss': '2.013', 'grad_norm': '0.7263', 'learning_rate': '0.0001333', 'entropy': '1.922', 'num_tokens': '6442', 'mean_token_accuracy': '0.5794', 'epoch': '0.6667'}
+{'loss': '2.089', 'grad_norm': '0.9199', 'learning_rate': '6.667e-05', 'entropy': '1.824', 'num_tokens': '7928', 'mean_token_accuracy': '0.5994', 'epoch': '1'}
+{'train_runtime': '4.534', 'train_samples_per_second': '17.86', 'train_steps_per_second': '0.662', 'train_loss': '2.008', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 7661.45it/s]
+Adding EOS to train dataset:   0%|          | 0/72 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 72/72 [00:00<00:00, 33513.47 examples/s]
+Tokenizing train dataset:   0%|          | 0/72 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 72/72 [00:00<00:00, 5132.04 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.52s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.52s/it] 67%|██████▋   | 2/3 [00:02<00:01,  1.48s/it]                                              67%|██████▋   | 2/3 [00:02<00:01,  1.48s/it]100%|██████████| 3/3 [00:04<00:00,  1.29s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.29s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.29s/it]100%|██████████| 3/3 [00:04<00:00,  1.34s/it]
+{'loss': '1.949', 'grad_norm': '0.5928', 'learning_rate': '0.0002', 'entropy': '1.973', 'num_tokens': '1662', 'mean_token_accuracy': '0.5825', 'epoch': '0.4'}
+{'loss': '1.886', 'grad_norm': '0.6432', 'learning_rate': '0.0001333', 'entropy': '1.898', 'num_tokens': '3464', 'mean_token_accuracy': '0.5961', 'epoch': '0.8'}
+{'loss': '2.207', 'grad_norm': '2.136', 'learning_rate': '6.667e-05', 'entropy': '2.125', 'num_tokens': '3733', 'mean_token_accuracy': '0.6092', 'epoch': '1'}
+{'train_runtime': '4.035', 'train_samples_per_second': '17.85', 'train_steps_per_second': '0.744', 'train_loss': '2.014', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10202.77it/s]
+Adding EOS to train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 90/90 [00:00<00:00, 37767.62 examples/s]
+Tokenizing train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 90/90 [00:00<00:00, 4090.36 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.82s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.82s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.68s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.68s/it]100%|██████████| 3/3 [00:05<00:00,  1.75s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.75s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.75s/it]100%|██████████| 3/3 [00:05<00:00,  1.74s/it]
+{'loss': '1.869', 'grad_norm': '0.4637', 'learning_rate': '0.0002', 'entropy': '1.891', 'num_tokens': '2589', 'mean_token_accuracy': '0.5904', 'epoch': '0.3333'}
+{'loss': '1.919', 'grad_norm': '0.6411', 'learning_rate': '0.0001333', 'entropy': '1.84', 'num_tokens': '5330', 'mean_token_accuracy': '0.5354', 'epoch': '0.6667'}
+{'loss': '1.823', 'grad_norm': '0.5309', 'learning_rate': '6.667e-05', 'entropy': '1.863', 'num_tokens': '7571', 'mean_token_accuracy': '0.5632', 'epoch': '1'}
+{'train_runtime': '5.228', 'train_samples_per_second': '17.22', 'train_steps_per_second': '0.574', 'train_loss': '1.87', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10188.18it/s]
+Adding EOS to train dataset:   0%|          | 0/89 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 89/89 [00:00<00:00, 36147.29 examples/s]
+Tokenizing train dataset:   0%|          | 0/89 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 89/89 [00:00<00:00, 3999.54 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.70s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.70s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.57s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.57s/it]100%|██████████| 3/3 [00:05<00:00,  1.79s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.79s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.79s/it]100%|██████████| 3/3 [00:05<00:00,  1.74s/it]
+{'loss': '1.826', 'grad_norm': '0.5444', 'learning_rate': '0.0002', 'entropy': '1.844', 'num_tokens': '3341', 'mean_token_accuracy': '0.6003', 'epoch': '0.3333'}
+{'loss': '1.705', 'grad_norm': '0.6516', 'learning_rate': '0.0001333', 'entropy': '1.758', 'num_tokens': '6335', 'mean_token_accuracy': '0.624', 'epoch': '0.6667'}
+{'loss': '1.887', 'grad_norm': '0.5186', 'learning_rate': '6.667e-05', 'entropy': '1.961', 'num_tokens': '9186', 'mean_token_accuracy': '0.5865', 'epoch': '1'}
+{'train_runtime': '5.233', 'train_samples_per_second': '17.01', 'train_steps_per_second': '0.573', 'train_loss': '1.806', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9035.53it/s]
+Adding EOS to train dataset:   0%|          | 0/74 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 74/74 [00:00<00:00, 33445.96 examples/s]
+Tokenizing train dataset:   0%|          | 0/74 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 74/74 [00:00<00:00, 5176.68 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.73s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.73s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.57s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.57s/it]100%|██████████| 3/3 [00:04<00:00,  1.33s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.33s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.33s/it]100%|██████████| 3/3 [00:04<00:00,  1.41s/it]
+{'loss': '1.921', 'grad_norm': '0.568', 'learning_rate': '0.0002', 'entropy': '1.996', 'num_tokens': '1971', 'mean_token_accuracy': '0.5992', 'epoch': '0.4'}
+{'loss': '1.947', 'grad_norm': '0.6556', 'learning_rate': '0.0001333', 'entropy': '1.953', 'num_tokens': '3639', 'mean_token_accuracy': '0.5843', 'epoch': '0.8'}
+{'loss': '1.756', 'grad_norm': '1.347', 'learning_rate': '6.667e-05', 'entropy': '1.898', 'num_tokens': '4018', 'mean_token_accuracy': '0.6314', 'epoch': '1'}
+{'train_runtime': '4.233', 'train_samples_per_second': '17.48', 'train_steps_per_second': '0.709', 'train_loss': '1.875', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9145.29it/s]
+Adding EOS to train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 90/90 [00:00<00:00, 37572.15 examples/s]
+Tokenizing train dataset:   0%|          | 0/90 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 90/90 [00:00<00:00, 4085.67 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.75s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.75s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.62s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.62s/it]100%|██████████| 3/3 [00:05<00:00,  1.71s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.71s/it]                                             100%|██████████| 3/3 [00:05<00:00,  1.71s/it]100%|██████████| 3/3 [00:05<00:00,  1.70s/it]
+{'loss': '1.935', 'grad_norm': '0.5034', 'learning_rate': '0.0002', 'entropy': '1.949', 'num_tokens': '2835', 'mean_token_accuracy': '0.5731', 'epoch': '0.3333'}
+{'loss': '1.785', 'grad_norm': '0.4913', 'learning_rate': '0.0001333', 'entropy': '1.762', 'num_tokens': '5413', 'mean_token_accuracy': '0.5687', 'epoch': '0.6667'}
+{'loss': '1.848', 'grad_norm': '0.525', 'learning_rate': '6.667e-05', 'entropy': '1.871', 'num_tokens': '7683', 'mean_token_accuracy': '0.5583', 'epoch': '1'}
+{'train_runtime': '5.093', 'train_samples_per_second': '17.67', 'train_steps_per_second': '0.589', 'train_loss': '1.856', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9294.64it/s]
+Adding EOS to train dataset:   0%|          | 0/100 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 100/100 [00:00<00:00, 38998.64 examples/s]
+Tokenizing train dataset:   0%|          | 0/100 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 100/100 [00:00<00:00, 4230.77 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:01<00:04,  1.56s/it]                                              25%|██▌       | 1/4 [00:01<00:04,  1.56s/it] 50%|█████     | 2/4 [00:03<00:03,  1.55s/it]                                              50%|█████     | 2/4 [00:03<00:03,  1.55s/it] 75%|███████▌  | 3/4 [00:04<00:01,  1.69s/it]                                              75%|███████▌  | 3/4 [00:04<00:01,  1.69s/it]100%|██████████| 4/4 [00:05<00:00,  1.31s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.31s/it]                                             100%|██████████| 4/4 [00:05<00:00,  1.31s/it]100%|██████████| 4/4 [00:05<00:00,  1.42s/it]
+{'loss': '1.855', 'grad_norm': '0.4688', 'learning_rate': '0.0002', 'entropy': '1.926', 'num_tokens': '3364', 'mean_token_accuracy': '0.588', 'epoch': '0.2857'}
+{'loss': '1.991', 'grad_norm': '0.5316', 'learning_rate': '0.00015', 'entropy': '1.969', 'num_tokens': '6498', 'mean_token_accuracy': '0.583', 'epoch': '0.5714'}
+{'loss': '1.954', 'grad_norm': '0.6669', 'learning_rate': '0.0001', 'entropy': '1.891', 'num_tokens': '9428', 'mean_token_accuracy': '0.5689', 'epoch': '0.8571'}
+{'loss': '1.948', 'grad_norm': '1.419', 'learning_rate': '5e-05', 'entropy': '1.953', 'num_tokens': '9848', 'mean_token_accuracy': '0.5817', 'epoch': '1'}
+{'train_runtime': '5.676', 'train_samples_per_second': '17.62', 'train_steps_per_second': '0.705', 'train_loss': '1.937', 'epoch': '1'}
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9509.62it/s]
+Adding EOS to train dataset:   0%|          | 0/69 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 69/69 [00:00<00:00, 32364.90 examples/s]
+Tokenizing train dataset:   0%|          | 0/69 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 69/69 [00:00<00:00, 5477.87 examples/s]
+[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
+/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
+    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
+    has less than 75% of the memory or cores of GPU 0. You can do so by setting
+    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
+    environment variable.
+  if warn_imbalance(lambda props: props.total_memory):
+  0%|          | 0/3 [00:00<?, ?it/s] 33%|███▎      | 1/3 [00:01<00:03,  1.50s/it]                                              33%|███▎      | 1/3 [00:01<00:03,  1.50s/it] 67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]                                              67%|██████▋   | 2/3 [00:03<00:01,  1.50s/it]100%|██████████| 3/3 [00:04<00:00,  1.29s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.29s/it]                                             100%|██████████| 3/3 [00:04<00:00,  1.29s/it]100%|██████████| 3/3 [00:04<00:00,  1.35s/it]
+{'loss': '2.189', 'grad_norm': '0.7561', 'learning_rate': '0.0002', 'entropy': '2.211', 'num_tokens': '1391', 'mean_token_accuracy': '0.5852', 'epoch': '0.4'}
+{'loss': '1.947', 'grad_norm': '0.7099', 'learning_rate': '0.0001333', 'entropy': '2.047', 'num_tokens': '2887', 'mean_token_accuracy': '0.6083', 'epoch': '0.8'}
+{'loss': '2.249', 'grad_norm': '1.564', 'learning_rate': '6.667e-05', 'entropy': '2.203', 'num_tokens': '3209', 'mean_token_accuracy': '0.5237', 'epoch': '1'}
+{'train_runtime': '4.051', 'train_samples_per_second': '17.03', 'train_steps_per_second': '0.74', 'train_loss': '2.128', 'epoch': '1'}
+closed-loop done: 10 rounds, wrote results/ai4privacy_n6_sft_r10_sigma05_stretch_h25_p25/seed0/history.json

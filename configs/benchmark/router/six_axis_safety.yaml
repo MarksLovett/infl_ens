@@ -1,0 +1,75 @@
+# Six-axis safety trait space: original four + OR-Bench + injection + Do-Not-Answer.
+# Used for pairwise resource-distribution slice figures.
+
+task: router_training
+seed: 0
+output_dir: results/six_axis_preview
+policy: proportional
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+  - kind: ai4privacy
+    path: data/ai4privacy
+    score_mode: density
+    english_only: true
+    max_records: 5000
+  - kind: orbench
+    path: data/orbench
+    configs: [or-bench-80k, or-bench-toxic]
+    max_records: 5000
+  - kind: prompt_injection
+    path: data/prompt_injection
+    max_records: 5000
+  - kind: do_not_answer
+    path: data/do_not_answer
+    include_benign: true
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  encoder_batch_size: 256
+  cache: true
+  cache_dir: data/trait_space_cache
+  # n_grid only affects KDE weights; pairwise figures use --density-mode empirical.
+  n_grid: 3
+  kde_bandwidth: 0.08
+  threshold: 0.5
+  coordinate_residualize: true
+  mode_alignment_weight: 0.5
+  mode_alignment_weights:
+    harm: 1.0
+    hallucination: 1.0
+    privacy: 1.0
+    overrefusal: 1.0
+    injection: 1.0
+    policy_violation: 1.0
+  coordinate_stretch_gamma: 1.5
+  coordinate_stretch_gammas:
+    harm: 6.0
+    hallucination: 2.5
+    privacy: 2.5
+    overrefusal: 2.5
+    injection: 6.0
+    policy_violation: 6.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+training:
+  init_noise: 0.01
+  learning_rate: 0.005
+  n_steps: 5000
+  tol: 1.0e-8
+  clip_to_box: true

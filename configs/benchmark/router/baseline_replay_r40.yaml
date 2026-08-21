@@ -1,0 +1,51 @@
+# Replay pooled baseline SFT from a closed-loop history.json (40 rounds).
+#
+# Trains ONE cumulative LoRA on the union of all specialists' routed
+# examples each round (same total examples per round as the four clones
+# combined). Compare to round-39 specialists with:
+#
+#   python scripts/compare_baseline_vs_specialists.py \
+#       --baseline-dir results/baseline_replay_r40/seed0 \
+#       --specialist-dir results/pairs_near_eq_round_sweep/r40/seed0
+
+task: baseline_replay
+seed: 0
+history_path: results/pairs_near_eq_round_sweep/r40/seed0/history.json
+output_dir: results/baseline_replay_r40/seed0
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  n_grid: 32
+  kde_bandwidth: 0.08
+  threshold: 0.5
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null
+
+sft:
+  base_model: Qwen/Qwen2.5-1.5B-Instruct
+  output_dir: results/baseline_replay_r40/seed0/agents
+  max_seq_length: 1024
+  per_device_batch_size: 8
+  gradient_accumulation_steps: 2
+  num_train_epochs: 1.0
+  learning_rate: 2.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 1
+  cumulative_lora: true
+  seed: 0

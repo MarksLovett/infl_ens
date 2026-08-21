@@ -1,0 +1,36 @@
+{
+  "description": "GA no-theory-pre on fixed five_axis_seed0.json split; vary training seed to test +0.009 reproducibility.",
+  "reference": {
+    "attribution_2x2_ga_no_theory_pre_seed0": {
+      "pooled_nll": 1.9457460591664868,
+      "learned_nll": 1.9550691510177387,
+      "delta_vs_pooled": 0.009323091851251908
+    }
+  },
+  "configs": [
+    {
+      "name": "ga_no_theory_pre_train1",
+      "train_seed": 1,
+      "split_seed": 0,
+      "manifest": "data/splits/five_axis_seed0.json",
+      "config": "configs\\benchmark\\router\\seed0_isolation\\ga_no_theory_pre_train1.yaml",
+      "output_dir": "results/seed0_isolation/ga_no_theory_pre_train1"
+    },
+    {
+      "name": "ga_no_theory_pre_train2",
+      "train_seed": 2,
+      "split_seed": 0,
+      "manifest": "data/splits/five_axis_seed0.json",
+      "config": "configs\\benchmark\\router\\seed0_isolation\\ga_no_theory_pre_train2.yaml",
+      "output_dir": "results/seed0_isolation/ga_no_theory_pre_train2"
+    },
+    {
+      "name": "ga_no_theory_pre_train3",
+      "train_seed": 3,
+      "split_seed": 0,
+      "manifest": "data/splits/five_axis_seed0.json",
+      "config": "configs\\benchmark\\router\\seed0_isolation\\ga_no_theory_pre_train3.yaml",
+      "output_dir": "results/seed0_isolation/ga_no_theory_pre_train3"
+    }
+  ]
+}

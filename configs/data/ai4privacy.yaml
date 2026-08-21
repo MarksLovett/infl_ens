@@ -1,0 +1,9 @@
+# configs/data/ai4privacy.yaml
+# Static loader settings consumed by infl_ens.data when previewing or
+# building a trait space that includes the AI4Privacy privacy-density axis.
+
+kind: ai4privacy
+path: data/ai4privacy                # dir with english_pii*.jsonl (or a single file)
+score_mode: density                  # one of: density, binary
+english_only: true                   # restrict directory globs to english shards
+max_records: null                    # null = no cap

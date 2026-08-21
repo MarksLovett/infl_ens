@@ -1,0 +1,140 @@
+# 14 routers, 6 pair-merged LoRAs, stratified 70/10/20 split per benchmark.
+# Training batches cover the train partition exactly once (no replacement).
+# expected_pool centroids use train + val (80%); test is withheld until eval.
+#
+# Pipeline:
+#   python scripts/build_six_axis_split.py
+#   bash scripts/run_six_axis_split.sh
+
+task: closed_loop
+seed: 0
+output_dir: results/six_axis_pair_merge_split/seed0
+policy: proportional
+
+data_split:
+  seed: 0
+  train_frac: 0.7
+  val_frac: 0.1
+  test_frac: 0.2
+  manifest: data/splits/six_axis_seed0.json
+  cover_train_exactly: true
+  preferred_batch_sizes: [4900, 2450, 1225, 980, 700, 350]
+  min_rounds: 5
+  max_rounds: 50
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+  - kind: ai4privacy
+    path: data/ai4privacy
+    score_mode: density
+    english_only: true
+    max_records: 5000
+  - kind: orbench
+    path: data/orbench
+    configs: [or-bench-80k, or-bench-toxic]
+    max_records: 5000
+  - kind: prompt_injection
+    path: data/prompt_injection
+    max_records: 5000
+  - kind: do_not_answer
+    path: data/do_not_answer
+    include_benign: true
+    max_records: 5000
+
+trait_space:
+  encoder: sentence-transformers/all-MiniLM-L6-v2
+  encoder_batch_size: 256
+  cache: true
+  cache_dir: data/trait_space_cache
+  n_grid: 3
+  kde_bandwidth: 0.08
+  threshold: 0.5
+  coordinate_residualize: true
+  mode_alignment_weight: 0.5
+  mode_alignment_weights:
+    harm: 1.0
+    hallucination: 1.0
+    privacy: 1.0
+    overrefusal: 1.0
+    injection: 1.0
+    policy_violation: 1.0
+  coordinate_stretch_gamma: 1.5
+  coordinate_stretch_gammas:
+    harm: 6.0
+    hallucination: 2.5
+    privacy: 2.5
+    overrefusal: 2.5
+    injection: 6.0
+    policy_violation: 6.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+  - name: clone-4
+  - name: clone-5
+  - name: clone-6
+  - name: clone-7
+  - name: clone-8
+  - name: clone-9
+  - name: clone-10
+  - name: clone-11
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  blend: 0.5
+  init_noise: 0.0
+  init_mode: fixed_positions
+  fixed_positions: results/six_axis_theory_n12/fixed_positions.json
+  centroid_mode: expected_pool
+  routing_weight: G
+  loss_reweight: position_only
+  save_per_round: true
+  val_eval:
+    every_n_rounds: 5
+    max_eval_records: null
+    agents:
+      - merge-harm
+      - merge-hallucination
+      - merge-privacy
+      - merge-injection
+      - merge-overrefusal
+      - merge-policy
+  sft_merge_groups:
+    - train_as: merge-harm
+      names: [clone-0, clone-1]
+    - train_as: merge-hallucination
+      names: [clone-2, clone-3]
+    - train_as: merge-privacy
+      names: [clone-4, clone-5]
+    - train_as: merge-overrefusal
+      names: [clone-6, clone-7]
+    - train_as: merge-injection
+      names: [clone-8, clone-9]
+    - train_as: merge-policy
+      names: [clone-10, clone-11]
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/six_axis_pair_merge_split/seed0/agents
+    max_seq_length: 1024
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 2
+    num_train_epochs: 1.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    logging_steps: 1
+    cumulative_lora: true
+    seed: 0

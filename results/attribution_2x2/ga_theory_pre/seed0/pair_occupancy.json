@@ -1,0 +1,151 @@
+{
+  "pairs": [
+    {
+      "merge": "merge-harm",
+      "clones": [
+        {
+          "clone": "clone-0",
+          "mean_g": 0.06609026260313296,
+          "argmax_wins": 595,
+          "argmax_share": 0.12848196933707623,
+          "active": true
+        },
+        {
+          "clone": "clone-1",
+          "mean_g": 0.06609026260313296,
+          "argmax_wins": 0,
+          "argmax_share": 0.0,
+          "active": true
+        }
+      ],
+      "pair_mean_g": 0.13218052520626591,
+      "pair_argmax_wins": 595,
+      "partner_g_ratio": 1.0,
+      "recommendation": "keep_pair"
+    },
+    {
+      "merge": "merge-hallucination",
+      "clones": [
+        {
+          "clone": "clone-2",
+          "mean_g": 0.163081822385466,
+          "argmax_wins": 1509,
+          "argmax_share": 0.3258475491254589,
+          "active": true
+        },
+        {
+          "clone": "clone-3",
+          "mean_g": 0.163081822385466,
+          "argmax_wins": 0,
+          "argmax_share": 0.0,
+          "active": true
+        }
+      ],
+      "pair_mean_g": 0.326163644770932,
+      "pair_argmax_wins": 1509,
+      "partner_g_ratio": 1.0,
+      "recommendation": "keep_pair"
+    },
+    {
+      "merge": "merge-privacy",
+      "clones": [
+        {
+          "clone": "clone-4",
+          "mean_g": 0.06576008512726844,
+          "argmax_wins": 614,
+          "argmax_share": 0.1325847549125459,
+          "active": true
+        },
+        {
+          "clone": "clone-5",
+          "mean_g": 0.06576008512726844,
+          "argmax_wins": 0,
+          "argmax_share": 0.0,
+          "active": true
+        }
+      ],
+      "pair_mean_g": 0.13152017025453688,
+      "pair_argmax_wins": 614,
+      "partner_g_ratio": 1.0,
+      "recommendation": "keep_pair"
+    },
+    {
+      "merge": "merge-overrefusal",
+      "clones": [
+        {
+          "clone": "clone-6",
+          "mean_g": 0.12505594880083917,
+          "argmax_wins": 1170,
+          "argmax_share": 0.2526452170157633,
+          "active": true
+        },
+        {
+          "clone": "clone-7",
+          "mean_g": 0.12505594880083917,
+          "argmax_wins": 0,
+          "argmax_share": 0.0,
+          "active": true
+        }
+      ],
+      "pair_mean_g": 0.25011189760167835,
+      "pair_argmax_wins": 1170,
+      "partner_g_ratio": 1.0,
+      "recommendation": "keep_pair"
+    },
+    {
+      "merge": "merge-policy",
+      "clones": [
+        {
+          "clone": "clone-8",
+          "mean_g": 0.08001188108329345,
+          "argmax_wins": 743,
+          "argmax_share": 0.16044050960915568,
+          "active": true
+        },
+        {
+          "clone": "clone-9",
+          "mean_g": 0.08001188108329345,
+          "argmax_wins": 0,
+          "argmax_share": 0.0,
+          "active": true
+        }
+      ],
+      "pair_mean_g": 0.1600237621665869,
+      "pair_argmax_wins": 743,
+      "partner_g_ratio": 1.0,
+      "recommendation": "keep_pair"
+    }
+  ],
+  "n_active_clones": 10,
+  "n_singleton_merges": 0,
+  "recommended_merges": 5,
+  "recommended_clones": 10,
+  "flat": {
+    "pooled_nll": 1.9457460591664868,
+    "learned_routing_argmax_nll": 1.9514460126052688,
+    "learned_routing_expected_nll": 1.954495889447387,
+    "learned_routing_sampled_nll": 1.955730150750378,
+    "strategic_routing_expected_nll": 1.9561359857404306,
+    "strategic_routing_argmax_nll": 1.9514460126052688,
+    "learned_routing_nll": 1.954495889447387,
+    "oracle_routing_nll": 1.916579083216368,
+    "routing_agreement_argmax": 0.7421723169941697,
+    "n_prompts": 4631,
+    "round": 7,
+    "merge_names": [
+      "merge-harm",
+      "merge-hallucination",
+      "merge-privacy",
+      "merge-overrefusal",
+      "merge-policy"
+    ],
+    "merge_name_map": {
+      "merge-harm": "merge-harm",
+      "merge-hallucination": "merge-hallucination",
+      "merge-privacy": "merge-privacy",
+      "merge-overrefusal": "merge-overrefusal",
+      "merge-policy": "merge-policy"
+    }
+  },
+  "oracle_minus_learned_expected": -0.037916806231018896
+}

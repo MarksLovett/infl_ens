@@ -1,15 +1,4 @@
-"""Overlay two closed-loop trajectories on a single trait-space plot.
-
-The use case: after a code change to the position-update path, run a
-short smoke-test closed loop (e.g. 5 rounds) and overlay its
-trajectory on a longer pre-change run (e.g. 20 rounds) at the same
-seed, sigma, and config otherwise. If the change landed, the two
-trajectories will diverge from round 1 onward.
-
-The script also computes and marks theory NE positions for each run
-(using ``train_router_positions`` on each history's trait space) so
-you can see whether the new run is heading toward theory NE while the
-old one wasn't.
+"""CLI: overlay two closed-loop trajectories on a single trait-space plot.
 
 Run with::
 
@@ -22,8 +11,6 @@ Run with::
         --axis-labels harm hallucination \\
         --title "position_only bug fix smoke test" \\
         --output-stem scripts/figures/test_position_only_r5/compare_runs
-
-Writes ``<output-stem>.pdf`` and ``<output-stem>.png``.
 """
 
 from __future__ import annotations
@@ -54,6 +41,7 @@ from infl_ens.training.router_training import (  # noqa: E402
     train_router_positions,
 )
 from infl_ens.utils.resource import gaussian_stability_threshold  # noqa: E402
+from infl_ens.vis.closed_loop import plot_trajectory_overlay  # noqa: E402
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -252,7 +240,6 @@ def main(argv: list[str] | None = None) -> int:
         n_steps=args.theory_steps, lr=args.theory_lr,
     )
 
-    # Per-agent SFT-end -> theory NE residuals, for both runs.
     summary: dict[str, dict[str, float]] = {}
     for name in traj_a:
         a_end = traj_a[name][-1]
@@ -270,102 +257,21 @@ def main(argv: list[str] | None = None) -> int:
             ),
         }
 
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(9.5, 8.5))
-
-    # Resource-weighted mean.
-    ax.scatter(
-        [space.mean[0]], [space.mean[1]],
-        marker="P", s=200, c="black", edgecolors="white", linewidths=1.5,
-        zorder=5, label=r"$\mathbb{E}_B[b]$",
+    plot_trajectory_overlay(
+        resource_mean=space.mean,
+        traj_a=traj_a,
+        traj_b=traj_b,
+        theory_a=theory_a,
+        label_a=args.label_a,
+        label_b=args.label_b,
+        axis_labels=(args.axis_labels[0], args.axis_labels[1]),
+        sigma=sigma,
+        sigma_star=s0,
+        title=args.title,
+        output_stem=Path(args.output_stem),
     )
-
-    cmap = plt.get_cmap("tab10")
-    for i, name in enumerate(traj_a):
-        c = cmap(i % 10)
-        ta = traj_a[name]
-        tb = traj_b.get(name)
-        ne = theory_a[name]
-
-        # Run B (pre-fix): light, dashed.
-        if tb is not None:
-            ax.plot(
-                tb[:, 0], tb[:, 1],
-                linestyle="--", color=c, alpha=0.45, linewidth=1.2,
-                zorder=2,
-            )
-            ax.scatter(
-                [tb[-1, 0]], [tb[-1, 1]],
-                marker="s", s=80, facecolors="white",
-                edgecolors=c, linewidths=1.5, zorder=3,
-                label=(f"{name}  {args.label_b}" if i == 0
-                       else f"{name}  {args.label_b}"),
-            )
-
-        # Run A (post-fix): bold, solid.
-        ax.plot(
-            ta[:, 0], ta[:, 1],
-            linestyle="-", color=c, alpha=0.95, linewidth=1.8,
-            zorder=4,
-        )
-        ax.scatter(
-            [ta[0, 0]], [ta[0, 1]],
-            marker="o", s=70, facecolors="none",
-            edgecolors=c, linewidths=1.6, zorder=4,
-        )
-        ax.scatter(
-            [ta[-1, 0]], [ta[-1, 1]],
-            marker="*", s=240, c=[c], edgecolors="black", linewidths=0.7,
-            zorder=6,
-            label=f"{name}  {args.label_a}",
-        )
-
-        # Theory NE.
-        ax.scatter(
-            [ne[0]], [ne[1]],
-            marker="X", s=180, c=[c], edgecolors="black", linewidths=0.7,
-            zorder=5,
-            label=f"{name}  theory NE",
-        )
-
-    ax.set_xlabel(args.axis_labels[0])
-    ax.set_ylabel(args.axis_labels[1])
-    ax.set_xlim(0.0, 1.0)
-    ax.set_ylim(0.0, 1.0)
-    ax.grid(alpha=0.3)
-    ax.set_title(
-        f"trajectory overlay  (σ = {sigma:.3f},  σ₀* = {s0:.3f})"
-        f"\n{args.title}"
-        if args.title else
-        f"trajectory overlay  (σ = {sigma:.3f},  σ₀* = {s0:.3f})"
-    )
-
-    # Legend in a compact layout.
-    handles, labels = ax.get_legend_handles_labels()
-    seen: set[str] = set()
-    dedup_handles: list[Any] = []
-    dedup_labels: list[str] = []
-    for h, l in zip(handles, labels):
-        if l in seen:
-            continue
-        seen.add(l)
-        dedup_handles.append(h)
-        dedup_labels.append(l)
-    ax.legend(
-        dedup_handles, dedup_labels,
-        loc="lower left", fontsize=7, framealpha=0.9, ncol=2,
-    )
-
-    fig.tight_layout()
-    out = Path(args.output_stem)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(f"{args.output_stem}.pdf", bbox_inches="tight")
-    fig.savefig(f"{args.output_stem}.png", dpi=150, bbox_inches="tight")
-    plt.close(fig)
     print(f"wrote {args.output_stem}.{{pdf,png}}")
 
-    # Console summary.
     print()
     print(f"{'agent':<10} "
           f"{args.label_a + ' end → NE':>22} "

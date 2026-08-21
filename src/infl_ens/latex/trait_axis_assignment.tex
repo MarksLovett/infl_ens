@@ -1,0 +1,202 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype,amsmath,amssymb,booktabs,hyperref,enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue!55!black,urlcolor=blue!55!black}
+\title{How prompts are assigned trait-axis coordinates}
+\author{\texttt{infl\_ens} methodology note}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note records the \emph{current} pipeline that maps a text prompt to a point
+\(b^\ast\in[0,1]^L\) in the learned safety trait space. The seven-axis setup used by
+\texttt{seven\_axis\_pair\_merge\_split} has \(L=7\). Axes are external,
+benchmark-supervised summaries---not claimed transformer-internal features.
+Routing then evaluates influence shares \(G_i(x_i,b^\ast)\) at that continuous
+coordinate.
+\end{abstract}
+
+\section{Overview}
+The assignment pipeline is:
+\[
+\text{prompt }q
+\;\xrightarrow{\;E\;}
+e_q
+\;\xrightarrow{\;\text{learned axes}\;}
+c^{\mathrm{base}}
+\;\xrightarrow{\;\text{residualize}\;}
+c
+\;\xrightarrow{\;\text{stretch}\;}
+b^\ast\in[0,1]^L.
+\]
+Implementation entry points:
+\texttt{build\_safety\_trait\_space\_bundle}
+(\texttt{src/infl\_ens/data/benchmarks/safety\_trait\_space.py})
+and the cached wrapper
+\texttt{build\_or\_load\_safety\_trait\_space}.
+
+Two distinct objects live in the same box \([0,1]^L\):
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Prompt coordinate} \(b^\ast=\mathrm{project}(q)\) --- where this query sits.
+  \item \textbf{Agent position} \(x_i\) --- where specialist \(i\) chooses to compete.
+\end{itemize}
+Only \(b^\ast\) is produced by the methodology below. Agent positions are set by
+theory init / closed-loop updates and are \emph{not} label assignments.
+
+\section{Datasets and axis labels}
+Axes are learned in config order. Each axis has a labelled benchmark split.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Axis label & Dataset & Positive class (high end of axis) \\
+\midrule
+harm & BeaverTails & unsafe / not-safe responses \\
+hallucination & HaluEval (QA, dialogue) & incorrect responses \\
+jailbreak & JBB-Behaviors & harmful goals (vs benign) \\
+privacy & AI4Privacy & high PII character density \\
+overrefusal & OR-Bench & seemingly-toxic but benign \\
+injection & Prompt Injection & injection prompts \\
+policy & Do-Not-Answer & policy-violating prompts \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For Fisher fitting, \texttt{harm} and \texttt{hallucination} currently use
+\emph{response} embeddings as the supervised target; the other five axes use
+\emph{prompt} embeddings. At routing time, \textbf{every} query is projected from
+its \textbf{prompt} text.
+
+\section{Embedding}
+Let \(E\) be a frozen sentence encoder
+(\texttt{sentence-transformers/all-MiniLM-L6-v2} in the seven-axis config).
+A string \(t\) maps to
+\[
+e = E(t)\in\mathbb{R}^D.
+\]
+There is no L2-normalization in the learned-axis path. Unique strings are encoded
+once and cached.
+
+\section{Learning one axis direction}
+For axis \(\ell\), split the labelled embeddings into positives and negatives by a
+score threshold \(\tau\) (config: \(\tau=0.5\)):
+\[
+\mathcal{P}_\ell=\{e:s(e)\ge\tau\},\qquad
+\mathcal{N}_\ell=\{e:s(e)<\tau\}.
+\]
+For discrete labels, \(s\in\{0,1\}\). For AI4Privacy density mode,
+\[
+s(x)=\min\Bigl(1,\frac{\sum_s(\mathrm{end}_s-\mathrm{start}_s)}{\max(1,|x|)}\Bigr).
+\]
+
+Compute class means \(\mu_+,\mu_-\) and a pooled covariance \(S_w\). Apply
+Ledoit--Wolf-style shrinkage (code default \(\alpha=0.1\)):
+\[
+S_{\mathrm{reg}}=(1-\alpha)S_w+\alpha\,\tfrac{\mathrm{tr}(S_w)}{D}\,I,
+\qquad
+\tilde w = S_{\mathrm{reg}}^{-1}(\mu_+-\mu_-).
+\]
+Then Gram--Schmidt-orthogonalize \(\tilde w\) against previously learned directions
+and unit-normalize to obtain \(w_\ell\).
+
+\section{Calibration to \([0,1]\)}
+Project the negative and positive sets onto \(w_\ell\). Set
+\[
+\ell_\ell=\mathrm{percentile}_{q}(w_\ell^\top\mathcal{N}_\ell),
+\qquad
+h_\ell=\mathrm{percentile}_{100-q}(w_\ell^\top\mathcal{P}_\ell),
+\]
+with \(q=5\) (code default). The base coordinate is
+\[
+c^{\mathrm{base}}_\ell
+=
+\mathrm{clip}_{[0,1]}
+\Bigl(
+\frac{w_\ell^\top e-\ell_\ell}{h_\ell-\ell_\ell}
+\Bigr).
+\]
+
+\section{Mode alignment (optional)}
+To mix \emph{label} separation with \emph{benchmark-of-origin} separation, form a
+second Fisher direction \(w^{\mathrm{mode}}\) contrasting this split's prompts
+against all other splits' prompts, then
+\[
+w_\ell\leftarrow (1-\beta)\,w^{\mathrm{label}}_\ell+\beta\,w^{\mathrm{mode}}_\ell,
+\]
+re-orthogonalize, and recalibrate. In the seven-axis config,
+\(\beta=0.35\) by default and \(\beta=1.0\) for jailbreak, privacy, overrefusal,
+injection, and policy (pure mode directions for those five).
+
+\section{Coordinate residualization (optional)}
+With \texttt{coordinate\_residualize: true}, later axes are decorrelated from earlier
+ones. On the calibration corpus, for \(j>0\), fit
+\[
+\hat c_j = a_j + c_{0:j}^\top\beta_j
+\]
+by least squares on base scores, set residual \(r_j=c^{\mathrm{base}}_j-\hat c_j\),
+and recalibrate \(r_j\) with that axis's labels to obtain the final pre-stretch
+coordinate \(c_j\in[0,1]\). Order follows the benchmark list (harm first, policy last).
+
+\section{Stretch}
+A concave stretch pushes moderate values toward one:
+\[
+c^{(\gamma)}=1-(1-c)^\gamma,\qquad\gamma>0.
+\]
+Seven-axis defaults: \(\gamma=1.5\) for harm; \(\gamma=2.5\) for the other six axes.
+The runtime projector returns the stretched vector \(b^\ast\).
+
+\section{Runtime projection of a new prompt}
+Given query \(q\):
+\begin{enumerate}[leftmargin=1.4em]
+  \item Embed \(e_q=E(q)\) (prompt text only).
+  \item For each axis: base score \(w_\ell^\top e_q\), then residualize if enabled.
+  \item Apply per-axis stretch; clip to \([0,1]^L\).
+\end{enumerate}
+This is \texttt{TraitSpace.project}. It does \emph{not} snap to the KDE grid.
+
+\section{Resource density \(B(b)\) (not per-prompt assignment)}
+Separately, calibration coordinates are smoothed onto a Cartesian grid to form the
+resource measure \(B\) used for expected utilities:
+\[
+B(b_k)\propto\sum_n\exp\Bigl(-\tfrac12\frac{\|b_k-c_n\|^2}{h^2}\Bigr),
+\qquad\sum_k B(b_k)=1.
+\]
+Seven-axis config uses \(n_{\mathrm{grid}}=3\) (so \(K=3^7=2187\) cells) and
+\(h=0.08\). These knobs affect landscape integrals \(u_i=\sum_k B(b_k)G_i(x,b_k)\),
+\textbf{not} the continuous coordinate \(b^\ast\) of an individual prompt.
+
+\section{How routing uses the coordinates}
+With Gaussian influence,
+\[
+\log f_i(x_i,b)=-\tfrac12(x_i-b)^\top\Sigma^{-1}(x_i-b),
+\qquad
+G_i(\mathbf{x},b)=\frac{f_i(x_i,b)}{\sum_j f_j(x_j,b)}.
+\]
+Live routing: compute \(b^\ast=\mathrm{project}(q)\), then allocate with
+\(G_i(\mathbf{x},b^\ast)\) (proportional policy samples \(\propto G_i\)).
+Specialists receive prompts near their positions \(x_i\); that is the mechanism by
+which axis geometry becomes a training curriculum.
+
+\section{Caveats}
+\begin{itemize}[leftmargin=1.4em]
+  \item Axes are external proxies (labels + MiniLM); they can confound topic, style,
+        and difficulty.
+  \item Harm / hallucination directions are fit on responses but applied to prompts.
+  \item Mode weight \(1.0\) on five axes makes those coordinates largely
+        ``which benchmark did this come from?'' separators.
+  \item Residualization is order-dependent; Gram--Schmidt on directions does not
+        guarantee independent calibrated scores without residualize.
+  \item A coarse \(n_{\mathrm{grid}}=3\) resource is a poor visualization of density;
+        routing itself still uses continuous \(b^\ast\).
+\end{itemize}
+
+\section*{Source files}
+\texttt{safety\_trait\_space.py},
+\texttt{trait\_space.py},
+\texttt{trait\_space\_cache.py},
+\texttt{configs/benchmark/router/seven\_axis\_pair\_merge\_split.yaml}.
+
+\end{document}

@@ -1,0 +1,22 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 13279.23it/s]
+Per-axis fit field and self-separability:
+  axis            fit_field     self_AUC
+  --------------------------------------
+  harm            response         0.840
+  hallucination   response         0.903
+  jailbreak       response         0.945
+  privacy         response         0.966
+
+4-way benchmark-of-origin recoverability from trait coords:
+  chance balanced accuracy : 0.250
+  raw coords balanced acc  : 0.467
+  whitened coords bal acc  : 0.467
+
+Per-benchmark recall (raw coords; low = collides with others):
+  harm               0.717
+  hallucination      0.898
+  jailbreak          0.071
+  privacy            0.184
+
+wrote scripts/figures/axis_confusability.{pdf,png}

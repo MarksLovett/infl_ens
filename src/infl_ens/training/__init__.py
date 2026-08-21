@@ -27,6 +27,10 @@ Lazy:
 - :class:`SFTTrainingConfig`, :func:`sft_train_agent` from
   :mod:`infl_ens.training.sft_training`.
 
+Theory-vs-SFT comparison helpers live in
+:mod:`infl_ens.training.theory_vs_sft` (not re-exported at package import
+time; import by submodule to avoid pulling trait-space builders eagerly).
+
 Both trainers are reachable through the single CLI; see
 :mod:`infl_ens.training.__main__` for the dispatch table.
 
@@ -73,7 +77,7 @@ three orthogonal "rule" knobs in the YAML config:
   - ``'position_only'``: centroid update ONLY; SFT loss is unit-weight.
 
 - ``closed_loop.save_per_round``: per-round adapter archiving for
-  :mod:`scripts.probe_sft_capability`.
+  :mod:`infl_ens.evaluation.capability_probe`.
 - ``closed_loop.position_step``: adaptive EMA blend for trait-space
   position updates (:mod:`infl_ens.utils.position_step`).
 
@@ -102,7 +106,7 @@ The matrix of gradient-aligned modes is:
 |                  | ``position_only``    | (1-G) factor)                  |
 +------------------+----------------------+--------------------------------+
 
-See :mod:`scripts.compare_reweighted_drift` for the numerical alignment
+See :mod:`infl_ens.inflgame.router.verification` for the numerical alignment
 check that distinguishes the "≈" and "=" cases, and
 :mod:`scripts.compare_routing_ess` for the per-round ESS gap diagnostic
 that motivates the ``position_only`` mode.

@@ -1,0 +1,63 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\begin{document}
+
+\section*{Canonical Routing}
+
+With canonical routing,
+\begin{equation*}
+p_i(b) = G_i(b),
+\end{equation*}
+agent \(i\) receives samples according to
+\begin{equation*}
+B(b)\,G_i(b).
+\end{equation*}
+
+In \texttt{position\_only}, the centroid weight is
+\begin{equation*}
+w(b) = 1 - G_i(b).
+\end{equation*}
+Therefore the target centroid is
+\begin{equation*}
+\hat{x}_i
+=
+\frac{
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)\,b
+}{
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)
+}.
+\end{equation*}
+
+The update rule is
+\begin{equation*}
+x_i^{+} = (1-\beta)x_i + \beta \hat{x}_i.
+\end{equation*}
+Hence
+\begin{equation*}
+\Delta x_i
+=
+x_i^{+}-x_i
+=
+\beta\,
+\frac{
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)\,(b-x_i)
+}{
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)
+}.
+\end{equation*}
+
+This matches the gradient direction up to:
+\begin{enumerate}
+\item left multiplication by the \(\Sigma\)-metric (since the exact gradient contains \(\Sigma^{-1}\)),
+\item a positive scalar normalization
+\begin{equation*}
+\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr),
+\end{equation*}
+\item step size \(\beta\).
+\end{enumerate}
+
+So for isotropic \(\Sigma\), this is essentially a preconditioned/scaled gradient step, which is why the update is called \emph{gradient-matched in direction}.
+
+\end{document}

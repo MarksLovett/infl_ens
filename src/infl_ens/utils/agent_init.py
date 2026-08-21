@@ -39,6 +39,31 @@ def harm_pair_indices(pos: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return order[:2], order[2:]
 
 
+def adjacent_harm_pair_indices(pos: np.ndarray) -> list[np.ndarray]:
+    """Pair an even number of positions by adjacent harm-axis order.
+
+    Positions are sorted by axis ``0`` (harm), then grouped as adjacent
+    pairs: lowest two, next two, and so on. This generalizes the original
+    four-agent low/high harm pairing to any even number of agents.
+
+    :param pos: ``(N, L)`` positions with even ``N``.
+    :type pos: numpy.ndarray
+    :returns: List of length ``N/2``; each entry has two row indices.
+    :rtype: list[numpy.ndarray]
+    :raises ValueError: If ``N`` is odd or smaller than two.
+    """
+    if pos.ndim != 2:
+        raise ValueError(f"positions must be a 2-D array, got shape {pos.shape}")
+    n_agents = pos.shape[0]
+    if n_agents < 2 or n_agents % 2 != 0:
+        raise ValueError(
+            f"pairwise theory init requires an even number of agents >= 2, "
+            f"got {n_agents}"
+        )
+    order = np.argsort(pos[:, 0])
+    return [order[i : i + 2] for i in range(0, n_agents, 2)]
+
+
 def trait_box_bounds(space: TraitSpace) -> tuple[np.ndarray, np.ndarray]:
     """Axis-aligned bounds from the trait grid.
 
@@ -50,6 +75,146 @@ def trait_box_bounds(space: TraitSpace) -> tuple[np.ndarray, np.ndarray]:
     lo = np.min(space.grid, axis=0)
     hi = np.max(space.grid, axis=0)
     return lo, hi
+
+
+def underrepresented_grid_point(
+    space: TraitSpace,
+    *,
+    avoid: Sequence[np.ndarray] = (),
+    min_avoid_distance: float = 0.1,
+    weight_quantile: float = 0.05,
+) -> np.ndarray:
+    """Pick a low-resource grid point in :math:`\\mathbb{B}`.
+
+    Selects among the lowest ``weight_quantile`` fraction of KDE grid
+    weights, preferring candidates at least ``min_avoid_distance`` away
+    from any point in ``avoid``. Falls back to the global minimum-weight
+    grid point when no candidate satisfies the separation constraint.
+
+    :param space: Trait space carrying ``grid`` and ``weights``.
+    :type space: TraitSpace
+    :param avoid: Optional positions to stay away from (other agents).
+    :type avoid: Sequence[numpy.ndarray]
+    :param min_avoid_distance: Minimum L2 distance from ``avoid`` points.
+    :type min_avoid_distance: float
+    :param weight_quantile: Upper quantile for the low-mass candidate pool.
+    :type weight_quantile: float
+    :returns: Selected grid coordinate, shape ``(L,)``.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``weight_quantile`` is not in ``(0, 1]``.
+    """
+    if not 0.0 < weight_quantile <= 1.0:
+        raise ValueError(
+            f"weight_quantile must lie in (0, 1], got {weight_quantile}"
+        )
+    weights = np.asarray(space.weights, dtype=float)
+    grid = np.asarray(space.grid, dtype=float)
+    cutoff = float(np.quantile(weights, weight_quantile))
+    candidate_idx = np.flatnonzero(weights <= cutoff + 1e-15)
+    if candidate_idx.size == 0:
+        candidate_idx = np.array([int(np.argmin(weights))])
+
+    avoid_arr = [np.asarray(p, dtype=float) for p in avoid]
+    separated_idx = candidate_idx
+    if avoid_arr and min_avoid_distance > 0.0:
+        keep: list[int] = []
+        for idx in candidate_idx:
+            point = grid[idx]
+            if all(
+                float(np.linalg.norm(point - ref)) >= min_avoid_distance
+                for ref in avoid_arr
+            ):
+                keep.append(int(idx))
+        if keep:
+            separated_idx = np.asarray(keep, dtype=int)
+
+    best_idx = int(separated_idx[np.argmin(weights[separated_idx])])
+    if avoid_arr and min_avoid_distance > 0.0:
+        dists = [
+            min(float(np.linalg.norm(grid[i] - ref)) for ref in avoid_arr)
+            for i in separated_idx
+        ]
+        weights_pool = weights[separated_idx]
+        rank = np.lexsort((-np.asarray(dists), weights_pool))
+        best_idx = int(separated_idx[rank[0]])
+    return grid[best_idx].copy()
+
+
+def apply_agent_start_overrides(
+    agents: list[RouterAgent],
+    overrides: dict[str, Any],
+    space: TraitSpace,
+    *,
+    seed: int = 0,
+) -> dict[str, list[float]]:
+    """Move named agents to configured start overrides in place.
+
+    Override values may be:
+
+    - ``\"underrepresented\"``: snap to a low-mass grid point, shared by
+      all agents using the same token in one call.
+    - a length-``L`` numeric list: explicit coordinates in ``[0, 1]^L``.
+
+    :param agents: Router agents to mutate.
+    :type agents: list[RouterAgent]
+    :param overrides: Map from agent name to override spec.
+    :type overrides: dict
+    :param space: Trait space used to resolve ``underrepresented``.
+    :type space: TraitSpace
+    :param seed: Unused today; reserved for stochastic tie breaks.
+    :type seed: int
+    :returns: Resolved override coordinates keyed by agent name.
+    :rtype: dict[str, list[float]]
+    :raises ValueError: If an agent name or coordinate spec is invalid.
+    """
+    del seed
+    if not overrides:
+        return {}
+    by_name = {a.name: a for a in agents}
+    missing = sorted(set(overrides) - set(by_name))
+    if missing:
+        raise ValueError(
+            f"agent_start_overrides unknown agents: {', '.join(missing)}"
+        )
+
+    resolved: dict[str, np.ndarray] = {}
+    token_groups: dict[str, list[str]] = {}
+    for name, spec in overrides.items():
+        if isinstance(spec, str):
+            token_groups.setdefault(spec, []).append(name)
+        else:
+            pos = np.asarray(spec, dtype=float)
+            if pos.shape != (space.L,):
+                raise ValueError(
+                    f"override for {name!r} must have shape ({space.L},), "
+                    f"got {pos.shape}"
+                )
+            resolved[name] = np.clip(pos, 0.0, 1.0)
+
+    avoid_names = set(overrides)
+    avoid_points = [
+        a.position.copy()
+        for a in agents
+        if a.name not in avoid_names
+    ]
+    for token, names in token_groups.items():
+        if token == "underrepresented":
+            point = underrepresented_grid_point(
+                space,
+                avoid=avoid_points,
+                min_avoid_distance=0.1,
+            )
+        else:
+            raise ValueError(
+                f"unknown agent_start_overrides token {token!r}; "
+                "use 'underrepresented' or an explicit coordinate list"
+            )
+        for name in names:
+            resolved[name] = point.copy()
+
+    for name, pos in resolved.items():
+        by_name[name].position = pos.copy()
+    return {name: pos.tolist() for name, pos in resolved.items()}
 
 
 def random_separated_initial_positions(
@@ -270,8 +435,8 @@ def init_agents_pairs_near_reference(
         raise ValueError(
             f"reference has {reference.shape[0]} agents, config has {len(names)}",
         )
-    low, high = harm_pair_indices(reference)
-    anchors = [reference[low[0]], reference[low[1]], reference[high[0]], reference[high[1]]]
+    pairs = adjacent_harm_pair_indices(reference)
+    anchors = [reference[int(i)] for pair in pairs for i in pair]
     rng = np.random.default_rng(seed)
     agents: list[RouterAgent] = []
     for entry, base in zip(cfg.get("agents", []), anchors):
@@ -358,6 +523,490 @@ def init_agents_theory_gradient(
     )
     agents = init_agents_at_positions(
         cfg, meta["theory_end"], space, seed=seed, init_noise=init_noise,
+    )
+    return agents, meta
+
+
+def co_locate_theory_pairs(
+    theory_end: np.ndarray,
+    agent_names: Sequence[str],
+) -> np.ndarray:
+    """Place each harm-sorted pair at its theory-endpoint centroid.
+
+    :param theory_end: ``(N, L)`` gradient-ascent endpoints.
+    :type theory_end: numpy.ndarray
+    :param agent_names: Names in row order of ``theory_end``.
+    :type agent_names: Sequence[str]
+    :returns: ``(N, L)`` positions with duplicates within each adjacent
+        harm-sorted pair.
+    :rtype: numpy.ndarray
+    """
+    if theory_end.shape[0] != len(agent_names):
+        raise ValueError("theory_end rows must match agent_names length")
+    pairs = adjacent_harm_pair_indices(theory_end)
+    out = np.empty_like(theory_end)
+    for pair in pairs:
+        centroid = theory_end[pair].mean(axis=0)
+        for i in pair:
+            out[int(i)] = centroid
+    return out
+
+
+_MERGE_AXIS_ALIASES: dict[str, str] = {
+    "policy": "policy_violation",
+    "halluc": "hallucination",
+    "overrefusal": "overrefusal",
+    "privacy": "privacy",
+    "harm": "harm",
+}
+
+
+def axis_index_from_merge_label(
+    train_as: str,
+    axis_labels: Sequence[str],
+    *,
+    group_index: int = 0,
+) -> int:
+    """Map a merge group label to a trait-axis index.
+
+    :param train_as: Merge training name (e.g. ``merge-harm``).
+    :type train_as: str
+    :param axis_labels: Trait-space axis labels.
+    :type axis_labels: Sequence[str]
+    :param group_index: Fallback index when no label match is found.
+    :type group_index: int
+    :returns: Axis index in ``[0, L)``.
+    :rtype: int
+    """
+    slug = train_as.removeprefix("merge-").lower()
+    slug = _MERGE_AXIS_ALIASES.get(slug, slug)
+    labels = [lab.lower() for lab in axis_labels]
+    if slug in labels:
+        return labels.index(slug)
+    for i, lab in enumerate(labels):
+        if slug in lab or lab.replace("_", "") in slug.replace("_", ""):
+            return i
+    return int(group_index) % max(len(labels), 1)
+
+
+def axis_corner_unit(axis_idx: int, L: int) -> np.ndarray:
+    """Return axis-aligned hypercube vertex ``e_i`` in ``[0, 1]^L``.
+
+    :param axis_idx: Active coordinate index.
+    :type axis_idx: int
+    :param L: Trait dimensionality.
+    :type L: int
+    :returns: Corner vector with a one in coordinate ``axis_idx``.
+    :rtype: numpy.ndarray
+    """
+    corner = np.zeros(L, dtype=float)
+    corner[int(axis_idx)] = 1.0
+    return corner
+
+
+def merge_pairs_hypercube_edge_positions(
+    merge_groups: Sequence[tuple[str, Sequence[str]]],
+    agent_names: Sequence[str],
+    L: int,
+    *,
+    seed: int,
+    pair_separation: float = 0.04,
+    randomize_corners: bool = True,
+    corner_jitter: float = 0.0,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Place merge pairs near randomly assigned hypercube vertices ``e_i``.
+
+    Each merge group is assigned a distinct axis-aligned corner such as
+    ``(1, 0, 0, 0, 0)``. Partners start at ``corner ± pair_separation / 2``
+    along that axis (clipped to ``[0, 1]^L``).
+
+    :param merge_groups: ``(train_as, member_names)`` pairs of size two.
+    :type merge_groups: Sequence[tuple[str, Sequence[str]]]
+    :param agent_names: Full router agent name list (config order).
+    :type agent_names: Sequence[str]
+    :param L: Trait dimensionality.
+    :type L: int
+    :param seed: RNG seed for corner permutation and jitter.
+    :type seed: int
+    :param pair_separation: Target L2 distance between merge partners.
+    :type pair_separation: float
+    :param randomize_corners: If ``True``, shuffle which corner each group gets.
+    :type randomize_corners: bool
+    :param corner_jitter: Uniform jitter added to all coordinates before
+        partner offsets (optional).
+    :type corner_jitter: float
+    :returns: Positions ``(N, L)`` and placement metadata.
+    :rtype: tuple[numpy.ndarray, dict]
+    :raises ValueError: If groups are not pairs or exceed ``L`` corners.
+    """
+    if pair_separation <= 0.0:
+        raise ValueError(f"pair_separation must be positive, got {pair_separation}")
+    k = len(merge_groups)
+    if k > L:
+        raise ValueError(
+            f"hypercube-edge init supports at most {L} merge groups, got {k}",
+        )
+    rng = np.random.default_rng(seed)
+    axis_indices = list(range(L))
+    if randomize_corners:
+        rng.shuffle(axis_indices)
+    axis_for_group = axis_indices[:k]
+
+    name_to_idx = {n: i for i, n in enumerate(agent_names)}
+    positions = np.zeros((len(agent_names), L), dtype=float)
+    corner_assignments: dict[str, dict[str, Any]] = {}
+    within_pair_distances: dict[str, float] = {}
+    half = 0.5 * pair_separation
+
+    for g_idx, (train_as, members) in enumerate(merge_groups):
+        members = list(members)
+        if len(members) != 2:
+            raise ValueError(
+                f"hypercube-edge init requires pairs of size 2; "
+                f"{train_as!r} has {len(members)} members",
+            )
+        ax = int(axis_for_group[g_idx])
+        corner = axis_corner_unit(ax, L)
+        if corner_jitter > 0.0:
+            corner = np.clip(
+                corner + rng.uniform(-corner_jitter, corner_jitter, size=L),
+                0.0,
+                1.0,
+            )
+        direction = axis_corner_unit(ax, L)
+        positions[name_to_idx[members[0]]] = np.clip(
+            corner - half * direction, 0.0, 1.0,
+        )
+        positions[name_to_idx[members[1]]] = np.clip(
+            corner + half * direction, 0.0, 1.0,
+        )
+        i, j = name_to_idx[members[0]], name_to_idx[members[1]]
+        within_pair_distances[train_as] = float(
+            np.linalg.norm(positions[i] - positions[j]),
+        )
+        corner_assignments[train_as] = {
+            "axis_index": ax,
+            "corner": corner.tolist(),
+            "members": members,
+        }
+
+    return positions, {
+        "init_mode": "merge_hypercube_edges",
+        "randomize_corners": randomize_corners,
+        "corner_jitter": corner_jitter,
+        "pair_separation_target": pair_separation,
+        "corner_assignments": corner_assignments,
+        "within_pair_distance_at_init": within_pair_distances,
+    }
+
+
+def init_agents_merge_hypercube_edges(
+    cfg: dict[str, Any],
+    space: TraitSpace,
+    merge_groups: Sequence[tuple[str, Sequence[str]]],
+    *,
+    seed: int,
+    init_noise: float = 0.0,
+    edge_cfg: Optional[dict[str, Any]] = None,
+) -> tuple[list[RouterAgent], dict[str, Any]]:
+    """Initialize merge partners on randomly assigned hypercube vertices.
+
+    :param cfg: Training config with ``agents`` list.
+    :type cfg: dict
+    :param space: Trait space.
+    :type space: TraitSpace
+    :param merge_groups: Parsed ``sft_merge_groups`` entries.
+    :type merge_groups: Sequence[tuple[str, Sequence[str]]]
+    :param seed: Per-run seed.
+    :type seed: int
+    :param init_noise: Optional post-placement jitter (keep small).
+    :type init_noise: float
+    :param edge_cfg: Optional ``closed_loop.merge_hypercube`` block.
+    :type edge_cfg: dict | None
+    :returns: Agents and placement metadata.
+    :rtype: tuple[list[RouterAgent], dict]
+    """
+    ec = edge_cfg or {}
+    names = [a["name"] for a in cfg.get("agents", [])]
+    positions, placement_meta = merge_pairs_hypercube_edge_positions(
+        merge_groups,
+        names,
+        space.L,
+        seed=seed,
+        pair_separation=float(ec.get("pair_separation", 0.04)),
+        randomize_corners=bool(ec.get("randomize_corners", True)),
+        corner_jitter=float(ec.get("corner_jitter", 0.0)),
+    )
+    agents = init_agents_at_positions(
+        cfg, positions, space, seed=seed, init_noise=init_noise,
+    )
+    meta = {
+        "merge_groups": [[t, list(m)] for t, m in merge_groups],
+        "theory_initial": positions.tolist(),
+        **placement_meta,
+    }
+    return agents, meta
+
+
+def merge_near_initial_positions(
+    space: TraitSpace,
+    merge_groups: Sequence[tuple[str, Sequence[str]]],
+    agent_names: Sequence[str],
+    *,
+    sigma: float,
+    seed: int,
+    pair_separation: float = 0.04,
+    theory_cfg: Optional[dict[str, Any]] = None,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Place merge partners near a shared anchor from a reduced Nash solve.
+
+    Runs gradient-ascent theory on one virtual agent per merge group to
+    obtain separated axis anchors, then offsets each pair by
+    ``± pair_separation / 2`` along the group's trait axis.
+
+    :param space: Trait space.
+    :type space: TraitSpace
+    :param merge_groups: ``(train_as, member_names)`` pairs of size two.
+    :type merge_groups: Sequence[tuple[str, Sequence[str]]]
+    :param agent_names: Full router agent name list (config order).
+    :type agent_names: Sequence[str]
+    :param sigma: Competitive reach for anchor theory solve.
+    :type sigma: float
+    :param seed: RNG seed for anchor theory.
+    :type seed: int
+    :param pair_separation: Target L2 distance between merge partners.
+    :type pair_separation: float
+    :param theory_cfg: Optional ``closed_loop.theory_gradient`` block.
+    :type theory_cfg: dict | None
+    :returns: Positions ``(N, L)`` and placement metadata.
+    :rtype: tuple[numpy.ndarray, dict]
+    :raises ValueError: If merge groups are not disjoint pairs of size two.
+    """
+    if pair_separation <= 0.0:
+        raise ValueError(f"pair_separation must be positive, got {pair_separation}")
+    tc = theory_cfg or {}
+    k = len(merge_groups)
+    if k < 1:
+        raise ValueError("merge_near_initial_positions requires at least one merge group")
+    anchor_names = [f"_anchor-{i}" for i in range(k)]
+    anchor_meta = run_theory_gradient_positions(
+        space,
+        anchor_names,
+        sigma=sigma,
+        seed=seed,
+        learning_rate=float(tc.get("learning_rate", 5e-3)),
+        n_steps=int(tc.get("n_steps", 5000)),
+        tol=float(tc.get("tol", 1e-8)),
+        min_pairwise=float(tc.get("min_pairwise", 0.2)),
+    )
+    anchors = anchor_meta["theory_end"]
+    axis_labels = space.axis_labels or tuple(f"axis-{i}" for i in range(space.L))
+    name_to_idx = {n: i for i, n in enumerate(agent_names)}
+    positions = np.zeros((len(agent_names), space.L), dtype=float)
+    within_pair_distances: dict[str, float] = {}
+    half = 0.5 * pair_separation
+    for g_idx, (train_as, members) in enumerate(merge_groups):
+        members = list(members)
+        if len(members) != 2:
+            raise ValueError(
+                f"merge_near_theory requires pairs of size 2; "
+                f"{train_as!r} has {len(members)} members",
+            )
+        ax_idx = axis_index_from_merge_label(
+            train_as, axis_labels, group_index=g_idx,
+        )
+        direction = np.zeros(space.L, dtype=float)
+        direction[ax_idx] = 1.0
+        anchor = anchors[g_idx]
+        positions[name_to_idx[members[0]]] = np.clip(anchor - half * direction, 0.0, 1.0)
+        positions[name_to_idx[members[1]]] = np.clip(anchor + half * direction, 0.0, 1.0)
+        within_pair_distances[train_as] = float(
+            np.linalg.norm(
+                positions[name_to_idx[members[0]]]
+                - positions[name_to_idx[members[1]]],
+            ),
+        )
+    return positions, {
+        "anchor_theory_layout": anchor_meta["layout"],
+        "anchor_theory_converged": anchor_meta["converged"],
+        "anchor_theory_n_steps": anchor_meta["n_steps"],
+        "anchor_positions": anchors.tolist(),
+        "within_pair_distance_at_init": within_pair_distances,
+        "pair_separation_target": pair_separation,
+    }
+
+
+def init_agents_merge_near_theory(
+    cfg: dict[str, Any],
+    space: TraitSpace,
+    merge_groups: Sequence[tuple[str, Sequence[str]]],
+    *,
+    sigma: float,
+    seed: int,
+    init_noise: float = 0.0,
+    near_cfg: Optional[dict[str, Any]] = None,
+    theory_cfg: Optional[dict[str, Any]] = None,
+) -> tuple[list[RouterAgent], dict[str, Any]]:
+    """Initialize merge partners near shared anchors from reduced theory.
+
+    :param cfg: Training config with ``agents`` list.
+    :type cfg: dict
+    :param space: Trait space.
+    :type space: TraitSpace
+    :param merge_groups: Parsed ``sft_merge_groups`` entries.
+    :type merge_groups: Sequence[tuple[str, Sequence[str]]]
+    :param sigma: Competitive reach.
+    :type sigma: float
+    :param seed: Per-run seed.
+    :type seed: int
+    :param init_noise: Optional post-placement jitter (keep small).
+    :type init_noise: float
+    :param near_cfg: Optional ``closed_loop.merge_near`` block.
+    :type near_cfg: dict | None
+    :param theory_cfg: Optional ``closed_loop.theory_gradient`` block.
+    :type theory_cfg: dict | None
+    :returns: Agents and theory metadata for logging.
+    :rtype: tuple[list[RouterAgent], dict]
+    """
+    nc = near_cfg or {}
+    names = [a["name"] for a in cfg.get("agents", [])]
+    pair_sep = float(nc.get("pair_separation", 0.04))
+    positions, placement_meta = merge_near_initial_positions(
+        space,
+        merge_groups,
+        names,
+        sigma=sigma,
+        seed=seed,
+        pair_separation=pair_sep,
+        theory_cfg=theory_cfg,
+    )
+    agents = init_agents_at_positions(
+        cfg, positions, space, seed=seed, init_noise=init_noise,
+    )
+    meta = {
+        "init_mode": "merge_near_theory",
+        "merge_groups": [[t, list(m)] for t, m in merge_groups],
+        "theory_initial": positions.tolist(),
+        **placement_meta,
+    }
+    return agents, meta
+
+
+def init_agents_theory_gradient_paired(
+    cfg: dict[str, Any],
+    space: TraitSpace,
+    *,
+    sigma: float,
+    seed: int,
+    init_noise: float = 0.0,
+    theory_cfg: Optional[dict[str, Any]] = None,
+    skip_initial_theory: bool = False,
+) -> tuple[list[RouterAgent], dict[str, Any]]:
+    """Theory init with co-located harm pairs, then a paired theory refinement step.
+
+    Runs gradient ascent from a separated start, co-locates each harm pair at
+    the pair centroid, re-runs gradient ascent from that paired state, then
+    places SFT agents at the co-located paired endpoints (optional jitter).
+
+    When ``skip_initial_theory`` is ``True``, the first gradient-ascent pass
+    is omitted and co-located harm pairs are built directly from a random
+    separated draw. This is intended for runs that immediately apply
+    ``agent_start_overrides`` before the final Nash solve.
+
+    :param cfg: Training config.
+    :type cfg: dict
+    :param space: Trait space.
+    :type space: TraitSpace
+    :param sigma: Competitive reach.
+    :type sigma: float
+    :param seed: Per-run seed.
+    :type seed: int
+    :param init_noise: Post-theory jitter (keep small so pairs stay merged).
+    :type init_noise: float
+    :param theory_cfg: Optional ``closed_loop.theory_gradient`` block.
+    :type theory_cfg: dict | None
+    :param skip_initial_theory: If ``True``, skip the first theory pass.
+    :type skip_initial_theory: bool
+    :returns: Agents and theory metadata.
+    :rtype: tuple[list[RouterAgent], dict]
+    """
+    from infl_ens.training.pool_dynamics import (
+        classify_layout,
+        pairwise_spread,
+        run_gradient_ascent_theory,
+    )
+
+    tc = theory_cfg or {}
+    names = [a["name"] for a in cfg.get("agents", [])]
+    lr = float(tc.get("learning_rate", 5e-3))
+    n_steps = int(tc.get("n_steps", 5000))
+    tol = float(tc.get("tol", 1e-8))
+    min_pairwise = float(tc.get("min_pairwise", 0.2))
+
+    if skip_initial_theory:
+        p0 = random_separated_initial_positions(
+            space,
+            len(names),
+            seed,
+            min_pairwise=min_pairwise,
+        )
+        paired_start = co_locate_theory_pairs(p0, names)
+        meta0 = {
+            "initial": p0,
+            "theory_end": paired_start.copy(),
+            "layout": classify_layout(paired_start),
+            "converged": True,
+            "n_steps": 0,
+            "final_spread": pairwise_spread(paired_start),
+            "skipped_initial_theory": True,
+        }
+    else:
+        meta0 = run_theory_gradient_positions(
+            space,
+            names,
+            sigma=sigma,
+            seed=seed,
+            learning_rate=lr,
+            n_steps=n_steps,
+            tol=tol,
+            min_pairwise=min_pairwise,
+        )
+        paired_start = co_locate_theory_pairs(meta0["theory_end"], names)
+    grad1 = run_gradient_ascent_theory(
+        space,
+        paired_start,
+        list(names),
+        sigma=sigma,
+        learning_rate=lr,
+        n_steps=n_steps,
+        tol=tol,
+        seed=seed,
+    )
+    theory_end = co_locate_theory_pairs(grad1["positions"][-1], names)
+    pair_indices = adjacent_harm_pair_indices(theory_end)
+    pair_names = [
+        [names[int(i)] for i in pair]
+        for pair in pair_indices
+    ]
+    within_pair_distances = {
+        "pair_" + "_".join(names[int(i)] for i in pair): float(
+            np.linalg.norm(theory_end[int(pair[0])] - theory_end[int(pair[1])])
+        )
+        for pair in pair_indices
+    }
+    meta = {
+        **meta0,
+        "init_mode": "theory_gradient_paired",
+        "theory_layout_initial": meta0["layout"],
+        "theory_layout_paired_refine": grad1["layout"],
+        "theory_converged_paired_refine": grad1["converged"],
+        "theory_n_steps_paired_refine": grad1["n_steps"],
+        "theory_end": theory_end,
+        "paired_harm_order": pair_names,
+        "within_pair_distance_after_pair": within_pair_distances,
+    }
+    agents = init_agents_at_positions(
+        cfg, theory_end, space, seed=seed, init_noise=init_noise,
     )
     return agents, meta
 

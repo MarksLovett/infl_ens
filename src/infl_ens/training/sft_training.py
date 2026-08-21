@@ -78,7 +78,7 @@ class SFTTrainingConfig:
         loss. With small per-round batches (e.g. 4 optimiser steps), the
         default value of ``10`` produces no per-step records — only a
         final summary. Set to ``1`` for full per-step capture, which is
-        what :mod:`scripts.probe_sft_capability`'s Tier 1 panel needs.
+        what :mod:`infl_ens.evaluation.capability_probe`'s Tier 1 panel needs.
     :type logging_steps: int
     :param cumulative_lora: If ``True``, when ``agent.metadata['lora_dir']``
         points to an existing adapter from a previous round, that adapter

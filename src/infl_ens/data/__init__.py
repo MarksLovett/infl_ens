@@ -26,6 +26,7 @@ from infl_ens.data.encoders import (
     HuggingFaceEncoder,
     SentenceTransformerEncoder,
 )
+from infl_ens.data.trait_linear_transform import FrozenLinearTransform
 from infl_ens.data.trait_space import (
     TraitSpace,
     build_trait_space,
@@ -33,6 +34,7 @@ from infl_ens.data.trait_space import (
 )
 
 __all__ = [
+    "FrozenLinearTransform",
     "HuggingFaceEncoder",
     "SentenceTransformerEncoder",
     "TraitSpace",

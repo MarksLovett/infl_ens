@@ -1,0 +1,38 @@
+\documentclass[tikz,border=3pt]{standalone}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+  width=12.5cm, height=6.5cm,
+  ybar, bar width=7pt,
+  enlarge x limits=0.15,
+  ymin=0, ymax=4.0,
+  ylabel={Mean token NLL (lower is better)},
+  symbolic x coords={Harm,Hallucination,Jailbreak,Privacy},
+  xtick=data,
+  legend style={font=\small},
+  legend columns=3,
+  ymajorgrids=true,
+  grid style={dashed, gray!35},
+  title={Fixed-theory specialists vs base vs generalist (round 9, sigma=0.4, 10 SFT seeds, 10 specialist seeds, 10 generalist seeds)},
+]
+\addplot+[fill=gray!50, draw=black!50] coordinates {(Harm,2.591) (Hallucination,3.700) (Jailbreak,1.552) (Privacy,3.245)};
+\addlegendentry{Base}
+\addplot+[fill=blue!65!black, draw=black!40, error bars/.cd, y explicit, error values={(0.003) (0.013) (0.005) (0.011)}] coordinates {(Harm,1.803) (Hallucination,2.195) (Jailbreak,1.324) (Privacy,2.190)};
+\addlegendentry{clone-0}
+\addplot+[fill=red!75!black, draw=black!40, error bars/.cd, y explicit, error values={(0.011) (0.032) (0.007) (0.006)}] coordinates {(Harm,1.949) (Hallucination,2.473) (Jailbreak,1.350) (Privacy,1.844)};
+\addlegendentry{clone-1}
+\addplot+[fill=red!55, draw=black!40, error bars/.cd, y explicit, error values={(0.013) (0.006) (0.010) (0.019)}] coordinates {(Harm,1.970) (Hallucination,1.991) (Jailbreak,1.344) (Privacy,2.632)};
+\addlegendentry{clone-2}
+\addplot+[fill=blue!45, draw=black!40, error bars/.cd, y explicit, error values={(0.004) (0.010) (0.003) (0.010)}] coordinates {(Harm,1.809) (Hallucination,2.213) (Jailbreak,1.314) (Privacy,2.205)};
+\addlegendentry{clone-3}
+\addplot+[fill=green!55!black, draw=black!40, error bars/.cd, y explicit, error values={(0.006) (0.025) (0.005) (0.005)}] coordinates {(Harm,1.949) (Hallucination,2.466) (Jailbreak,1.355) (Privacy,1.834)};
+\addlegendentry{clone-4}
+\addplot+[fill=green!35, draw=black!40, error bars/.cd, y explicit, error values={(0.008) (0.006) (0.006) (0.024)}] coordinates {(Harm,1.950) (Hallucination,2.002) (Jailbreak,1.316) (Privacy,2.642)};
+\addlegendentry{clone-5}
+\addplot+[fill=purple!70!black, draw=black!40, error bars/.cd, y explicit, error values={(0.003) (0.006) (0.004) (0.005)}] coordinates {(Harm,1.802) (Hallucination,2.018) (Jailbreak,1.356) (Privacy,1.789)};
+\addlegendentry{generalist}
+\end{axis}
+\end{tikzpicture}
+\end{document}

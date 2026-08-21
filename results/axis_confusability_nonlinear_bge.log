@@ -1,0 +1,35 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 10292.45it/s]
+Per-axis fit field and self-separability:
+  axis            fit_field     self_AUC
+  --------------------------------------
+  harm            response         0.866
+  hallucination   response         0.930
+  jailbreak       response         0.962
+  privacy         response         0.979
+
+4-way benchmark-of-origin recoverability from trait coords:
+  chance balanced accuracy : 0.250
+  raw coords balanced acc  : 0.430
+
+Per-benchmark recall (raw coords; low = collides with others):
+  harm               0.672
+  hallucination      0.885
+  jailbreak          0.118
+  privacy            0.046
+
+Subspace residual of each axis vs the span of the others:
+  axis              resid_norm   cos_to_span
+  ------------------------------------------
+  harm                   0.990         0.139
+  hallucination          1.000         0.031
+  jailbreak              0.998         0.064
+  privacy                0.992         0.125
+  (resid_norm -> 0 means the axis adds no independent direction)
+
+Nonlinear (RBF random-feature) origin recoverability:
+  linear raw bal acc    : 0.430
+  nonlinear bal acc     : 0.413
+  nonlinear lift        : -0.017  -> no nonlinear lift: axes inseparable at this representation
+
+wrote scripts/figures/axis_confusability_bge.{pdf,png}

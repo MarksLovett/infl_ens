@@ -56,24 +56,36 @@ def pairwise_spread(pos: np.ndarray) -> float:
 
 
 def classify_layout(pos: np.ndarray, *, spread_thresh: float = 0.45) -> str:
-    """Classify as ``2,2`` or ``collapsed``.
+    """Classify an even-agent harm-axis layout or collapse.
 
-    :param pos: ``(N, 2)`` positions (expects 4 agents).
+    Four-agent layouts retain the historical ``'2,2'`` label. Larger even
+    layouts are labelled ``'<N/2>x2'`` when adjacent harm-sorted pairs are
+    separated enough to be interpreted as paired corners.
+
+    :param pos: ``(N, L)`` positions.
     :type pos: numpy.ndarray
     :param spread_thresh: Collapse threshold on pairwise spread.
     :type spread_thresh: float
-    :returns: ``'2,2'`` or ``'collapsed'``.
+    :returns: ``'2,2'``, ``'<N/2>x2'``, or ``'collapsed'``.
     :rtype: str
     """
     if pairwise_spread(pos) < spread_thresh:
         return "collapsed"
+    n = pos.shape[0]
+    if n < 2 or n % 2 != 0:
+        return "collapsed"
     harm = pos[:, 0]
     order = np.argsort(harm)
-    low, high = set(order[:2].tolist()), set(order[2:].tolist())
-    if len(low) != 2:
+    pair_means = np.array([
+        float(np.mean(harm[order[i : i + 2]]))
+        for i in range(0, n, 2)
+    ])
+    if len(pair_means) == 1:
+        return "1x2"
+    min_sep = float(np.min(np.diff(pair_means)))
+    if min_sep < 0.15:
         return "collapsed"
-    harm_sep = float(np.mean(pos[list(high), 0]) - np.mean(pos[list(low), 0]))
-    return "2,2" if harm_sep >= 0.35 else "collapsed"
+    return "2,2" if n == 4 else f"{n // 2}x2"
 
 
 def run_matched_pool_dynamics(
@@ -204,4 +216,119 @@ def run_gradient_ascent_theory(
         "layout": classify_layout(final),
         "converged": bool(info["converged"]),
         "n_steps": int(info["n_steps"]),
+    }
+
+
+def run_theory_pre_warmup(
+    space: TraitSpace,
+    agents: list[RouterAgent],
+    pool_prompts: Sequence[str],
+    *,
+    sigma: float,
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
+    """Position-only expected-pool dynamics before closed-loop SFT rounds.
+
+    Integrates the same matched-pool centroid rule as
+    ``centroid_mode='expected_pool'`` with optional adaptive
+    :func:`infl_ens.utils.position_step.apply_position_update` stepping.
+    No LoRA training occurs during this phase.
+
+    :param space: Trait space.
+    :type space: TraitSpace
+    :param agents: Router agents (updated in place).
+    :type agents: list[RouterAgent]
+    :param pool_prompts: Full prompt pool for projection.
+    :type pool_prompts: Sequence[str]
+    :param sigma: Competitive reach.
+    :type sigma: float
+    :param cfg: ``closed_loop.theory_pre`` block.
+    :type cfg: dict
+    :returns: Warm-up metadata including start/end positions.
+    :rtype: dict
+    """
+    mode = str(cfg.get("mode", "matched_pool"))
+    if mode != "matched_pool":
+        raise ValueError(
+            f"theory_pre.mode must be 'matched_pool', got {mode!r}",
+        )
+    n_rounds = int(cfg.get("n_rounds", 24))
+    names = [a.name for a in agents]
+    initial = np.stack([a.position.copy() for a in agents], axis=0)
+    result = run_matched_pool_dynamics(
+        space,
+        initial,
+        names,
+        pool_prompts,
+        sigma=sigma,
+        n_rounds=n_rounds,
+        blend_base=float(cfg.get("blend", 0.5)),
+        blend_schedule=cfg.get("blend_schedule"),
+        blend_start=cfg.get("blend_start"),
+        position_step=cfg.get("position_step"),
+    )
+    final = result["positions"][-1]
+    for i, agent in enumerate(agents):
+        agent.position = final[i].copy()
+    out = {
+        "mode": mode,
+        "n_rounds": n_rounds,
+        "blend": float(cfg.get("blend", 0.5)),
+        "position_step": cfg.get("position_step"),
+        "theory_pre_initial": initial.tolist(),
+        "theory_pre_end": final.tolist(),
+        "theory_pre_layout": result["layout"],
+        "theory_pre_final_spread": result["final_spread"],
+    }
+    merge_groups = cfg.get("merge_groups")
+    if merge_groups is not None:
+        out["agent_geometry"] = agent_pairwise_geometry(
+            final, names, merge_groups=merge_groups,
+        )
+    return out
+
+
+def agent_pairwise_geometry(
+    positions: np.ndarray,
+    names: Sequence[str],
+    *,
+    merge_groups: Optional[Sequence[tuple[str, Sequence[str]]]] = None,
+) -> dict[str, Any]:
+    """Summarize inter-agent L2 geometry for attribution diagnostics.
+
+    :param positions: Agent positions ``(N, L)``.
+    :type positions: numpy.ndarray
+    :param names: Agent names aligned with rows of ``positions``.
+    :type names: Sequence[str]
+    :param merge_groups: Optional ``(train_as, members)`` SFT merge pairs.
+    :type merge_groups: Sequence[tuple[str, Sequence[str]]] | None
+    :returns: Pairwise and within-merge distance summaries.
+    :rtype: dict
+    """
+    pos = np.asarray(positions, dtype=float)
+    n = pos.shape[0]
+    if n != len(names):
+        raise ValueError("positions rows must match names length")
+    pairwise: dict[str, float] = {}
+    off_diag: list[float] = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist = float(np.linalg.norm(pos[i] - pos[j]))
+            pairwise[f"{names[i]}|{names[j]}"] = dist
+            off_diag.append(dist)
+    within_merge: dict[str, float] = {}
+    if merge_groups:
+        by_name = {name: idx for idx, name in enumerate(names)}
+        for train_as, members in merge_groups:
+            members = list(members)
+            if len(members) != 2:
+                continue
+            i, j = by_name[members[0]], by_name[members[1]]
+            within_merge[train_as] = float(np.linalg.norm(pos[i] - pos[j]))
+    return {
+        "pairwise_l2": pairwise,
+        "within_merge_l2": within_merge,
+        "mean_pairwise_l2": float(np.mean(off_diag)) if off_diag else 0.0,
+        "min_pairwise_l2": float(np.min(off_diag)) if off_diag else 0.0,
+        "max_pairwise_l2": float(np.max(off_diag)) if off_diag else 0.0,
     }

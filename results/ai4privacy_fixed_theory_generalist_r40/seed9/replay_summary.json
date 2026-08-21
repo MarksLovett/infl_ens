@@ -1,0 +1,928 @@
+{
+  "history_path": "/home/mlovett/infl_ens/results/ai4privacy_fixed_theory_specialists_r40/seed9/history.json",
+  "agent": "generalist",
+  "n_rounds": 40,
+  "rounds": [
+    {
+      "round": 0,
+      "n_train": 512,
+      "train_loss": 2.1422442942857742,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-00",
+      "loaded_prior_lora": null,
+      "batch_centroid": [
+        0.4890539319067181,
+        0.6407453702913344,
+        0.21049317412793914
+      ],
+      "cumulative_n_train": 512,
+      "cumulative_centroid": [
+        0.4890539319067181,
+        0.6407453702913344,
+        0.21049317412793914
+      ],
+      "position": [
+        0.4890539319067181,
+        0.6407453702913344,
+        0.21049317412793914
+      ]
+    },
+    {
+      "round": 1,
+      "n_train": 512,
+      "train_loss": 1.8422830055157344,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-01",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-00",
+      "batch_centroid": [
+        0.4945462699021525,
+        0.6319355325134922,
+        0.21137892474801054
+      ],
+      "cumulative_n_train": 1024,
+      "cumulative_centroid": [
+        0.49180010090443527,
+        0.6363404514024134,
+        0.21093604943797484
+      ],
+      "position": [
+        0.49180010090443527,
+        0.6363404514024134,
+        0.21093604943797484
+      ]
+    },
+    {
+      "round": 2,
+      "n_train": 512,
+      "train_loss": 1.7693848709265392,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-02",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-01",
+      "batch_centroid": [
+        0.47900454919936,
+        0.628000101235423,
+        0.22074921223793442
+      ],
+      "cumulative_n_train": 1536,
+      "cumulative_centroid": [
+        0.4875349170027435,
+        0.6335603346800832,
+        0.21420710370462803
+      ],
+      "position": [
+        0.4875349170027435,
+        0.6335603346800832,
+        0.21420710370462803
+      ]
+    },
+    {
+      "round": 3,
+      "n_train": 512,
+      "train_loss": 1.7463114062945049,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-03",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-02",
+      "batch_centroid": [
+        0.4909231323528591,
+        0.6404191002302825,
+        0.21260380204216597
+      ],
+      "cumulative_n_train": 2048,
+      "cumulative_centroid": [
+        0.4883819708402724,
+        0.6352750260676331,
+        0.21380627828901252
+      ],
+      "position": [
+        0.4883819708402724,
+        0.6352750260676331,
+        0.21380627828901252
+      ]
+    },
+    {
+      "round": 4,
+      "n_train": 512,
+      "train_loss": 1.7322888523340225,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-04",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-03",
+      "batch_centroid": [
+        0.4788087734153054,
+        0.6441750622891472,
+        0.21597332482812456
+      ],
+      "cumulative_n_train": 2560,
+      "cumulative_centroid": [
+        0.486467331355279,
+        0.6370550333119359,
+        0.21423968759683493
+      ],
+      "position": [
+        0.486467331355279,
+        0.6370550333119359,
+        0.21423968759683493
+      ]
+    },
+    {
+      "round": 5,
+      "n_train": 512,
+      "train_loss": 1.6825339943170547,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-05",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-04",
+      "batch_centroid": [
+        0.49369284603648034,
+        0.632366838499214,
+        0.2108278360810473
+      ],
+      "cumulative_n_train": 3072,
+      "cumulative_centroid": [
+        0.48767158380214587,
+        0.6362736675098156,
+        0.213671045677537
+      ],
+      "position": [
+        0.48767158380214587,
+        0.6362736675098156,
+        0.213671045677537
+      ]
+    },
+    {
+      "round": 6,
+      "n_train": 512,
+      "train_loss": 1.6327781875928242,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-06",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-05",
+      "batch_centroid": [
+        0.4790963887469866,
+        0.6274956475365534,
+        0.22350460410245568
+      ],
+      "cumulative_n_train": 3584,
+      "cumulative_centroid": [
+        0.4864465559371231,
+        0.6350196646564924,
+        0.21507583973823968
+      ],
+      "position": [
+        0.4864465559371231,
+        0.6350196646564924,
+        0.21507583973823968
+      ]
+    },
+    {
+      "round": 7,
+      "n_train": 512,
+      "train_loss": 1.634781648715337,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-07",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-06",
+      "batch_centroid": [
+        0.5094894833019473,
+        0.6334982268527694,
+        0.225056160583654
+      ],
+      "cumulative_n_train": 4096,
+      "cumulative_centroid": [
+        0.48932692185772614,
+        0.634829484931027,
+        0.21632337984391647
+      ],
+      "position": [
+        0.48932692185772614,
+        0.634829484931027,
+        0.21632337984391647
+      ]
+    },
+    {
+      "round": 8,
+      "n_train": 512,
+      "train_loss": 1.6003147264321644,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-08",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-07",
+      "batch_centroid": [
+        0.49321802065468645,
+        0.6283080046642947,
+        0.2238887650142255
+      ],
+      "cumulative_n_train": 4608,
+      "cumulative_centroid": [
+        0.48975926616849946,
+        0.6341048760125011,
+        0.21716397819617303
+      ],
+      "position": [
+        0.48975926616849946,
+        0.6341048760125011,
+        0.21716397819617303
+      ]
+    },
+    {
+      "round": 9,
+      "n_train": 512,
+      "train_loss": 1.6087202032407124,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-09",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-08",
+      "batch_centroid": [
+        0.48498342929230326,
+        0.6415561507789904,
+        0.2176863912513914
+      ],
+      "cumulative_n_train": 5120,
+      "cumulative_centroid": [
+        0.4892816824808799,
+        0.6348500034891501,
+        0.21721621950169484
+      ],
+      "position": [
+        0.4892816824808799,
+        0.6348500034891501,
+        0.21721621950169484
+      ]
+    },
+    {
+      "round": 10,
+      "n_train": 512,
+      "train_loss": 1.6039549609025319,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-10",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-09",
+      "batch_centroid": [
+        0.4830882619920168,
+        0.6335246537764072,
+        0.21559402033360234
+      ],
+      "cumulative_n_train": 5632,
+      "cumulative_centroid": [
+        0.48871864425461964,
+        0.634729517151628,
+        0.21706874685005006
+      ],
+      "position": [
+        0.48871864425461964,
+        0.634729517151628,
+        0.21706874685005006
+      ]
+    },
+    {
+      "round": 11,
+      "n_train": 512,
+      "train_loss": 1.6176773111025493,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-11",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-10",
+      "batch_centroid": [
+        0.47184638213422425,
+        0.6253840369128119,
+        0.220689111412201
+      ],
+      "cumulative_n_train": 6144,
+      "cumulative_centroid": [
+        0.48731262241125334,
+        0.6339507271317266,
+        0.21737044389689597
+      ],
+      "position": [
+        0.48731262241125334,
+        0.6339507271317266,
+        0.21737044389689597
+      ]
+    },
+    {
+      "round": 12,
+      "n_train": 512,
+      "train_loss": 1.6020791629950206,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-12",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-11",
+      "batch_centroid": [
+        0.5010663514848593,
+        0.6395466756770991,
+        0.22405249841684746
+      ],
+      "cumulative_n_train": 6656,
+      "cumulative_centroid": [
+        0.4883706015707615,
+        0.6343811847121399,
+        0.21788444809073837
+      ],
+      "position": [
+        0.4883706015707615,
+        0.6343811847121399,
+        0.21788444809073837
+      ]
+    },
+    {
+      "round": 13,
+      "n_train": 512,
+      "train_loss": 1.5492698351542156,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-13",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-12",
+      "batch_centroid": [
+        0.48444174503877085,
+        0.6211514901843499,
+        0.22304858779041425
+      ],
+      "cumulative_n_train": 7168,
+      "cumulative_centroid": [
+        0.48808996896133355,
+        0.6334362065315834,
+        0.2182533152121438
+      ],
+      "position": [
+        0.48808996896133355,
+        0.6334362065315834,
+        0.2182533152121438
+      ]
+    },
+    {
+      "round": 14,
+      "n_train": 512,
+      "train_loss": 1.5443505148092906,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-14",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-13",
+      "batch_centroid": [
+        0.4888575542673998,
+        0.6212700562025912,
+        0.21366854527786944
+      ],
+      "cumulative_n_train": 7680,
+      "cumulative_centroid": [
+        0.4881411413150713,
+        0.6326251298429839,
+        0.21794766388319217
+      ],
+      "position": [
+        0.4881411413150713,
+        0.6326251298429839,
+        0.21794766388319217
+      ]
+    },
+    {
+      "round": 15,
+      "n_train": 512,
+      "train_loss": 1.4931611269712448,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-15",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-14",
+      "batch_centroid": [
+        0.4836081457473902,
+        0.6338114977158699,
+        0.22355751863637213
+      ],
+      "cumulative_n_train": 8192,
+      "cumulative_centroid": [
+        0.48785782909209124,
+        0.6326992778350393,
+        0.21829827980526592
+      ],
+      "position": [
+        0.48785782909209124,
+        0.6326992778350393,
+        0.21829827980526592
+      ]
+    },
+    {
+      "round": 16,
+      "n_train": 512,
+      "train_loss": 1.5555994510650635,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-16",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-15",
+      "batch_centroid": [
+        0.48552608317262586,
+        0.6287046186199351,
+        0.21857310004149585
+      ],
+      "cumulative_n_train": 8704,
+      "cumulative_centroid": [
+        0.4877206675674168,
+        0.6324642978812096,
+        0.21831444570151473
+      ],
+      "position": [
+        0.4877206675674168,
+        0.6324642978812096,
+        0.21831444570151473
+      ]
+    },
+    {
+      "round": 17,
+      "n_train": 512,
+      "train_loss": 1.570993756254514,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-17",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-16",
+      "batch_centroid": [
+        0.49664023840643795,
+        0.6238170113008845,
+        0.22412614782373033
+      ],
+      "cumulative_n_train": 9216,
+      "cumulative_centroid": [
+        0.48821619928069576,
+        0.6319838930711916,
+        0.2186373180416378
+      ],
+      "position": [
+        0.48821619928069576,
+        0.6319838930711916,
+        0.2186373180416378
+      ]
+    },
+    {
+      "round": 18,
+      "n_train": 512,
+      "train_loss": 1.5084149092435837,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-18",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-17",
+      "batch_centroid": [
+        0.503666870921212,
+        0.6418857456097522,
+        0.22818954540265401
+      ],
+      "cumulative_n_train": 9728,
+      "cumulative_centroid": [
+        0.48902939252493344,
+        0.6325050432048,
+        0.21914006685011236
+      ],
+      "position": [
+        0.48902939252493344,
+        0.6325050432048,
+        0.21914006685011236
+      ]
+    },
+    {
+      "round": 19,
+      "n_train": 512,
+      "train_loss": 1.5086569686730702,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-19",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-18",
+      "batch_centroid": [
+        0.4817347270655461,
+        0.6367166018059036,
+        0.22467787855770377
+      ],
+      "cumulative_n_train": 10240,
+      "cumulative_centroid": [
+        0.4886646592519641,
+        0.6327156211348551,
+        0.21941695743549192
+      ],
+      "position": [
+        0.4886646592519641,
+        0.6327156211348551,
+        0.21941695743549192
+      ]
+    },
+    {
+      "round": 20,
+      "n_train": 512,
+      "train_loss": 1.5070361097653706,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-20",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-19",
+      "batch_centroid": [
+        0.4891947751427744,
+        0.6389696443693282,
+        0.2245154011154104
+      ],
+      "cumulative_n_train": 10752,
+      "cumulative_centroid": [
+        0.4886899028658122,
+        0.6330134317650682,
+        0.21965974046786899
+      ],
+      "position": [
+        0.4886899028658122,
+        0.6330134317650682,
+        0.21965974046786899
+      ]
+    },
+    {
+      "round": 21,
+      "n_train": 512,
+      "train_loss": 1.5206539531548817,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-21",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-20",
+      "batch_centroid": [
+        0.4843904483639693,
+        0.6381309352207593,
+        0.21833240344643123
+      ],
+      "cumulative_n_train": 11264,
+      "cumulative_centroid": [
+        0.48849447311572847,
+        0.6332460455585087,
+        0.21959940696689453
+      ],
+      "position": [
+        0.48849447311572847,
+        0.6332460455585087,
+        0.21959940696689453
+      ]
+    },
+    {
+      "round": 22,
+      "n_train": 512,
+      "train_loss": 1.5003317842880886,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-22",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-21",
+      "batch_centroid": [
+        0.4824156001785821,
+        0.6343630841943507,
+        0.22125880690816604
+      ],
+      "cumulative_n_train": 11776,
+      "cumulative_centroid": [
+        0.48823017429237425,
+        0.6332946124557193,
+        0.21967155479042808
+      ],
+      "position": [
+        0.48823017429237425,
+        0.6332946124557193,
+        0.21967155479042808
+      ]
+    },
+    {
+      "round": 23,
+      "n_train": 512,
+      "train_loss": 1.4456761479377747,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-23",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-22",
+      "batch_centroid": [
+        0.4820011366741238,
+        0.6270417049888517,
+        0.21888185125360957
+      ],
+      "cumulative_n_train": 12288,
+      "cumulative_centroid": [
+        0.4879706310582805,
+        0.6330340746445998,
+        0.21963865047639397
+      ],
+      "position": [
+        0.4879706310582805,
+        0.6330340746445998,
+        0.21963865047639397
+      ]
+    },
+    {
+      "round": 24,
+      "n_train": 512,
+      "train_loss": 1.4776690006256104,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-24",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-23",
+      "batch_centroid": [
+        0.49744360941681975,
+        0.645278114375645,
+        0.2335318198300514
+      ],
+      "cumulative_n_train": 12800,
+      "cumulative_centroid": [
+        0.48834955019262205,
+        0.6335238362338416,
+        0.22019437725054025
+      ],
+      "position": [
+        0.48834955019262205,
+        0.6335238362338416,
+        0.22019437725054025
+      ]
+    },
+    {
+      "round": 25,
+      "n_train": 512,
+      "train_loss": 1.4191874066988628,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-25",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-24",
+      "batch_centroid": [
+        0.47407700257212576,
+        0.6324335756789016,
+        0.2146317729290875
+      ],
+      "cumulative_n_train": 13312,
+      "cumulative_centroid": [
+        0.48780060605337217,
+        0.6334819031355747,
+        0.2199804309304844
+      ],
+      "position": [
+        0.48780060605337217,
+        0.6334819031355747,
+        0.2199804309304844
+      ]
+    },
+    {
+      "round": 26,
+      "n_train": 512,
+      "train_loss": 1.4259552011887233,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-26",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-25",
+      "batch_centroid": [
+        0.5077067848055034,
+        0.6374108985165549,
+        0.2236292100923629
+      ],
+      "cumulative_n_train": 13824,
+      "cumulative_centroid": [
+        0.4885378719330807,
+        0.6336274214830184,
+        0.22011557089944286
+      ],
+      "position": [
+        0.4885378719330807,
+        0.6336274214830184,
+        0.22011557089944286
+      ]
+    },
+    {
+      "round": 27,
+      "n_train": 512,
+      "train_loss": 1.447281375527382,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-27",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-26",
+      "batch_centroid": [
+        0.49248651885021827,
+        0.6394208264637015,
+        0.2169629330380825
+      ],
+      "cumulative_n_train": 14336,
+      "cumulative_centroid": [
+        0.48867889503726414,
+        0.6338343288037571,
+        0.22000297669010857
+      ],
+      "position": [
+        0.48867889503726414,
+        0.6338343288037571,
+        0.22000297669010857
+      ]
+    },
+    {
+      "round": 28,
+      "n_train": 512,
+      "train_loss": 1.4082529991865158,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-28",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-27",
+      "batch_centroid": [
+        0.494737021072861,
+        0.6274735958297144,
+        0.22843108165468592
+      ],
+      "cumulative_n_train": 14848,
+      "cumulative_centroid": [
+        0.4888877959350434,
+        0.6336149931839625,
+        0.22029360099923193
+      ],
+      "position": [
+        0.4888877959350434,
+        0.6336149931839625,
+        0.22029360099923193
+      ]
+    },
+    {
+      "round": 29,
+      "n_train": 512,
+      "train_loss": 1.4258255114157994,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-29",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-28",
+      "batch_centroid": [
+        0.4877800156747351,
+        0.6300649361033245,
+        0.2149499245590281
+      ],
+      "cumulative_n_train": 15360,
+      "cumulative_centroid": [
+        0.48885086992636645,
+        0.6334966579479412,
+        0.22011547845122514
+      ],
+      "position": [
+        0.48885086992636645,
+        0.6334966579479412,
+        0.22011547845122514
+      ]
+    },
+    {
+      "round": 30,
+      "n_train": 512,
+      "train_loss": 1.4013035744428635,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-30",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-29",
+      "batch_centroid": [
+        0.48885884316406814,
+        0.6342588726331384,
+        0.22320568234882315
+      ],
+      "cumulative_n_train": 15872,
+      "cumulative_centroid": [
+        0.48885112712758266,
+        0.6335212455184315,
+        0.22021516244792186
+      ],
+      "position": [
+        0.48885112712758266,
+        0.6335212455184315,
+        0.22021516244792186
+      ]
+    },
+    {
+      "round": 31,
+      "n_train": 512,
+      "train_loss": 1.4010560661554337,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-31",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-30",
+      "batch_centroid": [
+        0.47933385179452437,
+        0.6338419256620886,
+        0.21384500121106756
+      ],
+      "cumulative_n_train": 16384,
+      "cumulative_centroid": [
+        0.4885537122734246,
+        0.6335312667729208,
+        0.22001609490927015
+      ],
+      "position": [
+        0.4885537122734246,
+        0.6335312667729208,
+        0.22001609490927015
+      ]
+    },
+    {
+      "round": 32,
+      "n_train": 512,
+      "train_loss": 1.3763164679209392,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-32",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-31",
+      "batch_centroid": [
+        0.4889368859064307,
+        0.6191656006888548,
+        0.21607563908245558
+      ],
+      "cumulative_n_train": 16896,
+      "cumulative_centroid": [
+        0.48856532359563687,
+        0.6330959435582522,
+        0.21989668715694244
+      ],
+      "position": [
+        0.48856532359563687,
+        0.6330959435582522,
+        0.21989668715694244
+      ]
+    },
+    {
+      "round": 33,
+      "n_train": 512,
+      "train_loss": 1.4174309074878693,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-33",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-32",
+      "batch_centroid": [
+        0.48077831440578245,
+        0.6229526120100546,
+        0.20994908828335926
+      ],
+      "cumulative_n_train": 17408,
+      "cumulative_centroid": [
+        0.4883362939135823,
+        0.6327976102774228,
+        0.2196041107194841
+      ],
+      "position": [
+        0.4883362939135823,
+        0.6327976102774228,
+        0.2196041107194841
+      ]
+    },
+    {
+      "round": 34,
+      "n_train": 512,
+      "train_loss": 1.3798521558443706,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-34",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-33",
+      "batch_centroid": [
+        0.49665658328878154,
+        0.6347588597244255,
+        0.22820816952013592
+      ],
+      "cumulative_n_train": 17920,
+      "cumulative_centroid": [
+        0.4885740164671595,
+        0.6328536459759085,
+        0.2198499409709313
+      ],
+      "position": [
+        0.4885740164671595,
+        0.6328536459759085,
+        0.2198499409709313
+      ]
+    },
+    {
+      "round": 35,
+      "n_train": 512,
+      "train_loss": 1.3715528398752213,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-35",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-34",
+      "batch_centroid": [
+        0.4992799669840924,
+        0.6343910846823126,
+        0.2256804057818721
+      ],
+      "cumulative_n_train": 18432,
+      "cumulative_centroid": [
+        0.4888714039815187,
+        0.632896352606642,
+        0.22001189832679077
+      ],
+      "position": [
+        0.4888714039815187,
+        0.632896352606642,
+        0.22001189832679077
+      ]
+    },
+    {
+      "round": 36,
+      "n_train": 512,
+      "train_loss": 1.304484744866689,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-36",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-35",
+      "batch_centroid": [
+        0.4769391182956782,
+        0.6196084540422343,
+        0.22110003340178916
+      ],
+      "cumulative_n_train": 18944,
+      "cumulative_centroid": [
+        0.4885489097737933,
+        0.6325372202130094,
+        0.22004130738287178
+      ],
+      "position": [
+        0.4885489097737933,
+        0.6325372202130094,
+        0.22004130738287178
+      ]
+    },
+    {
+      "round": 37,
+      "n_train": 512,
+      "train_loss": 1.3763955235481262,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-37",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-36",
+      "batch_centroid": [
+        0.4900336185405157,
+        0.6313039008506017,
+        0.21874270596419285
+      ],
+      "cumulative_n_train": 19456,
+      "cumulative_centroid": [
+        0.48858798105712803,
+        0.6325047644403143,
+        0.2200071336613276
+      ],
+      "position": [
+        0.48858798105712803,
+        0.6325047644403143,
+        0.2200071336613276
+      ]
+    },
+    {
+      "round": 38,
+      "n_train": 512,
+      "train_loss": 1.3468811164299648,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-38",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-37",
+      "batch_centroid": [
+        0.5044506985777405,
+        0.6269574464785372,
+        0.2111136662840245
+      ],
+      "cumulative_n_train": 19968,
+      "cumulative_centroid": [
+        0.48899471740381045,
+        0.6323625255182176,
+        0.21977909603626855
+      ],
+      "position": [
+        0.48899471740381045,
+        0.6323625255182176,
+        0.21977909603626855
+      ]
+    },
+    {
+      "round": 39,
+      "n_train": 512,
+      "train_loss": 1.3382436434427898,
+      "output_dir": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-39",
+      "loaded_prior_lora": "results/ai4privacy_fixed_theory_generalist_r40/seed9/agents/generalist/round-38",
+      "batch_centroid": [
+        0.4930727881970187,
+        0.6376114119674879,
+        0.22569687546739764
+      ],
+      "cumulative_n_train": 20480,
+      "cumulative_centroid": [
+        0.48909666917364064,
+        0.6324937476794493,
+        0.21992704052204676
+      ],
+      "position": [
+        0.48909666917364064,
+        0.6324937476794493,
+        0.21992704052204676
+      ]
+    }
+  ],
+  "centroid_history_path": "results/ai4privacy_fixed_theory_generalist_r40/seed9/history.json"
+}

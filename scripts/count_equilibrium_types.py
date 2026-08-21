@@ -5,53 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from collections import Counter
+from functools import partial
 from pathlib import Path
 
-import numpy as np
-
-_SCRIPTS = Path(__file__).resolve().parent
-if str(_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS))
-
-from classify_equilibrium import classify_22, pairwise_spread  # noqa: E402
-
-_SIGMA_RE = re.compile(r"^sigma(?P<val>[0-9.]+)$", re.IGNORECASE)
-_SEED_RE = re.compile(r"^seed(?P<val>\d+)$", re.IGNORECASE)
-
-
-def collect_labels(root: Path, *, spread_thresh: float) -> list[dict]:
-    """Scan ``root/sigma*/seed*/history.json`` and classify finals."""
-    rows: list[dict] = []
-    if not root.is_dir():
-        return rows
-    for sigma_dir in sorted(root.iterdir()):
-        if not sigma_dir.is_dir():
-            continue
-        sm = _SIGMA_RE.match(sigma_dir.name)
-        if not sm:
-            continue
-        sigma = float(sm.group("val"))
-        for seed_dir in sorted(sigma_dir.iterdir()):
-            sd = _SEED_RE.match(seed_dir.name)
-            hist_path = seed_dir / "history.json"
-            if not sd or not hist_path.is_file():
-                continue
-            hist = json.loads(hist_path.read_text(encoding="utf-8"))
-            names = sorted(hist[-1]["positions"].keys())
-            pos = np.stack(
-                [np.asarray(hist[-1]["positions"][n], dtype=float) for n in names],
-            )
-            label = classify_22(pos, spread_thresh=spread_thresh)
-            rows.append({
-                "sigma": sigma,
-                "seed": int(sd.group("val")),
-                "spread": pairwise_spread(pos),
-                "label": label,
-            })
-    return rows
+from infl_ens.training.pool_dynamics import classify_layout, pairwise_spread
+from infl_ens.utils.sweep_discovery import collect_final_layout_labels
 
 
 def main() -> int:
@@ -67,7 +27,12 @@ def main() -> int:
     )
     args = p.parse_args()
 
-    rows = collect_labels(args.root, spread_thresh=args.spread_thresh)
+    classify_fn = partial(classify_layout, spread_thresh=args.spread_thresh)
+    rows = collect_final_layout_labels(
+        args.root,
+        classify_fn=classify_fn,
+        spread_fn=pairwise_spread,
+    )
     if not rows:
         print(f"no completed runs under {args.root}", file=sys.stderr)
         return 1
