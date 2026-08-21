@@ -1,0 +1,241 @@
+{
+  "config": "configs/benchmark/router/seven_axis_pair_merge_split.yaml",
+  "axis_labels": [
+    "harm",
+    "hallucination",
+    "jailbreak",
+    "privacy",
+    "overrefusal",
+    "injection",
+    "policy_violation"
+  ],
+  "n_prompts_sampled": 7052,
+  "quantile_knots": 1001,
+  "normalizer_fit_n": 28355,
+  "linear_transform": null,
+  "coordinate_stretch_gammas": [
+    1.5,
+    2.5,
+    2.5,
+    2.5,
+    2.5,
+    2.5,
+    2.5
+  ],
+  "legacy": {
+    "n_prompts": 7052,
+    "in_unit_box": true,
+    "max_frac_saturated": 0.9682359614293817,
+    "max_ks_vs_uniform": 0.9682359614293817,
+    "mean_abs_offdiag_corr": 0.14232416504217735,
+    "per_axis": [
+      {
+        "axis": "harm",
+        "frac_at_zero": 0.03743618831537152,
+        "frac_at_one": 0.008082813386273398,
+        "frac_saturated": 0.04551900170164492,
+        "ks_vs_uniform": 0.1541398960553919,
+        "mean": 0.4436746018208502,
+        "std": 0.25918896301163385
+      },
+      {
+        "axis": "hallucination",
+        "frac_at_zero": 0.841747022121384,
+        "frac_at_one": 0.0069483834373227455,
+        "frac_saturated": 0.8486954055587067,
+        "ks_vs_uniform": 0.841747022121384,
+        "mean": 0.12505315563010133,
+        "std": 0.3029301743596761
+      },
+      {
+        "axis": "jailbreak",
+        "frac_at_zero": 0.9682359614293817,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.9682359614293817,
+        "ks_vs_uniform": 0.9682359614293817,
+        "mean": 0.023668898156922177,
+        "std": 0.13943976644412853
+      },
+      {
+        "axis": "privacy",
+        "frac_at_zero": 0.8366420873511061,
+        "frac_at_one": 0.105218377765173,
+        "frac_saturated": 0.9418604651162791,
+        "ks_vs_uniform": 0.8366420873511061,
+        "mean": 0.15874273886960286,
+        "std": 0.3618802940535119
+      },
+      {
+        "axis": "overrefusal",
+        "frac_at_zero": 0.800482132728304,
+        "frac_at_one": 0.021695972773681224,
+        "frac_saturated": 0.8221781055019852,
+        "ks_vs_uniform": 0.800482132728304,
+        "mean": 0.15475397808746058,
+        "std": 0.3414904612471701
+      },
+      {
+        "axis": "injection",
+        "frac_at_zero": 0.036443562110039705,
+        "frac_at_one": 0.1191151446398185,
+        "frac_saturated": 0.1555587067498582,
+        "ks_vs_uniform": 0.1856838386646813,
+        "mean": 0.6179655335988259,
+        "std": 0.27919004238024303
+      },
+      {
+        "axis": "policy_violation",
+        "frac_at_zero": 0.12691435053885422,
+        "frac_at_one": 0.19767441860465115,
+        "frac_saturated": 0.3245887691435054,
+        "ks_vs_uniform": 0.4660505928155877,
+        "mean": 0.7413251525994,
+        "std": 0.3556005732243982
+      }
+    ]
+  },
+  "new": {
+    "n_prompts": 7052,
+    "in_unit_box": true,
+    "max_frac_saturated": 0.013896766874645491,
+    "max_ks_vs_uniform": 0.3572853516107502,
+    "mean_abs_offdiag_corr": 0.13702260601203567,
+    "per_axis": [
+      {
+        "axis": "harm",
+        "frac_at_zero": 0.00014180374361883155,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.00014180374361883155,
+        "ks_vs_uniform": 0.15725110263047443,
+        "mean": 0.6047733284037634,
+        "std": 0.29621082227163503
+      },
+      {
+        "axis": "hallucination",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.0041123085649461145,
+        "frac_saturated": 0.0041123085649461145,
+        "ks_vs_uniform": 0.3145032423033033,
+        "mean": 0.7063098750187378,
+        "std": 0.29353498750499285
+      },
+      {
+        "axis": "jailbreak",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.013896766874645491,
+        "frac_saturated": 0.013896766874645491,
+        "ks_vs_uniform": 0.3363056162721387,
+        "mean": 0.720365297286389,
+        "std": 0.2922131892492812
+      },
+      {
+        "axis": "privacy",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.0038287010777084515,
+        "frac_saturated": 0.0038287010777084515,
+        "ks_vs_uniform": 0.3177137188795279,
+        "mean": 0.7089687871961099,
+        "std": 0.2927607294079267
+      },
+      {
+        "axis": "overrefusal",
+        "frac_at_zero": 0.00014180374361883155,
+        "frac_at_one": 0.005955757231990925,
+        "frac_saturated": 0.006097560975609756,
+        "ks_vs_uniform": 0.3572853516107502,
+        "mean": 0.7337910829529473,
+        "std": 0.28987282931197494
+      },
+      {
+        "axis": "injection",
+        "frac_at_zero": 0.00014180374361883155,
+        "frac_at_one": 0.003403289846851957,
+        "frac_saturated": 0.0035450935904707886,
+        "ks_vs_uniform": 0.3421059901623151,
+        "mean": 0.7241804722852934,
+        "std": 0.28517400149633126
+      },
+      {
+        "axis": "policy_violation",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.00368689733408962,
+        "frac_saturated": 0.00368689733408962,
+        "ks_vs_uniform": 0.33197869205821456,
+        "mean": 0.7184248000044638,
+        "std": 0.2886677696939586
+      }
+    ]
+  },
+  "cdf_only": {
+    "n_prompts": 7052,
+    "in_unit_box": true,
+    "max_frac_saturated": 0.00014180374361883155,
+    "max_ks_vs_uniform": 0.05125387852127683,
+    "mean_abs_offdiag_corr": 0.08783413433879562,
+    "per_axis": [
+      {
+        "axis": "harm",
+        "frac_at_zero": 0.00014180374361883155,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.00014180374361883155,
+        "ks_vs_uniform": 0.01157480899102381,
+        "mean": 0.5032942459330301,
+        "std": 0.28472728361774174
+      },
+      {
+        "axis": "hallucination",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.0,
+        "ks_vs_uniform": 0.017810013878917896,
+        "mean": 0.4905622555079411,
+        "std": 0.2870871121602582
+      },
+      {
+        "axis": "jailbreak",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.00014180374361883155,
+        "frac_saturated": 0.00014180374361883155,
+        "ks_vs_uniform": 0.025984090436541263,
+        "mean": 0.5121522362007185,
+        "std": 0.2964552485384475
+      },
+      {
+        "axis": "privacy",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.0,
+        "ks_vs_uniform": 0.014227518336778933,
+        "mean": 0.4928595116513087,
+        "std": 0.28641215890371
+      },
+      {
+        "axis": "overrefusal",
+        "frac_at_zero": 0.00014180374361883155,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.00014180374361883155,
+        "ks_vs_uniform": 0.05125387852127683,
+        "mean": 0.5288165858924017,
+        "std": 0.2984005510207695
+      },
+      {
+        "axis": "injection",
+        "frac_at_zero": 0.00014180374361883155,
+        "frac_at_one": 0.0,
+        "frac_saturated": 0.00014180374361883155,
+        "ks_vs_uniform": 0.017540879863204017,
+        "mean": 0.5060185846953732,
+        "std": 0.28269479993882324
+      },
+      {
+        "axis": "policy_violation",
+        "frac_at_zero": 0.0,
+        "frac_at_one": 0.00014180374361883155,
+        "frac_saturated": 0.00014180374361883155,
+        "ks_vs_uniform": 0.010396481116891468,
+        "mean": 0.5033894059402998,
+        "std": 0.2874596934822081
+      }
+    ]
+  }
+}
