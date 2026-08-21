@@ -175,9 +175,15 @@ echo "=== \$(date -Is) trait representation (builds cache; slow) ==="
     --output-dir __FIGDIR__
 
 echo "=== \$(date -Is) resource-density slices ==="
+# Train/val/test scatter coloring is cosmetic and requires the manifest to
+# cover every loaded prompt exactly. data/splits/seven_axis_seed0.json is
+# currently stale for prompt_injection (covers 662 of 5000 records, since
+# that dataset was re-downloaded from a larger source after the manifest
+# was built), so plot_benchmark_space_heatmaps.py rightly refuses it.
+# Enable with SPLIT_MANIFEST=<path> once the manifest is regenerated.
 SPLIT_ARG=""
-if [ -f data/splits/seven_axis_seed0.json ]; then
-    SPLIT_ARG="--split-manifest data/splits/seven_axis_seed0.json"
+if [ -n "\${SPLIT_MANIFEST:-}" ] && [ -f "\${SPLIT_MANIFEST}" ]; then
+    SPLIT_ARG="--split-manifest \${SPLIT_MANIFEST}"
 fi
 \${PY} scripts/plot_benchmark_space_heatmaps.py \
     --config "__CONFIG__" \
