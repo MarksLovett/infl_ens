@@ -90,6 +90,8 @@ infl_ens/
 │   ├── download_prompt_injection.py              one-off download (Protect AI injection JSONL)
 │   ├── download_do_not_answer.py                 one-off download (Do-Not-Answer + Alpaca negatives)
 │   ├── build_safety_trait_space.py               wrapper around `python -m infl_ens.data`
+│   ├── plot_trait_representation.py              clipped-vs-quantile trait representation figures
+│   ├── run_trait_representation_on_doob.sh       sync to doob, build representation figures, pull back
 │   ├── compare_utility_estimators.py             u_grid vs u_pool vs share diagnostic
 │   ├── diagnose_axis_separability.py             axis AUC / Cohen's d / saturation diagnostics
 │   ├── diagnose_trait_support.py                 KDE vs empirical resource density; explains SFT-vs-theory gaps
@@ -285,6 +287,8 @@ infl_ens/
 | `download_prompt_injection.py` | Downloads `neuralchemy/prompt-injection-Threat-Matrix` (binary, cap 5k) to `data/prompt_injection/`; legacy `--source deepset` |
 | `download_do_not_answer.py` | Downloads `LibrAI/do-not-answer` plus Alpaca benign negatives to `data/do_not_answer/` |
 | `build_safety_trait_space.py` | Convenience wrapper around `python -m infl_ens.data build-safety-trait-space` |
+| `plot_trait_representation.py` | Data-representation figures contrasting the legacy clipped calibration with the always-on quantile normalization. Derives both coordinate sets from **one** encode pass (a second pass would need a different `trait_space` block and thus a full re-encode). Writes `trait_marginals_old_vs_new`, `trait_pairs_old_vs_new`, `dataset_composition`, and `trait_repr_summary.json`. |
+| `run_trait_representation_on_doob.sh` | Sync (`scp -r`) to `mlovett@doob.dartmouth.edu`, run the representation + resource-density figures there under `nohup`, and pull figures back. `MODE=launch\|status\|pull`; `SMOKE=1` runs a cheap 2-axis foreground gate first. |
 | `compare_utility_estimators.py` | Side-by-side comparison of grid :math:`u_i`, empirical-pool :math:`\hat u_i`, and finite-batch proportional share. `--mode {toy,safety}`. |
 | `diagnose_axis_separability.py` | Compares mean-difference vs shrinkage-Fisher trait-axis estimators, percentile calibration, saturation, and optional Gram-Schmidt decorrelation before changing the production trait-space builder. |
 | `diagnose_axis_confusability.py` | Diagnoses benchmark-origin confusion in learned trait coordinates, including field-map A/Bs, subspace residuals, nonlinear probes, score→coordinate leak matrices, and benchmark coordinate-overlap matrices. |

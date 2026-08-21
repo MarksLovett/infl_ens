@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
@@ -396,6 +397,87 @@ def build_or_load_safety_trait_space(
     return bundle.space
 
 
+@dataclass(frozen=True)
+class CachedTraitArtifacts:
+    """Frozen pipeline artifacts reloaded from a trait-space cache.
+
+    :param axes: Learned axis directions and calibration metadata.
+    :type axes: tuple[LearnedAxis, ...]
+    :param normalizer: Fitted per-axis quantile normalizer.
+    :type normalizer: QuantileNormalizer
+    :param linear_transform: Optional frozen standardize/whiten transform.
+    :type linear_transform: FrozenLinearTransform | None
+    :param gammas: Per-axis post-normalization stretch exponents.
+    :type gammas: numpy.ndarray
+    :param axis_labels: Axis names in config order.
+    :type axis_labels: tuple[str, ...]
+    """
+
+    axes: tuple[LearnedAxis, ...]
+    normalizer: QuantileNormalizer
+    linear_transform: Optional[FrozenLinearTransform]
+    gammas: np.ndarray
+    axis_labels: tuple[str, ...]
+
+
+def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
+    """Reload learned axes, normalizer, transform, and stretch from cache.
+
+    Lets analysis tools reconstruct any stage of the projection pipeline
+    without re-encoding text or rebuilding the trait space.
+
+    :param cfg: Router or training config with ``trait_space.cache``.
+    :type cfg: dict
+    :returns: The frozen pipeline artifacts.
+    :rtype: CachedTraitArtifacts
+    :raises FileNotFoundError: If the cache directory is missing or
+        incomplete.
+    :raises ValueError: If the cache version is unsupported.
+    """
+    path = trait_space_cache_path(cfg)
+    manifest_path = path / _MANIFEST_NAME
+    arrays_path = path / _ARRAYS_NAME
+    if not manifest_path.is_file() or not arrays_path.is_file():
+        raise FileNotFoundError(
+            "load_cache_artifacts needs a built trait-space cache at "
+            f"{path}; run the build once with trait_space.cache "
+            "enabled to create it"
+        )
+    with manifest_path.open("r", encoding="utf-8") as fh:
+        manifest = json.load(fh)
+    if int(manifest.get("version", -1)) != _CACHE_VERSION:
+        raise ValueError(
+            f"unsupported trait-space cache version {manifest.get('version')!r} "
+            f"at {path}"
+        )
+    with np.load(arrays_path, allow_pickle=False) as arrays:
+        axes = tuple(
+            _axis_from_manifest(entry, arrays, idx)
+            for idx, entry in enumerate(manifest["axes"])
+        )
+        normalizer = _normalizer_from_cache(manifest, arrays, len(axes))
+    transform_payload = manifest.get("linear_transform")
+    transform = (
+        FrozenLinearTransform.from_dict(transform_payload)
+        if transform_payload
+        else None
+    )
+    names = [str(entry["name"]) for entry in manifest["axes"]]
+    default_gamma = float(manifest["coordinate_stretch_gamma"])
+    overrides = manifest.get("coordinate_stretch_gammas") or {}
+    gammas = np.asarray(
+        [float(overrides.get(name, default_gamma)) for name in names],
+        dtype=float,
+    )
+    return CachedTraitArtifacts(
+        axes=axes,
+        normalizer=normalizer,
+        linear_transform=transform,
+        gammas=gammas,
+        axis_labels=tuple(manifest.get("axis_labels") or names),
+    )
+
+
 def coordinate_chain_from_cache(
     cfg: dict[str, Any],
 ) -> Callable[[np.ndarray], np.ndarray]:
@@ -415,37 +497,10 @@ def coordinate_chain_from_cache(
         incomplete.
     :raises ValueError: If the cache version is unsupported.
     """
-    path = trait_space_cache_path(cfg)
-    manifest_path = path / _MANIFEST_NAME
-    arrays_path = path / _ARRAYS_NAME
-    if not manifest_path.is_file() or not arrays_path.is_file():
-        raise FileNotFoundError(
-            "coordinate_chain_from_cache needs a built trait-space cache at "
-            f"{path}; run the closed-loop task once with trait_space.cache "
-            "enabled to create it"
-        )
-    with manifest_path.open("r", encoding="utf-8") as fh:
-        manifest = json.load(fh)
-    if int(manifest.get("version", -1)) != _CACHE_VERSION:
-        raise ValueError(
-            f"unsupported trait-space cache version {manifest.get('version')!r} "
-            f"at {path}"
-        )
-    with np.load(arrays_path, allow_pickle=False) as arrays:
-        normalizer = _normalizer_from_cache(manifest, arrays, len(manifest["axes"]))
-    transform_payload = manifest.get("linear_transform")
-    transform = (
-        FrozenLinearTransform.from_dict(transform_payload)
-        if transform_payload
-        else None
-    )
-    names = [str(entry["name"]) for entry in manifest["axes"]]
-    default_gamma = float(manifest["coordinate_stretch_gamma"])
-    overrides = manifest.get("coordinate_stretch_gammas") or {}
-    gammas = np.asarray(
-        [float(overrides.get(name, default_gamma)) for name in names],
-        dtype=float,
-    )
+    artifacts = load_cache_artifacts(cfg)
+    transform = artifacts.linear_transform
+    normalizer = artifacts.normalizer
+    gammas = artifacts.gammas
 
     def chain(coords: np.ndarray) -> np.ndarray:
         x = np.asarray(coords, dtype=float)
