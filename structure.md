@@ -218,7 +218,7 @@ infl_ens/
 |---|---|---|
 | `__init__.py` | Re-exports | `RouterAgent`, `InfluencerRouter`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `utility_gradient` |
 | `agents.py` | Router-agent dataclass and calibration-based init | `RouterAgent`, `RouterAgent.from_calibration` |
-| `allocation.py` | Allocation math :math:`G_i, u_i, \hat u_i, \nabla_{x_i} u_i, p_i^{strat}` | `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `utility_gradient` |
+| `allocation.py` | Allocation math :math:`G_i, u_i, \hat u_i, \nabla_{x_i} u_i, p_i^{strat}`; top-k sparsified renormalised weights for soft (dense) routing | `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `top_k_allocation_weights`, `utility_gradient` |
 | `verification.py` | Numerical drift-vs-gradient alignment for canonical/strategic routing rules | `run_reweighted_drift_report` |
 | `core.py` | Public router class | `InfluencerRouter` |
 
@@ -483,7 +483,7 @@ infl_ens/
 - `src/infl_ens/data/__init__.py`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `FrozenLinearTransform`, `QuantileNormalizer`, `benchmarks`.
 - `src/infl_ens/data/benchmarks/__init__.py`: `BenchmarkSplit`, `load_beavertails`, `load_halueval`, `load_jbb_behaviors`, `load_toxicchat`, `load_ai4privacy`, `load_orbench`, `load_prompt_injection`, `load_do_not_answer`, `build_safety_trait_space`, `LearnedAxis`, `BEAVERTAILS_CATEGORIES`, `HALUEVAL_TASKS`, `TOXICCHAT_SCORE_MODES`, `PII_SCORE_MODES`, `ORBENCH_CONFIGS`.
 - `src/infl_ens/inflgame/__init__.py`: re-exports the `router` subpackage.
-- `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `expected_utilities`, `utility_gradient`.
+- `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `empirical_utility`, `expected_utilities`, `strategic_routing_weights`, `top_k_allocation_weights`, `utility_gradient`.
 - `src/infl_ens/training/__init__.py`: `RouterTrainingConfig`, `train_router_positions`; lazy `SFTTrainingConfig`, `sft_train_agent` (avoids importing torch/transformers at package import time).
 - `src/infl_ens/evaluation/__init__.py`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `load_benchmark_splits`, `evaluate_adapter_on_splits`, `evaluate_run_adapters`, `run_eval_job`, `discover_adapters`, `resolve_adapter_dir`; lazy `mean_token_nll`, `format_chat_example`, `evaluate_base_model`, `write_base_eval_report`, compare helpers (`ModelScore`, `compare_baseline_vs_specialists`, …), capability probe (`probe_run`, `cross_batch_margin`).
 - `src/infl_ens/vis/__init__.py`: `plot_benchmark_nll_comparison`, `plot_pairwise_heatmaps`, `plot_history`, `plot_pairwise_position_updates`, `plot_trajectory_overlay`, `plot_probe`, `plot_theory_vs_sft_comparison`, `plot_sweep_grid`, `plot_trajectory_mean_std`, `plot_series_mean_std`, `plot_overview`, `plot_spread_by_mode_sigma`, `save_figure`.

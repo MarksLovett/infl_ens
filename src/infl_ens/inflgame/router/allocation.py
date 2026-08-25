@@ -180,6 +180,60 @@ def strategic_routing_weights(
     return np.where(safe, w / np.where(safe, col_sum, 1.0), fallback)
 
 
+def top_k_allocation_weights(
+    G: np.ndarray,
+    top_k: int,
+) -> np.ndarray:
+    """Top-:math:`k` sparsified, per-query renormalised allocation weights.
+
+    Used by the **soft (dense) routing** mode of the closed loop. Whereas
+    hard routing samples a single agent per query from
+    :math:`G_i(\\mathbf{x}, b)`, soft routing trains *every* agent on the
+    query with a per-example loss weight equal to its (renormalised)
+    allocation share. To cap the :math:`\\mathcal{O}(N)` blow-up in SFT
+    compute, only the ``top_k`` most-allocated agents per query are kept;
+    their weights are renormalised so each query column sums to one (mass
+    per query is conserved).
+
+    Setting ``top_k == 1`` recovers a deterministic hard assignment (one
+    agent per query at unit weight — the :math:`\\arg\\max_i G_i` winner);
+    ``top_k >= N`` keeps the full dense allocation.
+
+    :param G: Allocation matrix :math:`G_i(\\mathbf{x}, b_k)`, shape
+        ``(N, K)``. Columns are expected to sum to one across agents (as
+        returned by :func:`allocation_weights`) but this is not required —
+        the output is renormalised regardless.
+    :type G: numpy.ndarray
+    :param top_k: Number of highest-allocation agents to retain per query.
+        Must satisfy ``top_k >= 1``.
+    :type top_k: int
+    :returns: Sparsified weight matrix ``W`` with the same shape as ``G``;
+        each column has at most ``top_k`` non-zero entries and sums to one
+        (except an all-zero query column, which is left at zero). Shape
+        ``(N, K)``.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``top_k < 1`` or ``G`` is not 2-D.
+    """
+    if G.ndim != 2:
+        raise ValueError(f"G must be 2-D (N, K), got shape {G.shape}")
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1, got {top_k}")
+    n_agents = G.shape[0]
+    if top_k >= n_agents:
+        col_sum = G.sum(axis=0, keepdims=True)
+        safe = col_sum > 0.0
+        return np.where(safe, G / np.where(safe, col_sum, 1.0), 0.0)
+
+    # Keep the top_k largest entries per column, zero the rest.
+    keep = np.zeros_like(G, dtype=bool)
+    top_idx = np.argpartition(-G, top_k - 1, axis=0)[:top_k]     # (top_k, K)
+    np.put_along_axis(keep, top_idx, True, axis=0)
+    w = np.where(keep, G, 0.0)
+    col_sum = w.sum(axis=0, keepdims=True)
+    safe = col_sum > 0.0
+    return np.where(safe, w / np.where(safe, col_sum, 1.0), 0.0)
+
+
 def empirical_utility(
     positions: np.ndarray,
     query_coords: np.ndarray,

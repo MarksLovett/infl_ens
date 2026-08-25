@@ -14,6 +14,8 @@ Top-level exports:
 - :func:`empirical_utility` — :math:`\\hat u_i` from a finite query batch.
 - :func:`strategic_routing_weights` — :math:`p_i^{\\mathrm{strat}}`,
   the strategic-gradient routing weight :math:`G_i (1 - G_i)`.
+- :func:`top_k_allocation_weights` — top-:math:`k` sparsified, per-query
+  renormalised allocation weights for soft (dense) routing.
 - :func:`utility_gradient` — :math:`\\nabla_{x_i} u_i(\\mathbf{x})`.
 """
 
@@ -25,6 +27,7 @@ from infl_ens.inflgame.router.allocation import (
     empirical_utility,
     expected_utilities,
     strategic_routing_weights,
+    top_k_allocation_weights,
     utility_gradient,
 )
 from infl_ens.inflgame.router.core import InfluencerRouter
@@ -36,5 +39,6 @@ __all__ = [
     "empirical_utility",
     "expected_utilities",
     "strategic_routing_weights",
+    "top_k_allocation_weights",
     "utility_gradient",
 ]
