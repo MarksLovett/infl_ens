@@ -168,6 +168,7 @@ infl_ens/
 │           ├── safety_truth_ai4privacy_n6_theory_only_sigma04.yaml  6-agent paired-theory no-SFT AI4Privacy run at 0.4σ*
 │           └── ai4privacy_fixed_theory_generalist_replay_r40.yaml  pooled replay generalist for the fixed-theory AI4Privacy sweep
 ├── tests/
+│   ├── test_weighted_sft_loss.py                 offline tests for weighted CE loss + top-k soft routing weights
 │   ├── test_benchmark_loaders.py                 offline tests with synthetic JSON fixtures
 │   ├── test_ai4privacy_loader.py                 offline tests with synthetic AI4Privacy JSONL fixture
 │   ├── test_evaluation.py                        offline tests for adapter discovery + eval I/O
@@ -463,6 +464,7 @@ infl_ens/
 
 | File | Role |
 |---|---|
+| `test_weighted_sft_loss.py` | Offline tests for `weighted_causal_lm_loss` (per-example weighted CE scaling, ignore-index) and `top_k_allocation_weights` (top-k renormalisation, `top_k=1` hard-argmax equivalence) |
 | `test_benchmark_loaders.py` | Offline tests for BeaverTails and HaluEval loaders |
 | `test_ai4privacy_loader.py` | Offline tests for AI4Privacy JSONL parsing and privacy-density scoring |
 | `test_evaluation.py` | Offline tests for adapter discovery, benchmark config loading, eval JSON reports |
