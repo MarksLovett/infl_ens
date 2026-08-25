@@ -168,6 +168,7 @@ infl_ens/
 │           ├── safety_truth_ai4privacy_n6_theory_only_sigma04.yaml  6-agent paired-theory no-SFT AI4Privacy run at 0.4σ*
 │           └── ai4privacy_fixed_theory_generalist_replay_r40.yaml  pooled replay generalist for the fixed-theory AI4Privacy sweep
 ├── tests/
+│   ├── test_weighted_sft_loss.py                 offline tests for weighted CE loss + top-k soft routing weights
 │   ├── test_benchmark_loaders.py                 offline tests with synthetic JSON fixtures
 │   ├── test_ai4privacy_loader.py                 offline tests with synthetic AI4Privacy JSONL fixture
 │   ├── test_evaluation.py                        offline tests for adapter discovery + eval I/O
@@ -218,7 +219,7 @@ infl_ens/
 |---|---|---|
 | `__init__.py` | Re-exports | `RouterAgent`, `InfluencerRouter`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `utility_gradient` |
 | `agents.py` | Router-agent dataclass and calibration-based init | `RouterAgent`, `RouterAgent.from_calibration` |
-| `allocation.py` | Allocation math :math:`G_i, u_i, \hat u_i, \nabla_{x_i} u_i, p_i^{strat}` | `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `utility_gradient` |
+| `allocation.py` | Allocation math :math:`G_i, u_i, \hat u_i, \nabla_{x_i} u_i, p_i^{strat}`; top-k sparsified renormalised weights for soft (dense) routing | `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `top_k_allocation_weights`, `utility_gradient` |
 | `verification.py` | Numerical drift-vs-gradient alignment for canonical/strategic routing rules | `run_reweighted_drift_report` |
 | `core.py` | Public router class | `InfluencerRouter` |
 
@@ -244,9 +245,9 @@ infl_ens/
 | File | Role | Key public symbols |
 |---|---|---|
 | `__init__.py` | Eager re-export of router training; lazy proxy for SFT | `RouterTrainingConfig`, `train_router_positions`, (lazy) `SFTTrainingConfig`, `sft_train_agent` |
-| `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`), `closed_loop.loss_reweight`, `closed_loop.init_noise` (Gaussian symmetry-breaking at clone start), `closed_loop.sft_merge_groups` (optional pair-merge SFT: four routers, two physical LoRAs), and `closed_loop.save_per_round`; always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` per round in `history.json` (plus `merge_*` fields when pair-merge is enabled). Baseline replay also writes a centroid-tracking `history.json` for pooled generalist plots. | `main` |
+| `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`), `closed_loop.routing_mode` (`hard` default / `soft` dense with `closed_loop.soft_top_k`: every agent trains each top-k query weighted by renormalised :math:`G_i`, requires `routing_weight=G`, `loss_reweight=null`, `centroid_mode=batch`, no merge groups), `closed_loop.loss_reweight`, `closed_loop.init_noise` (Gaussian symmetry-breaking at clone start), `closed_loop.sft_merge_groups` (optional pair-merge SFT: four routers, two physical LoRAs), and `closed_loop.save_per_round`; always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` / `routing_mode` / `soft_top_k` per round in `history.json` (plus `merge_*` fields when pair-merge is enabled). Baseline replay also writes a centroid-tracking `history.json` for pooled generalist plots. | `main` |
 | `router_training.py` | Gradient-ascent loop on agent positions | `RouterTrainingConfig`, `train_router_positions` |
-| `sft_training.py` | LoRA SFT for a single :class:`RouterAgent`; accepts `out_dir_override` for per-round adapter archiving; accepts `cfg.cumulative_lora=True` to load and continue training the prior adapter rather than starting fresh; returns `log_history` and `loaded_prior_lora` from the SFT trainer's state | `SFTTrainingConfig`, `sft_train_agent` |
+| `sft_training.py` | LoRA SFT for a single :class:`RouterAgent`; accepts `out_dir_override` for per-round adapter archiving; accepts `cfg.cumulative_lora=True` to load and continue training the prior adapter rather than starting fresh; when `sample_weights` is supplied, routes through a per-example-weighted `WeightedSFTTrainer` (pre-tokenised, packing off) whose loss is `weighted_causal_lm_loss`; returns `log_history` and `loaded_prior_lora` from the SFT trainer's state | `SFTTrainingConfig`, `sft_train_agent`, `weighted_causal_lm_loss` |
 | `baseline_replay.py` | Replay pooled baseline/generalist SFT from closed-loop `history.json` routed batches; records pooled batch and cumulative centroids | `load_closed_loop_history`, `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
 | `merge_training.py` | Pair-merge closed loop: fixed or proximity merge groups, routed-batch concat, router-only centroid updates | `resolve_dynamic_merge_groups`, `merge_train_name`, `parse_sft_merge_groups`, `merge_routed_batch`, `closed_loop_weight_args` |
 | `sweep_aggregate.py` | Sweep summaries and seed×σ aggregation (orchestrates :mod:`infl_ens.vis.sweeps`) | `classify_equilibrium_clusters`, `summarise_flat_sweep_run`, `write_flat_sweep_csv`, `aggregate_group_seed_sweep`, `aggregate_final_positions`, `print_final_positions_report`, `summarize_pairs_near_theory_sweep` |
@@ -463,6 +464,7 @@ infl_ens/
 
 | File | Role |
 |---|---|
+| `test_weighted_sft_loss.py` | Offline tests for `weighted_causal_lm_loss` (per-example weighted CE scaling, ignore-index) and `top_k_allocation_weights` (top-k renormalisation, `top_k=1` hard-argmax equivalence) |
 | `test_benchmark_loaders.py` | Offline tests for BeaverTails and HaluEval loaders |
 | `test_ai4privacy_loader.py` | Offline tests for AI4Privacy JSONL parsing and privacy-density scoring |
 | `test_evaluation.py` | Offline tests for adapter discovery, benchmark config loading, eval JSON reports |
@@ -483,7 +485,7 @@ infl_ens/
 - `src/infl_ens/data/__init__.py`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `FrozenLinearTransform`, `QuantileNormalizer`, `benchmarks`.
 - `src/infl_ens/data/benchmarks/__init__.py`: `BenchmarkSplit`, `load_beavertails`, `load_halueval`, `load_jbb_behaviors`, `load_toxicchat`, `load_ai4privacy`, `load_orbench`, `load_prompt_injection`, `load_do_not_answer`, `build_safety_trait_space`, `LearnedAxis`, `BEAVERTAILS_CATEGORIES`, `HALUEVAL_TASKS`, `TOXICCHAT_SCORE_MODES`, `PII_SCORE_MODES`, `ORBENCH_CONFIGS`.
 - `src/infl_ens/inflgame/__init__.py`: re-exports the `router` subpackage.
-- `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `expected_utilities`, `utility_gradient`.
+- `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `empirical_utility`, `expected_utilities`, `strategic_routing_weights`, `top_k_allocation_weights`, `utility_gradient`.
 - `src/infl_ens/training/__init__.py`: `RouterTrainingConfig`, `train_router_positions`; lazy `SFTTrainingConfig`, `sft_train_agent` (avoids importing torch/transformers at package import time).
 - `src/infl_ens/evaluation/__init__.py`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `load_benchmark_splits`, `evaluate_adapter_on_splits`, `evaluate_run_adapters`, `run_eval_job`, `discover_adapters`, `resolve_adapter_dir`; lazy `mean_token_nll`, `format_chat_example`, `evaluate_base_model`, `write_base_eval_report`, compare helpers (`ModelScore`, `compare_baseline_vs_specialists`, …), capability probe (`probe_run`, `cross_batch_margin`).
 - `src/infl_ens/vis/__init__.py`: `plot_benchmark_nll_comparison`, `plot_pairwise_heatmaps`, `plot_history`, `plot_pairwise_position_updates`, `plot_trajectory_overlay`, `plot_probe`, `plot_theory_vs_sft_comparison`, `plot_sweep_grid`, `plot_trajectory_mean_std`, `plot_series_mean_std`, `plot_overview`, `plot_spread_by_mode_sigma`, `save_figure`.

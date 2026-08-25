@@ -124,6 +124,152 @@ class SFTTrainingConfig:
     seed: int = 0
 
 
+def weighted_causal_lm_loss(
+    logits: "Any",
+    labels: "Any",
+    weights: "Any",
+    *,
+    ignore_index: int = -100,
+) -> "Any":
+    """Per-example-weighted causal-LM cross-entropy.
+
+    Computes the standard next-token cross-entropy, averages it over the
+    (non-ignored) answer tokens of each sequence, then takes a per-example
+    weighted mean:
+
+    .. math::
+
+        \\mathcal{L} \\;=\\; \\frac{1}{B} \\sum_{b=1}^{B} w_b \\,
+        \\Big( \\frac{1}{T_b} \\sum_{t} \\mathrm{CE}(z_{b,t}, y_{b,t}) \\Big),
+
+    where :math:`T_b` is the number of supervised tokens in example
+    :math:`b`. The weight :math:`w_b` acts as a per-example learning-rate
+    multiplier: doubling :math:`w_b` doubles that example's contribution to
+    the batch loss (and hence its gradient), which is exactly the semantics
+    the soft (dense) router relies on — each agent trains on every routed
+    query scaled by its (renormalised) allocation share :math:`G_i`.
+
+    This is a pure function of tensors so it can be unit-tested without
+    ``trl``. It is consumed by the ``WeightedSFTTrainer`` built inside
+    :func:`sft_train_agent`.
+
+    :param logits: Model logits, shape ``(B, T, V)``.
+    :type logits: torch.Tensor
+    :param labels: Target token ids, shape ``(B, T)``; positions equal to
+        ``ignore_index`` are excluded from the loss.
+    :type labels: torch.Tensor
+    :param weights: Per-example weights, shape ``(B,)``.
+    :type weights: torch.Tensor
+    :param ignore_index: Label value marking non-supervised positions.
+    :type ignore_index: int
+    :returns: Scalar weighted loss tensor.
+    :rtype: torch.Tensor
+    """
+    import torch
+    from torch.nn import functional as F
+
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = labels[..., 1:].contiguous()
+    b, tm1, v = shift_logits.shape
+    per_token = F.cross_entropy(
+        shift_logits.reshape(-1, v),
+        shift_labels.reshape(-1),
+        ignore_index=ignore_index,
+        reduction="none",
+    ).reshape(b, tm1)
+    mask = (shift_labels != ignore_index).to(per_token.dtype)
+    tok_counts = mask.sum(dim=1).clamp_min(1.0)
+    per_example = (per_token * mask).sum(dim=1) / tok_counts
+    w = weights.to(per_example.dtype)
+    return (per_example * w).mean()
+
+
+class _WeightedExampleCollator:
+    """Collator for the weighted SFT path (pre-tokenised, no packing).
+
+    Pads a batch of already-tokenised examples, builds full-sequence LM
+    labels (pad positions masked to ``-100``, matching the stock trainer's
+    unit-weight behaviour), and carries the per-example ``sample_weight``
+    through as a tensor for :func:`weighted_causal_lm_loss`.
+
+    :param tokenizer: A HuggingFace tokenizer with a defined pad token.
+    :type tokenizer: transformers.PreTrainedTokenizerBase
+    """
+
+    def __init__(self, tokenizer: "Any") -> None:
+        self.tokenizer = tokenizer
+
+    def __call__(self, features: "Any") -> "Any":
+        import torch
+
+        weights = [float(f["sample_weight"]) for f in features]
+        batch = self.tokenizer.pad(
+            [{"input_ids": f["input_ids"]} for f in features],
+            return_tensors="pt",
+        )
+        labels = batch["input_ids"].clone()
+        labels[batch["attention_mask"] == 0] = -100
+        batch["labels"] = labels
+        batch["sample_weight"] = torch.tensor(weights, dtype=torch.float)
+        return batch
+
+
+def _build_weighted_sft_trainer(sft_trainer_cls: "Any") -> "Any":
+    """Build a ``SFTTrainer`` subclass whose loss is per-example weighted.
+
+    Defined as a factory (rather than a top-level class) so the module stays
+    importable without ``trl``: the base class is only referenced when a
+    caller has already imported ``SFTTrainer``.
+
+    :param sft_trainer_cls: The ``trl.SFTTrainer`` class to subclass.
+    :type sft_trainer_cls: type
+    :returns: A ``WeightedSFTTrainer`` subclass.
+    :rtype: type
+    """
+
+    class WeightedSFTTrainer(sft_trainer_cls):  # type: ignore[misc, valid-type]
+        """SFTTrainer that scales each example's CE by its ``sample_weight``."""
+
+        def compute_loss(
+            self,
+            model: "Any",
+            inputs: "Any",
+            return_outputs: bool = False,
+            **kwargs: "Any",
+        ) -> "Any":
+            weights = inputs.pop("sample_weight")
+            labels = inputs.pop("labels")
+            outputs = model(**inputs)
+            loss = weighted_causal_lm_loss(outputs.logits, labels, weights)
+            return (loss, outputs) if return_outputs else loss
+
+    return WeightedSFTTrainer
+
+
+def _make_sft_config_pretokenised(sft_config_cls: "Any", base_args: dict) -> "Any":
+    """Build an SFT/training config for a pre-tokenised, unpacked dataset.
+
+    The weighted path pre-tokenises inside :func:`sft_train_agent`, so no
+    ``dataset_text_field`` is passed. Sequence packing is disabled so one
+    dataset row equals one example (keeping the per-example weight aligned
+    with its loss). Falls back gracefully across ``trl`` / ``transformers``
+    versions where ``packing`` may be unsupported.
+
+    :param sft_config_cls: ``trl.SFTConfig`` or ``TrainingArguments``.
+    :type sft_config_cls: type
+    :param base_args: Shared training arguments.
+    :type base_args: dict
+    :returns: An instantiated config object.
+    :rtype: Any
+    """
+    for extra in ({"packing": False}, {}):
+        try:
+            return sft_config_cls(**extra, **base_args)
+        except TypeError:
+            continue
+    return sft_config_cls(**base_args)  # pragma: no cover - very old deps
+
+
 def _format_chat(prompt: str, response: Optional[str]) -> str:
     """Format one (prompt, response) example as a chat-style string.
 
@@ -200,6 +346,17 @@ def sft_train_agent(
         archiving (e.g. ``agents/clone-0/round-03``) so a capability probe
         can reload each round's checkpoint independently.
     :type out_dir_override: str | None
+    :param sample_weights: Optional per-prompt loss weights, same length as
+        ``prompts``. When provided, training routes through a
+        ``WeightedSFTTrainer`` that scales each example's cross-entropy by
+        its weight (a per-example learning-rate multiplier); see
+        :func:`weighted_causal_lm_loss`. When ``None``, the stock
+        unit-weight trainer is used. Used by soft/dense routing (weight =
+        renormalised :math:`G_i`) and by ``loss_reweight='one_minus_G'``.
+    :type sample_weights: Sequence[float] | None
+    :param eval_weights: Optional per-eval-prompt weights forwarded as
+        ``scores`` to the post-SFT position update (weighted centroid).
+    :type eval_weights: Sequence[float] | None
     :returns: Dictionary with keys ``output_dir`` (path to LoRA adapter),
         ``n_train`` (training examples), ``train_loss`` (final train loss
         if available), and ``log_history`` (per-step log records emitted by
@@ -259,11 +416,25 @@ def sft_train_agent(
     fmt = formatting_func or _format_chat
     rs = responses if responses is not None else [None] * len(prompts)
     texts = [fmt(p, r) for p, r in zip(prompts, rs)]
-    ds = Dataset.from_dict({"text": texts})
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.base_model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    # Per-example loss weighting. When ``sample_weights`` is supplied (soft
+    # / dense routing, or ``loss_reweight='one_minus_G'``) we pre-tokenise
+    # and route training through a ``WeightedSFTTrainer`` that scales each
+    # example's cross-entropy by its weight. Without weights, the stock
+    # unit-weight text path is used unchanged.
+    weighted = sample_weights is not None
+    if weighted:
+        enc = tokenizer(texts, truncation=True, max_length=cfg.max_seq_length)
+        ds = Dataset.from_dict({
+            "input_ids": enc["input_ids"],
+            "sample_weight": [float(w) for w in sample_weights],
+        })
+    else:
+        ds = Dataset.from_dict({"text": texts})
 
     bf16 = bool(cfg.bf16 and torch.cuda.is_available() and torch.cuda.is_bf16_supported())
     dtype = torch.bfloat16 if bf16 else torch.float16
@@ -335,21 +506,27 @@ def sft_train_agent(
         report_to=[],
         seed=cfg.seed,
     )
-    try:
-        train_args = _SFTConfig(
-            dataset_text_field="text",
-            max_length=cfg.max_seq_length,
-            **base_args,
-        )
-    except TypeError:
+    if weighted:
+        # Keep the ``sample_weight`` column for the collator and disable
+        # packing so each row is one weighted example.
+        base_args["remove_unused_columns"] = False
+        train_args = _make_sft_config_pretokenised(_SFTConfig, base_args)
+    else:
         try:
             train_args = _SFTConfig(
                 dataset_text_field="text",
-                max_seq_length=cfg.max_seq_length,
+                max_length=cfg.max_seq_length,
                 **base_args,
             )
-        except TypeError:  # pragma: no cover - very old trl / TrainingArguments
-            train_args = _SFTConfig(**base_args)
+        except TypeError:
+            try:
+                train_args = _SFTConfig(
+                    dataset_text_field="text",
+                    max_seq_length=cfg.max_seq_length,
+                    **base_args,
+                )
+            except TypeError:  # pragma: no cover - very old trl
+                train_args = _SFTConfig(**base_args)
 
     # `tokenizer` was renamed to `processing_class` in trl >= 0.12.
     trainer_kwargs: dict = dict(
@@ -359,15 +536,32 @@ def sft_train_agent(
     )
     if peft_config_for_trainer is not None:
         trainer_kwargs["peft_config"] = peft_config_for_trainer
-    try:
-        trainer = SFTTrainer(processing_class=tokenizer, **trainer_kwargs)
-    except TypeError:  # pragma: no cover - old trl
-        trainer = SFTTrainer(
-            tokenizer=tokenizer,
-            dataset_text_field="text",
-            max_seq_length=cfg.max_seq_length,
-            **trainer_kwargs,
-        )
+
+    if weighted:
+        trainer_cls = _build_weighted_sft_trainer(SFTTrainer)
+        collator = _WeightedExampleCollator(tokenizer)
+        try:
+            trainer = trainer_cls(
+                processing_class=tokenizer,
+                data_collator=collator,
+                **trainer_kwargs,
+            )
+        except TypeError:  # pragma: no cover - old trl
+            trainer = trainer_cls(
+                tokenizer=tokenizer,
+                data_collator=collator,
+                **trainer_kwargs,
+            )
+    else:
+        try:
+            trainer = SFTTrainer(processing_class=tokenizer, **trainer_kwargs)
+        except TypeError:  # pragma: no cover - old trl
+            trainer = SFTTrainer(
+                tokenizer=tokenizer,
+                dataset_text_field="text",
+                max_seq_length=cfg.max_seq_length,
+                **trainer_kwargs,
+            )
     result = trainer.train()
     trainer.model.save_pretrained(str(out_dir))
     tokenizer.save_pretrained(str(out_dir))
