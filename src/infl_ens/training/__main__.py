@@ -26,6 +26,20 @@ Closed-loop honours three orthogonal "rule" knobs:
 
 - ``closed_loop.routing_weight`` selects how queries are routed:
   ``'G'`` (canonical, Lovett & Fu 2024) or ``'G_times_1mG'`` (strategic).
+- ``closed_loop.routing_mode`` selects hard vs soft assignment:
+
+  - ``'hard'`` (default): each query is sampled to exactly one agent, which
+    then SFTs on its won subset.
+  - ``'soft'``: dense routing. Every agent trains on each query with a
+    per-example loss weight equal to its renormalised allocation share
+    :math:`G_i` (the Rao-Blackwellised / deterministic realisation of the
+    fractional allocation), keeping only the top-``closed_loop.soft_top_k``
+    agents per query to bound the ~:math:`N\\times` SFT cost. The position
+    update targets the same :math:`G_i`-weighted batch centroid. Requires
+    ``routing_weight='G'``, ``loss_reweight=null``, ``centroid_mode='batch'``,
+    and no ``sft_merge_groups``. ``soft_top_k=1`` recovers a deterministic
+    hard (argmax) assignment; symmetry breaking then relies on
+    ``closed_loop.init_noise`` rather than routing RNG.
 - ``closed_loop.loss_reweight`` selects whether per-query weights are
   applied, and where:
 
@@ -547,9 +561,32 @@ _VALID_LOSS_REWEIGHT_MODES: tuple[Optional[str], ...] = (
 
 
 def _validate_routing_and_loss_modes(
-    routing_weight: str, loss_reweight: Optional[str],
+    routing_weight: str,
+    loss_reweight: Optional[str],
+    *,
+    routing_mode: str = "hard",
+    soft_top_k: int = 1,
+    n_agents: Optional[int] = None,
+    has_merge_groups: bool = False,
 ) -> None:
     """Validate combinations of ``routing_weight`` and ``loss_reweight``.
+
+    Also validates the soft (dense) routing knobs. ``routing_mode='soft'``
+    trains every agent on each query with a per-example loss weight equal
+    to its renormalised allocation share :math:`G_i` (top-``soft_top_k``
+    gated). It requires the canonical routing weight ``'G'`` and its own
+    weighting scheme, so it is mutually exclusive with ``loss_reweight``
+    and (for now) with pair-merge ``sft_merge_groups``.
+
+    :param routing_mode: ``'hard'`` (sample one agent per query) or
+        ``'soft'`` (dense, top-k weighted).
+    :type routing_mode: str
+    :param soft_top_k: Number of agents each query trains under soft mode.
+    :type soft_top_k: int
+    :param n_agents: Agent count, used to bound ``soft_top_k``.
+    :type n_agents: int | None
+    :param has_merge_groups: Whether ``sft_merge_groups`` is configured.
+    :type has_merge_groups: bool
 
     The matrix of valid combinations is
 
@@ -608,6 +645,37 @@ def _validate_routing_and_loss_modes(
             "(c) routing_weight='G', loss_reweight='position_only'  "
             "(decoupled: exact gradient match in position, full ESS in loss)."
         )
+    if routing_mode not in ("hard", "soft"):
+        raise ValueError(
+            f"closed_loop.routing_mode must be 'hard' or 'soft', "
+            f"got {routing_mode!r}"
+        )
+    if routing_mode == "soft":
+        if routing_weight != "G":
+            raise ValueError(
+                "routing_mode='soft' requires routing_weight='G'; the soft "
+                "per-query weights already are the renormalised G_i shares."
+            )
+        if loss_reweight is not None:
+            raise ValueError(
+                "routing_mode='soft' carries its own per-query loss weights "
+                f"(renormalised G_i); loss_reweight must be null, got "
+                f"{loss_reweight!r}."
+            )
+        if has_merge_groups:
+            raise ValueError(
+                "routing_mode='soft' is not yet supported with pair-merge "
+                "sft_merge_groups; use routing_mode='hard' for merge runs."
+            )
+        if soft_top_k < 1:
+            raise ValueError(
+                f"closed_loop.soft_top_k must be >= 1, got {soft_top_k}"
+            )
+        if n_agents is not None and soft_top_k > n_agents:
+            raise ValueError(
+                f"closed_loop.soft_top_k={soft_top_k} exceeds the number of "
+                f"agents ({n_agents})."
+            )
 
 
 def _init_agents_for_router_training(
@@ -895,7 +963,21 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
     # training distribution (canonical, including strongholds at unit
     # weight).
     loss_reweight = cl.get("loss_reweight", None)
-    _validate_routing_and_loss_modes(routing_weight, loss_reweight)
+    # Soft (dense) routing: train every agent on each query with a
+    # per-example loss weight equal to its renormalised allocation share
+    # G_i, keeping only the top-`soft_top_k` agents per query to bound the
+    # ~Nx SFT cost. routing_mode='hard' (default) preserves the original
+    # sample-one-agent behaviour.
+    routing_mode = str(cl.get("routing_mode", "hard"))
+    soft_top_k = int(cl.get("soft_top_k", 1))
+    _validate_routing_and_loss_modes(
+        routing_weight,
+        loss_reweight,
+        routing_mode=routing_mode,
+        soft_top_k=soft_top_k,
+        n_agents=len(agents),
+        has_merge_groups=static_merge_groups is not None,
+    )
 
     save_per_round = bool(cl.get("save_per_round", False))
     position_step = cl.get("position_step")
@@ -911,6 +993,16 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
     if centroid_mode == "expected_pool" and routing_weight != "G":
         raise ValueError(
             "centroid_mode='expected_pool' requires routing_weight='G'"
+        )
+    if routing_mode == "soft" and centroid_mode != "batch":
+        raise ValueError(
+            "routing_mode='soft' requires centroid_mode='batch' (the "
+            "position update uses the soft G_i-weighted batch centroid)."
+        )
+    if routing_mode == "soft" and sft_merge_mode == "proximity":
+        raise ValueError(
+            "routing_mode='soft' is not supported with proximity merge; "
+            "use routing_mode='hard'."
         )
 
     data_split_cfg = cfg.get("data_split")
@@ -1077,6 +1169,22 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
             )                                                       # (N, M)
             name_to_idx = {a.name: i for i, a in enumerate(agents)}
 
+        # Soft (dense) routing: every agent trains on each top-k query with
+        # a loss weight equal to its renormalised allocation share G_i. This
+        # bypasses the hard `choices` partition below; `choices` is still
+        # sampled for the `observed_share` diagnostic in the history log.
+        soft_weights: Optional[np.ndarray] = None
+        if routing_mode == "soft":
+            from infl_ens.inflgame.router.allocation import (
+                allocation_weights,
+                top_k_allocation_weights,
+            )
+            batch_coords_soft = space.project(batch_prompts)         # (M, L)
+            G_soft = allocation_weights(
+                router.positions, batch_coords_soft, router.cov,
+            )                                                       # (N, M)
+            soft_weights = top_k_allocation_weights(G_soft, soft_top_k)
+
         agent_prompts: dict[str, list[str]] = {a.name: [] for a in agents}
         agent_responses: dict[str, list[str]] = {a.name: [] for a in agents}
         agent_sft_logs: dict[str, list[dict[str, Any]]] = {
@@ -1101,33 +1209,51 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         round_merge_meta: Optional[dict[str, Any]] = None
         active_merge_groups: Optional[list[tuple[str, list[str]]]] = None
         unpaired_agents: list[str] = []
-        for agent in agents:
-            mine_p = [
-                q for q, c in zip(batch_prompts, choices)
-                if c.name == agent.name
-            ]
-            mine_r = [
-                t for t, c in zip(batch_responses, choices)
-                if c.name == agent.name
-            ]
+        for i_agent, agent in enumerate(agents):
+            if routing_mode == "soft":
+                assert soft_weights is not None
+                mine_idx_soft = np.flatnonzero(soft_weights[i_agent] > 0.0)
+                mine_p = [batch_prompts[int(m)] for m in mine_idx_soft]
+                mine_r = [batch_responses[int(m)] for m in mine_idx_soft]
+            else:
+                mine_p = [
+                    q for q, c in zip(batch_prompts, choices)
+                    if c.name == agent.name
+                ]
+                mine_r = [
+                    t for t, c in zip(batch_responses, choices)
+                    if c.name == agent.name
+                ]
             agent_prompts[agent.name] = list(mine_p)
             agent_responses[agent.name] = list(mine_r)
             if not mine_p:
                 continue
 
             weights_i: Optional[list[float]] = None
-            if loss_reweight in ("one_minus_G", "position_only"):
-                mine_idx = [
-                    m for m, c in enumerate(choices) if c.name == agent.name
-                ]
-                assert G_batch is not None
-                i_idx = name_to_idx[agent.name]
-                weights_i = (1.0 - G_batch[i_idx, mine_idx]).tolist()
+            if routing_mode == "soft":
+                assert soft_weights is not None
+                # Soft weights carry both the loss weighting and the
+                # G_i-weighted centroid target (via eval_weights → scores).
+                weights_i = soft_weights[i_agent, mine_idx_soft].tolist()
                 agent_sample_weights[agent.name] = list(weights_i)
+                sample_weights_arg: Optional[list[float]] = list(weights_i)
+                eval_weights_arg: Optional[list[float]] = list(weights_i)
+                skip_pos = False
+            else:
+                if loss_reweight in ("one_minus_G", "position_only"):
+                    mine_idx = [
+                        m for m, c in enumerate(choices) if c.name == agent.name
+                    ]
+                    assert G_batch is not None
+                    i_idx = name_to_idx[agent.name]
+                    weights_i = (1.0 - G_batch[i_idx, mine_idx]).tolist()
+                    agent_sample_weights[agent.name] = list(weights_i)
 
-            sample_weights_arg, eval_weights_arg, skip_pos = (
-                closed_loop_weight_args(loss_reweight, centroid_mode, weights_i)
-            )
+                sample_weights_arg, eval_weights_arg, skip_pos = (
+                    closed_loop_weight_args(
+                        loss_reweight, centroid_mode, weights_i,
+                    )
+                )
 
             if use_router_only_sft:
                 if not skip_pos:
@@ -1397,6 +1523,8 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
             "strategic_share_pool": strategic_share_pool.tolist(),
             "observed_share": observed.tolist(),
             "routing_weight": routing_weight,
+            "routing_mode": routing_mode,
+            "soft_top_k": soft_top_k if routing_mode == "soft" else None,
             "loss_reweight": loss_reweight,
             "agent_prompts": agent_prompts,
             "agent_responses": agent_responses,
