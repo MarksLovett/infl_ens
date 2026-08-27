@@ -29,7 +29,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REMOTE="${REMOTE:-mslovett@doob.dartmouth.edu}"
+# Verified 2026-08-26: `mslovett@` is rejected by the host's key auth
+# ("Permission denied (publickey,password)"); `mlovett@` is the account that
+# owns ~/infl_ens, the venv and the datasets.
+REMOTE="${REMOTE:-mlovett@doob.dartmouth.edu}"
 REMOTE_REPO="${REMOTE_REPO:-infl_ens}"
 EXPERIMENT="${EXPERIMENT:-configs/experiments/seven_axis_3arm.yaml}"
 GPU="${GPU:-0}"
