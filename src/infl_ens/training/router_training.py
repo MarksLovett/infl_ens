@@ -28,7 +28,7 @@ launched via ``python -m inflai.training`` with a config under
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 

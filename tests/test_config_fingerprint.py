@@ -4,7 +4,7 @@ The GPU host holds a 28k-prompt encode under
 ``data/trait_space_cache/3b42c68a8dd334c5``.  That fingerprint hashes the
 resolved ``benchmarks`` list and ``trait_space`` block, so any edit to the
 shared fragments that changes either forces a multi-hour re-encode.  This
-test pins the contract.
+test pins the contract for every arm of the experiment.
 """
 
 from __future__ import annotations
@@ -14,14 +14,11 @@ from pathlib import Path
 import pytest
 
 from infl_ens.config import load_config
-from infl_ens.data.trait_space_cache import trait_space_fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
-ARMS = [
-    ROOT / "configs" / "arms" / "soft_topk3_pairs.yaml",
-    ROOT / "configs" / "arms" / "hard_pairs_matched.yaml",
-    ROOT / "configs" / "arms" / "generalist_replay.yaml",
-]
+ARMS_DIR = ROOT / "configs" / "arms"
+ARMS = sorted(p for p in ARMS_DIR.glob("*.yaml") if not p.name.startswith("_"))
+SPECIALISTS = [p for p in ARMS if p.name != "generalist_replay.yaml"]
 
 EXPECTED_FINGERPRINT = "3b42c68a8dd334c5"
 
@@ -66,9 +63,25 @@ EXPECTED_TRAIT_SPACE = {
     "coordinate_stretch_gamma": 1.0,
 }
 
+ROUTING_KEYS = {"routing_mode", "soft_top_k", "soft_loss", "soft_select"}
+
+
+def test_all_arms_are_present() -> None:
+    names = {p.stem for p in ARMS}
+    assert names == {
+        "soft_full_pairs",
+        "soft_topk3_pairs",
+        "topk3_unit_pairs",
+        "hard_topk3_pairs",
+        "hard_pairs_matched",
+        "generalist_replay",
+    }
+
 
 @pytest.mark.parametrize("path", ARMS, ids=[p.stem for p in ARMS])
 def test_arm_resolves_to_the_cached_fingerprint(path: Path) -> None:
+    from infl_ens.data.trait_space_cache import trait_space_fingerprint
+
     cfg = load_config(path)
     assert cfg["benchmarks"] == EXPECTED_BENCHMARKS
     assert cfg["trait_space"] == EXPECTED_TRAIT_SPACE
@@ -83,14 +96,30 @@ def test_encoder_block_agrees_with_trait_space_encoder(path: Path) -> None:
 
 
 def test_specialist_arms_differ_only_in_routing_and_output() -> None:
-    soft = load_config(ARMS[0])
-    hard = load_config(ARMS[1])
-    assert soft["output_dir"] != hard["output_dir"]
-    routing_keys = {"routing_mode", "soft_top_k", "soft_loss"}
-    soft_cl = {k: v for k, v in soft["closed_loop"].items() if k not in routing_keys}
-    hard_cl = {k: v for k, v in hard["closed_loop"].items() if k not in routing_keys}
-    assert soft_cl == hard_cl
-    assert soft["closed_loop"]["routing_mode"] == "soft"
-    assert hard["closed_loop"]["routing_mode"] == "hard"
-    for key in ("benchmarks", "trait_space", "data_split", "sft", "agents", "seed", "sigma_fraction"):
-        assert soft[key] == hard[key]
+    """Data-matching precondition: same seed, manifest, init and LoRA settings."""
+    resolved = {p.stem: load_config(p) for p in SPECIALISTS}
+    reference = resolved["soft_topk3_pairs"]
+    ref_cl = {k: v for k, v in reference["closed_loop"].items() if k not in ROUTING_KEYS}
+    outputs = set()
+    for name, cfg in resolved.items():
+        outputs.add(cfg["output_dir"])
+        cl = {k: v for k, v in cfg["closed_loop"].items() if k not in ROUTING_KEYS}
+        assert cl == ref_cl, name
+        for key in ("benchmarks", "trait_space", "data_split", "sft", "agents", "seed", "sigma_fraction"):
+            assert cfg[key] == reference[key], (name, key)
+    assert len(outputs) == len(resolved)
+
+
+def test_routing_knobs_match_the_design_table() -> None:
+    resolved = {p.stem: load_config(p)["closed_loop"] for p in SPECIALISTS}
+    assert resolved["soft_full_pairs"]["routing_mode"] == "soft"
+    assert resolved["soft_full_pairs"]["soft_top_k"] == 7
+    assert resolved["soft_full_pairs"]["soft_loss"] == "weighted"
+    assert resolved["soft_topk3_pairs"]["soft_top_k"] == 3
+    assert resolved["soft_topk3_pairs"]["soft_loss"] == "weighted"
+    assert resolved["topk3_unit_pairs"]["soft_top_k"] == 3
+    assert resolved["topk3_unit_pairs"]["soft_loss"] == "unit"
+    assert resolved["hard_topk3_pairs"]["soft_select"] == "sample"
+    assert resolved["hard_topk3_pairs"]["soft_loss"] == "unit"
+    assert resolved["hard_pairs_matched"]["routing_mode"] == "hard"
+    assert "soft_select" not in resolved["topk3_unit_pairs"]

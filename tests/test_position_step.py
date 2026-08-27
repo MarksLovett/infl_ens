@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from infl_ens.utils.position_step import effective_blend, parse_position_step
+from infl_ens.training.position_step import effective_blend, parse_position_step
 
 
 def test_static_returns_blend_max() -> None:

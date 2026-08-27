@@ -88,17 +88,6 @@ def test_load_benchmark_splits_beavertails(tmp_path: Path) -> None:
     assert splits[0].n == 2
 
 
-def test_load_benchmark_splits_toxicchat(tmp_path: Path) -> None:
-    path = _write_toxicchat_fixture(tmp_path)
-    splits = load_benchmark_splits([
-        {"kind": "toxicchat", "path": str(path), "score_mode": "jailbreaking"},
-    ])
-    assert len(splits) == 1
-    assert splits[0].name == "toxicchat"
-    assert splits[0].axis_name == "jailbreak"
-    assert splits[0].metadata["score_target"] == "prompt"
-
-
 def test_subsample_split_unchanged_when_small() -> None:
     split = BenchmarkSplit(
         name="toy",

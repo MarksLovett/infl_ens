@@ -11,17 +11,11 @@ from typing import Any, Optional, Sequence
 
 import numpy as np
 
-from infl_ens.inflgame.router import InfluencerRouter, RouterAgent
-from infl_ens.inflgame.router.allocation import allocation_weights
+from infl_ens.inflgame.router import RouterAgent
 from infl_ens.data.trait_space import TraitSpace
 from infl_ens.training.router_training import (
     RouterTrainingConfig,
     train_router_positions,
-)
-from infl_ens.utils.position_step import (
-    apply_position_update,
-    blend_for_round,
-    expected_pool_centroid,
 )
 
 
@@ -88,76 +82,6 @@ def classify_layout(pos: np.ndarray, *, spread_thresh: float = 0.45) -> str:
     return "2,2" if n == 4 else f"{n // 2}x2"
 
 
-def run_matched_pool_dynamics(
-    space: TraitSpace,
-    initial_positions: np.ndarray,
-    names: Sequence[str],
-    pool_prompts: Sequence[str],
-    *,
-    sigma: float,
-    n_rounds: int,
-    blend_base: float = 0.5,
-    blend_schedule: Optional[str] = None,
-    blend_start: Optional[float] = None,
-    position_step: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    """Integrate expected-pool centroid updates for ``n_rounds``.
-
-    :param space: Trait space.
-    :type space: TraitSpace
-    :param initial_positions: Round-0 positions ``(N, L)``.
-    :type initial_positions: numpy.ndarray
-    :param names: Agent names.
-    :type names: Sequence[str]
-    :param pool_prompts: Full prompt pool for projection.
-    :type pool_prompts: Sequence[str]
-    :param sigma: Competitive reach.
-    :type sigma: float
-    :param n_rounds: Number of discrete rounds.
-    :type n_rounds: int
-    :param blend_base: Terminal / static blend.
-    :type blend_base: float
-    :param blend_schedule: Optional ``linear`` schedule.
-    :type blend_schedule: str | None
-    :param blend_start: Start blend for linear schedule.
-    :type blend_start: float | None
-    :param position_step: Optional adaptive step policy.
-    :type position_step: dict | None
-    :returns: Dict with ``positions`` ``(n_rounds+1, N, L)``, ``final_spread``,
-        ``layout``.
-    :rtype: dict
-    """
-    agents = [
-        RouterAgent(name=n, position=initial_positions[i].copy())
-        for i, n in enumerate(names)
-    ]
-    router = InfluencerRouter(space, agents, sigma=sigma, policy="proportional")
-    pool_coords = space.project(list(pool_prompts))
-    traj = [router.positions.copy()]
-
-    for r in range(n_rounds):
-        blend_r = blend_for_round(
-            r, n_rounds, blend_base, blend_schedule, blend_start=blend_start,
-        )
-        G_pool = allocation_weights(router.positions, pool_coords, router.cov)
-        for i, agent in enumerate(agents):
-            target = expected_pool_centroid(i, pool_coords, G_pool)
-            agent.position, _ = apply_position_update(
-                agent.position,
-                target,
-                blend=blend_r,
-                position_step=position_step,
-            )
-        traj.append(router.positions.copy())
-
-    final = traj[-1]
-    return {
-        "positions": np.stack(traj, axis=0),
-        "final_spread": pairwise_spread(final),
-        "layout": classify_layout(final),
-    }
-
-
 def run_gradient_ascent_theory(
     space: TraitSpace,
     initial_positions: np.ndarray,
@@ -217,75 +141,6 @@ def run_gradient_ascent_theory(
         "converged": bool(info["converged"]),
         "n_steps": int(info["n_steps"]),
     }
-
-
-def run_theory_pre_warmup(
-    space: TraitSpace,
-    agents: list[RouterAgent],
-    pool_prompts: Sequence[str],
-    *,
-    sigma: float,
-    cfg: dict[str, Any],
-) -> dict[str, Any]:
-    """Position-only expected-pool dynamics before closed-loop SFT rounds.
-
-    Integrates the same matched-pool centroid rule as
-    ``centroid_mode='expected_pool'`` with optional adaptive
-    :func:`infl_ens.utils.position_step.apply_position_update` stepping.
-    No LoRA training occurs during this phase.
-
-    :param space: Trait space.
-    :type space: TraitSpace
-    :param agents: Router agents (updated in place).
-    :type agents: list[RouterAgent]
-    :param pool_prompts: Full prompt pool for projection.
-    :type pool_prompts: Sequence[str]
-    :param sigma: Competitive reach.
-    :type sigma: float
-    :param cfg: ``closed_loop.theory_pre`` block.
-    :type cfg: dict
-    :returns: Warm-up metadata including start/end positions.
-    :rtype: dict
-    """
-    mode = str(cfg.get("mode", "matched_pool"))
-    if mode != "matched_pool":
-        raise ValueError(
-            f"theory_pre.mode must be 'matched_pool', got {mode!r}",
-        )
-    n_rounds = int(cfg.get("n_rounds", 24))
-    names = [a.name for a in agents]
-    initial = np.stack([a.position.copy() for a in agents], axis=0)
-    result = run_matched_pool_dynamics(
-        space,
-        initial,
-        names,
-        pool_prompts,
-        sigma=sigma,
-        n_rounds=n_rounds,
-        blend_base=float(cfg.get("blend", 0.5)),
-        blend_schedule=cfg.get("blend_schedule"),
-        blend_start=cfg.get("blend_start"),
-        position_step=cfg.get("position_step"),
-    )
-    final = result["positions"][-1]
-    for i, agent in enumerate(agents):
-        agent.position = final[i].copy()
-    out = {
-        "mode": mode,
-        "n_rounds": n_rounds,
-        "blend": float(cfg.get("blend", 0.5)),
-        "position_step": cfg.get("position_step"),
-        "theory_pre_initial": initial.tolist(),
-        "theory_pre_end": final.tolist(),
-        "theory_pre_layout": result["layout"],
-        "theory_pre_final_spread": result["final_spread"],
-    }
-    merge_groups = cfg.get("merge_groups")
-    if merge_groups is not None:
-        out["agent_geometry"] = agent_pairwise_geometry(
-            final, names, merge_groups=merge_groups,
-        )
-    return out
 
 
 def agent_pairwise_geometry(

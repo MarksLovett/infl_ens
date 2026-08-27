@@ -189,7 +189,7 @@ def test_dense_rule_is_lower_variance_than_hard_rule() -> None:
 
 def _install_fake_space(monkeypatch: pytest.MonkeyPatch, prompts: list[str]) -> None:
     from infl_ens.data.benchmarks import BenchmarkSplit
-    import infl_ens.training.__main__ as driver
+    import infl_ens.training.closed_loop as driver
 
     rng = np.random.default_rng(0)
     coords = {p: rng.random(2) for p in prompts}
@@ -277,7 +277,7 @@ def _hard_cfg(out_dir: Path, **closed_loop: Any) -> dict[str, Any]:
 
 
 def _run_hard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tag: str, **cl: Any):
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     prompts = [f"q{i}" for i in range(12)]
     _install_fake_space(monkeypatch, prompts)
@@ -343,7 +343,7 @@ def test_closed_loop_topk_pairs_round(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Top-k winners at unit loss over pairs; clones step independently and stay paired."""
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     prompts = [f"q{i}" for i in range(24)]
     _install_fake_space(monkeypatch, prompts)
@@ -421,7 +421,7 @@ def test_closed_loop_topk_per_agent_round(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Top-k winners at unit loss over individual agents (no merge groups)."""
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     prompts = [f"q{i}" for i in range(12)]
     _install_fake_space(monkeypatch, prompts)
@@ -465,7 +465,7 @@ def test_closed_loop_soft_expected_pool(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Soft routing now accepts the (matched) expected-pool centroid."""
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     prompts = [f"q{i}" for i in range(12)]
     _install_fake_space(monkeypatch, prompts)

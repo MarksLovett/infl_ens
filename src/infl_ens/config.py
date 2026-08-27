@@ -63,7 +63,7 @@ TOP_LEVEL_KEYS: frozenset[str] = frozenset(
 #: Allowed keys per benchmark ``kind`` (mirrors the loader signatures in
 #: :mod:`infl_ens.data.benchmarks`).
 BENCHMARK_ENTRY_KEYS: dict[str, frozenset[str]] = {
-    "beavertails": frozenset({"kind", "path", "max_records"}),
+    "beavertails": frozenset({"kind", "path", "categories", "max_records"}),
     "halueval": frozenset({"kind", "path", "tasks", "max_records"}),
     "jbb_behaviors": frozenset({"kind", "path", "include_benign", "max_records"}),
     "ai4privacy": frozenset(
@@ -143,6 +143,7 @@ CLOSED_LOOP_KEYS: frozenset[str] = frozenset(
         "routing_mode",
         "soft_top_k",
         "soft_loss",
+        "soft_select",
         "routing_weight",
         "loss_reweight",
         "position_update",
@@ -520,6 +521,28 @@ def load_config(
     return cfg
 
 
+def resolve_sft_block(cfg: Mapping[str, Any]) -> dict[str, Any]:
+    """Merge the SFT (base model + LoRA) settings of a run config.
+
+    The model fragment (``configs/models/*.yaml``) provides a top-level
+    ``sft`` block; a closed-loop config may overlay ``closed_loop.sft``.
+    When neither sets ``output_dir`` it defaults to ``<output_dir>/agents``.
+
+    :param cfg: Resolved run config.
+    :type cfg: Mapping
+    :returns: Keyword arguments for
+        :class:`infl_ens.training.sft_training.SFTTrainingConfig`.
+    :rtype: dict
+    """
+    top = cfg.get("sft") or {}
+    nested = (cfg.get("closed_loop") or {}).get("sft") or {}
+    sft = deep_merge(top, nested)
+    if "output_dir" not in sft:
+        run_dir = str(cfg.get("output_dir", "results/closed_loop"))
+        sft["output_dir"] = str(Path(run_dir) / "agents")
+    return sft
+
+
 __all__ = [
     "BASELINE_REPLAY_KEYS",
     "BENCHMARK_ENTRY_KEYS",
@@ -539,5 +562,6 @@ __all__ = [
     "load_config",
     "load_yaml",
     "resolve_includes",
+    "resolve_sft_block",
     "validate_config",
 ]

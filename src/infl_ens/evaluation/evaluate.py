@@ -21,13 +21,13 @@ from typing import Any, Callable, Optional, Sequence
 
 from infl_ens.data.benchmarks import BenchmarkSplit
 from infl_ens.evaluation.adapters import (
-    AdapterRef,
     discover_adapters,
     load_adapter_model,
     load_base_causal_lm,
     resolve_adapter_dir,
 )
-from infl_ens.evaluation.benchmarks import load_benchmark_splits, subsample_split
+from infl_ens.config import resolve_sft_block
+from infl_ens.data.benchmarks.loading import load_benchmark_splits, subsample_split
 from infl_ens.evaluation.metrics import mean_token_nll, split_to_texts
 
 
@@ -419,7 +419,7 @@ class EvalJobConfig:
 
         The training YAML is the single source of truth: ``run_dir`` is its
         ``output_dir``, the base model and default sequence length come from
-        ``closed_loop.sft``, the benchmarks from ``benchmarks`` and the
+        the merged ``sft`` block, the benchmarks from ``benchmarks`` and the
         held-out partitions from ``data_split.manifest``. Only the
         evaluation-specific knobs live in the ``eval`` block
         (``agents``, ``max_eval_records``, ``forward_batch_size``,
@@ -446,7 +446,7 @@ class EvalJobConfig:
                 "'closed_loop' block"
             )
         eval_block = dict(cfg.get("eval") or {})
-        sft = dict(cfg["closed_loop"].get("sft") or {})
+        sft = resolve_sft_block(cfg)
         data_split = cfg.get("data_split")
         manifest = None
         if isinstance(data_split, dict):
@@ -590,7 +590,7 @@ def run_eval_job(job: EvalJobConfig) -> list[BenchmarkEvalResult]:
         raise ValueError("benchmarks list must be non-empty")
 
     if job.data_split_manifest and job.data_split_partition:
-        from infl_ens.evaluation.benchmarks import load_benchmark_splits_with_partition
+        from infl_ens.data.benchmarks.loading import load_benchmark_splits_with_partition
 
         splits = load_benchmark_splits_with_partition(
             job.benchmarks,

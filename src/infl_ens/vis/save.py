@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Optional, Sequence, Union
+from typing import Literal, Sequence, Union
 
 from matplotlib.figure import Figure
 

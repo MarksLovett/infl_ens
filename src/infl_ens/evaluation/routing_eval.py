@@ -11,19 +11,20 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
 from infl_ens.data.splits import flatten_partition_prompts, load_split_manifest
 from infl_ens.evaluation.adapters import load_adapter_model, load_base_causal_lm
-from infl_ens.evaluation.benchmarks import subsample_split
+from infl_ens.config import load_config
+from infl_ens.data.benchmarks.loading import subsample_split
 from infl_ens.evaluation.metrics import format_chat_example
 from infl_ens.inflgame.router.allocation import (
     allocation_weights,
     strategic_routing_weights,
 )
-from infl_ens.training.__main__ import _load_splits, _load_yaml, _make_trait_space, _sigma_from_cfg
+from infl_ens.training.setup import load_splits, make_trait_space, sigma_from_config
 
 DEFAULT_MERGE_ALIASES: dict[str, str] = {
     "merge-jailbreak": "merge-generalist",
@@ -231,7 +232,7 @@ def load_flat_partition_pool(
     :returns: ``(prompts, responses, benchmark_labels)``.
     :rtype: tuple[list[str], list[str | None], list[str]]
     """
-    full_splits = _load_splits(dict(cfg))
+    full_splits = load_splits(dict(cfg))
     ds = cfg.get("data_split") or {}
     manifest_path = Path(ds["manifest"])
     if not manifest_path.is_absolute():
@@ -479,7 +480,7 @@ def run_flat_routing_eval(
     :returns: Full routing report.
     :rtype: FlatRoutingReport
     """
-    cfg = _load_yaml(router_config)
+    cfg = load_config(router_config, validate=False)
     cl = cfg.get("closed_loop", {})
     clone_to_merge, config_merge_names = parse_merge_groups(cl)
     agent_names = [a["name"] for a in cfg["agents"]]
@@ -500,9 +501,9 @@ def run_flat_routing_eval(
         for p, r in zip(prompts, responses)
     ]
 
-    full_splits = _load_splits(cfg)
-    space = _make_trait_space(cfg, full_splits)
-    sigma = _sigma_from_cfg(cfg, len(agent_names), space)
+    full_splits = load_splits(cfg)
+    space = make_trait_space(cfg, full_splits)
+    sigma = sigma_from_config(cfg, len(agent_names), space)
     positions = load_final_positions(history_path, agent_names)
     coords = np.asarray(space.project(prompts), dtype=float)
     cov = float(sigma) ** 2 * np.eye(space.L)

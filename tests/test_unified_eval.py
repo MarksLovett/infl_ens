@@ -191,7 +191,7 @@ def _install_fake_training(monkeypatch: pytest.MonkeyPatch, prompts: list[str]) 
     """Deterministic toy trait space plus a no-op SFT stub."""
     from infl_ens.data.benchmarks import BenchmarkSplit
     from infl_ens.data.trait_space import TraitSpace
-    import infl_ens.training.__main__ as driver
+    import infl_ens.training.closed_loop as driver
     import infl_ens.training.sft_training as sft_mod
 
     rng = np.random.default_rng(0)
@@ -263,7 +263,7 @@ def _trainer_cfg(tmp_path: Path, *, with_eval: bool = True) -> dict[str, Any]:
 def test_trainer_runs_unified_eval_after_training(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     _install_fake_training(monkeypatch, [f"q{i}" for i in range(40)])
     jobs = _install_recorder(monkeypatch)

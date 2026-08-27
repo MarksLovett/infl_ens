@@ -88,7 +88,7 @@ four orthogonal "rule" knobs in the YAML config:
 - ``closed_loop.save_per_round``: per-round adapter archiving for
   :mod:`infl_ens.evaluation.capability_probe`.
 - ``closed_loop.position_step``: adaptive EMA blend for trait-space
-  position updates (:mod:`infl_ens.utils.position_step`).
+  position updates (:mod:`infl_ens.training.position_step`).
 
 The matrix of gradient-aligned modes (``position_update: theory_matched``
 unless stated) is:

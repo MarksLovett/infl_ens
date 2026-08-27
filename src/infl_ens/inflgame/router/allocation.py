@@ -248,6 +248,66 @@ def _top_k_keep_mask(G: np.ndarray, top_k: int) -> np.ndarray:
     return keep
 
 
+def sampled_top_k_mask(
+    G: np.ndarray,
+    top_k: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Sample ``top_k`` distinct agents per query, without replacement, from :math:`G`.
+
+    The stochastic counterpart of :func:`_top_k_keep_mask`: instead of the
+    ``top_k`` largest shares, draw ``top_k`` agents by successive sampling
+    from the categorical distribution :math:`G_\\cdot(b)` — i.e. draw one
+    agent with probability :math:`G_i`, remove it, renormalise, draw again,
+    ``top_k`` times.
+
+    Implemented with the Gumbel-top-``k`` trick, which is exactly equivalent
+    to that sequential procedure (Plackett--Luce): perturb the log-weights
+    with iid Gumbel(0,1) noise and take the ``top_k`` largest,
+
+    .. math::
+
+        \\mathcal{S}_k(b) \\;=\\; \\operatorname*{arg\\,top-}k_i\\;
+        \\bigl[\\log G_i(b) + g_{ib}\\bigr], \\qquad
+        g_{ib} \\sim \\mathrm{Gumbel}(0,1),
+
+    which costs one pass instead of ``top_k`` renormalisations.
+
+    Two limits make this the natural bridge between the routing modes:
+    ``top_k == 1`` reduces to a single categorical draw — exactly the hard
+    routing of :meth:`infl_ens.inflgame.router.InfluencerRouter.route_batch`
+    under ``policy='proportional'`` — while suppressing the noise recovers
+    the deterministic top-``k`` gate. A run using this mask therefore
+    isolates *sampled* versus *argmax* selection at fixed ``k``.
+
+    Agents with zero share are never selected unless fewer than ``top_k``
+    agents have positive share, in which case the remainder is filled
+    arbitrarily to keep exactly ``top_k`` per column.
+
+    :param G: Allocation matrix :math:`G_i(\\mathbf{x}, b_k)`, shape
+        ``(N, K)``, columns summing to one across agents.
+    :type G: numpy.ndarray
+    :param top_k: Number of agents to draw per query; ``top_k >= N``
+        selects every agent.
+    :type top_k: int
+    :param rng: NumPy generator supplying the Gumbel noise.
+    :type rng: numpy.random.Generator
+    :returns: Boolean mask, shape ``(N, K)``, with exactly ``min(top_k, N)``
+        true entries per column.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``top_k < 1`` or ``G`` is not 2-D.
+    """
+    if G.ndim != 2:
+        raise ValueError(f"G must be 2-D (N, K), got shape {G.shape}")
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1, got {top_k}")
+    if top_k >= G.shape[0]:
+        return np.ones_like(G, dtype=bool)
+    tiny = np.finfo(float).tiny
+    keys = np.log(np.maximum(G, tiny)) + rng.gumbel(size=G.shape)
+    return _top_k_keep_mask(keys, top_k)
+
+
 def matched_centroid_mass(G: np.ndarray) -> np.ndarray:
     """Gradient-matched centroid mass :math:`G_i(1 - G_i)`, dense over every query.
 

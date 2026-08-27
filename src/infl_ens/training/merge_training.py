@@ -27,7 +27,6 @@ from typing import Any, Optional, Sequence
 import numpy as np
 
 from infl_ens.inflgame.router.agents import RouterAgent
-from infl_ens.utils.agent_init import harm_pair_indices
 
 
 def merge_train_name(members: Sequence[str]) -> str:
@@ -39,139 +38,6 @@ def merge_train_name(members: Sequence[str]) -> str:
     :rtype: str
     """
     return "merge-" + "-".join(sorted(members))
-
-
-def classify_layout_extended(
-    pos: np.ndarray,
-    *,
-    spread_thresh: float = 0.45,
-) -> str:
-    """Classify layout as ``2,2``, ``collapsed``, or ``other``.
-
-    :param pos: ``(N, L)`` agent positions.
-    :type pos: numpy.ndarray
-    :param spread_thresh: Collapse threshold passed to :func:`classify_layout`.
-    :type spread_thresh: float
-    :returns: Layout label.
-    :rtype: str
-    """
-    from infl_ens.training.pool_dynamics import classify_layout, pairwise_spread
-
-    if pairwise_spread(pos) < spread_thresh:
-        return "collapsed"
-    if classify_layout(pos, spread_thresh=spread_thresh) == "2,2":
-        return "2,2"
-    return "other"
-
-
-def proximity_pairs(
-    router_names: Sequence[str],
-    positions: np.ndarray,
-    distance_threshold: float,
-) -> tuple[list[list[str]], list[str]]:
-    """Greedy pair agents whose L2 distance is below ``distance_threshold``.
-
-    :param router_names: Agent names aligned with ``positions`` rows.
-    :type router_names: Sequence[str]
-    :param positions: ``(N, L)`` positions.
-    :type positions: numpy.ndarray
-    :param distance_threshold: Maximum distance to treat as co-located.
-    :type distance_threshold: float
-    :returns: ``(pairs, unpaired)`` where each pair is two names.
-    :rtype: tuple[list[list[str]], list[str]]
-    """
-    n = len(router_names)
-    dists: list[tuple[float, int, int]] = []
-    for i in range(n):
-        for j in range(i + 1, n):
-            d = float(np.linalg.norm(positions[i] - positions[j]))
-            dists.append((d, i, j))
-    dists.sort(key=lambda x: x[0])
-    used: set[int] = set()
-    pairs: list[list[str]] = []
-    pair_dists: dict[str, float] = {}
-    for d, i, j in dists:
-        if d > distance_threshold:
-            break
-        if i in used or j in used:
-            continue
-        used.add(i)
-        used.add(j)
-        pair = [router_names[i], router_names[j]]
-        pairs.append(pair)
-        key = merge_train_name(pair)
-        pair_dists[key] = d
-    unpaired = [router_names[k] for k in range(n) if k not in used]
-    return pairs, unpaired
-
-
-def resolve_dynamic_merge_groups(
-    router_agents: Sequence[RouterAgent],
-    router_names: Sequence[str],
-    *,
-    distance_threshold: float = 0.08,
-    spread_thresh: float = 0.45,
-) -> tuple[list[tuple[str, list[str]]], list[str], dict[str, Any]]:
-    """Resolve merge groups from current router positions.
-
-    When layout is ``2,2``, pairs are the low- and high-harm groups from
-    :func:`harm_pair_indices`. Otherwise, pairs agents by proximity; agents
-    that match no partner are returned in ``unpaired``.
-
-    :param router_agents: Live router agents.
-    :type router_agents: Sequence[RouterAgent]
-    :param router_names: Agent name order.
-    :type router_names: Sequence[str]
-    :param distance_threshold: Proximity pairing cutoff.
-    :type distance_threshold: float
-    :param spread_thresh: Layout classifier spread threshold.
-    :type spread_thresh: float
-    :returns: ``(merge_groups, unpaired_names, metadata)``.
-    :rtype: tuple
-    """
-    by_name = {a.name: a for a in router_agents}
-    positions = np.stack([by_name[n].position for n in router_names], axis=0)
-    layout = classify_layout_extended(positions, spread_thresh=spread_thresh)
-    meta: dict[str, Any] = {
-        "layout": layout,
-        "distance_threshold": distance_threshold,
-        "positions": {n: by_name[n].position.tolist() for n in router_names},
-    }
-
-    groups: list[tuple[str, list[str]]] = []
-    unpaired: list[str] = []
-
-    if layout == "2,2":
-        low_idx, high_idx = harm_pair_indices(positions)
-        low_names = [router_names[int(i)] for i in low_idx]
-        high_names = [router_names[int(i)] for i in high_idx]
-        groups = [
-            (merge_train_name(low_names), low_names),
-            (merge_train_name(high_names), high_names),
-        ]
-        meta["pairing_method"] = "harm_22"
-        meta["low_harm_pair"] = low_names
-        meta["high_harm_pair"] = high_names
-        d_low = float(np.linalg.norm(positions[low_idx[0]] - positions[low_idx[1]]))
-        d_high = float(np.linalg.norm(positions[high_idx[0]] - positions[high_idx[1]]))
-        meta["within_pair_distance"] = {
-            merge_train_name(low_names): d_low,
-            merge_train_name(high_names): d_high,
-        }
-    else:
-        pairs, unpaired = proximity_pairs(
-            router_names, positions, distance_threshold,
-        )
-        if pairs:
-            groups = [(merge_train_name(m), m) for m in pairs]
-            meta["pairing_method"] = "proximity"
-            meta["proximity_pairs"] = pairs
-        else:
-            meta["pairing_method"] = "none"
-        meta["unpaired"] = unpaired
-
-    meta["merge_groups"] = [{"train_as": t, "names": m} for t, m in groups]
-    return groups, unpaired, meta
 
 
 def parse_sft_merge_groups(
@@ -403,50 +269,8 @@ def snap_configured_merge_pairs(
     return snapped
 
 
-def collapsed_sft_merge_groups(
-    router_agents: Sequence[RouterAgent],
-    merge_groups: Sequence[tuple[str, Sequence[str]]],
-    *,
-    threshold: float = 0.01,
-) -> tuple[list[tuple[str, list[str]]], dict[str, Any]]:
-    """Keep only merge groups whose partners are co-located within ``threshold``.
-
-    :param router_agents: Live router agents.
-    :type router_agents: Sequence[RouterAgent]
-    :param merge_groups: Candidate ``(train_as, members)`` pairs.
-    :type merge_groups: Sequence[tuple[str, Sequence[str]]]
-    :param threshold: Maximum L2 distance for SFT merge eligibility.
-    :type threshold: float
-    :returns: Active merge groups and diagnostic metadata.
-    :rtype: tuple[list[tuple[str, list[str]]], dict]
-    """
-    by_name = {a.name: a for a in router_agents}
-    active: list[tuple[str, list[str]]] = []
-    collapsed: dict[str, float] = {}
-    skipped: dict[str, float] = {}
-    for train_as, members in merge_groups:
-        members = list(members)
-        if len(members) != 2:
-            raise ValueError(
-                f"collapsed_sft_merge_groups expects pairs; "
-                f"{train_as!r} has {len(members)} members",
-            )
-        dist = float(
-            np.linalg.norm(by_name[members[0]].position - by_name[members[1]].position),
-        )
-        if dist <= threshold:
-            active.append((train_as, members))
-            collapsed[train_as] = dist
-        else:
-            skipped[train_as] = dist
-    return active, {
-        "collapsed_sft_merge": collapsed,
-        "skipped_sft_merge": skipped,
-    }
-
-
 def merge_mode_from_config(cl: dict[str, Any]) -> str:
-    """Return ``fixed``, ``proximity``, or ``none`` for SFT merging.
+    """Return ``fixed`` when ``sft_merge_groups`` is configured, else ``none``.
 
     :param cl: ``closed_loop`` config block.
     :type cl: dict
@@ -455,9 +279,6 @@ def merge_mode_from_config(cl: dict[str, Any]) -> str:
     """
     if cl.get("sft_merge_groups") is not None:
         return "fixed"
-    mode = str(cl.get("sft_merge_mode", "none"))
-    if mode in ("proximity", "dynamic", "by_proximity"):
-        return "proximity"
     return "none"
 
 
@@ -499,7 +320,7 @@ def merge_groups_from_theory_pairs(
     """Turn a paired theory init into ``sft_merge_groups`` entries.
 
     Consumes ``theory_init_meta['paired_harm_order']`` produced by
-    :func:`infl_ens.utils.agent_init.init_agents_theory_gradient_paired`,
+    :func:`infl_ens.training.agent_init.init_agents_theory_gradient_paired`,
     whose entries are the two agent names co-located at each theory
     endpoint, ordered by the harm coordinate. The result is the ordinary
     list-of-mappings form accepted by :func:`parse_sft_merge_groups` and by
@@ -575,6 +396,9 @@ def soft_pair_assignments(
     group_index: np.ndarray,
     n_groups: int,
     soft_top_k: int,
+    *,
+    select: str = "topk",
+    rng: Optional[np.random.Generator] = None,
 ) -> tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]:
     """Top-``k`` soft routing weights at the merge-group level (training only).
 
@@ -601,18 +425,44 @@ def soft_pair_assignments(
     :type n_groups: int
     :param soft_top_k: Groups retained per query.
     :type soft_top_k: int
+    :param select: How the ``soft_top_k`` groups are chosen per query.
+        ``'topk'`` (default) keeps the largest group shares — a
+        deterministic argmax gate. ``'sample'`` draws that many distinct
+        groups without replacement from the group shares
+        (:func:`infl_ens.inflgame.router.allocation.sampled_top_k_mask`),
+        the stochastic counterpart; at ``soft_top_k == 1`` it reduces to the
+        single categorical draw of hard routing. Pairing the two at equal
+        ``k`` and equal loss weighting isolates argmax versus sampling.
+    :type select: str
+    :param rng: Generator for ``select='sample'``; required in that mode so
+        the draw is reproducible from the run seed.
+    :type rng: numpy.random.Generator | None
     :returns: ``(W, idx, weights)`` where ``W`` is the ``(P, M)`` weight
         matrix, ``idx[p]`` the batch positions this group trains on and
         ``weights[p]`` the aligned per-example weights.
     :rtype: tuple[numpy.ndarray, list[numpy.ndarray], list[numpy.ndarray]]
+    :raises ValueError: If ``select`` is unknown, or ``'sample'`` is
+        requested without an ``rng``.
     """
     from infl_ens.inflgame.router.allocation import (
         group_allocation_weights,
+        sampled_top_k_mask,
         top_k_allocation_weights,
     )
 
+    if select not in ("topk", "sample"):
+        raise ValueError(f"select must be 'topk' or 'sample', got {select!r}")
     G_group = group_allocation_weights(G_clone, group_index, n_groups)
-    W = top_k_allocation_weights(G_group, soft_top_k)
+    if select == "sample":
+        if rng is None:
+            raise ValueError("select='sample' requires an rng")
+        keep = sampled_top_k_mask(G_group, soft_top_k, rng)
+        masked = np.where(keep, G_group, 0.0)
+        col = masked.sum(axis=0, keepdims=True)
+        safe = col > 0.0
+        W = np.where(safe, masked / np.where(safe, col, 1.0), 0.0)
+    else:
+        W = top_k_allocation_weights(G_group, soft_top_k)
     idx = [np.flatnonzero(W[p] > 0.0) for p in range(n_groups)]
     weights = [W[p, idx[p]] for p in range(n_groups)]
     return W, idx, weights

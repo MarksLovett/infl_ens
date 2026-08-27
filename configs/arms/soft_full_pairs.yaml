@@ -1,0 +1,12 @@
+# ARM 1a: SOFT routing over co-located theory pairs, FULLY distributed.
+# soft_top_k equals the number of pairs, so every pair learns from every
+# prompt in proportion to its share.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_soft_full_pairs/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

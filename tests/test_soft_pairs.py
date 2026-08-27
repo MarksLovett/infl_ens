@@ -10,7 +10,7 @@ and train exactly one LoRA per pair at the pair's shared position:
 - :func:`infl_ens.training.merge_training.soft_pair_assignments` /
   :func:`~infl_ens.training.merge_training.soft_pair_position_target` /
   :func:`~infl_ens.training.merge_training.merge_groups_from_theory_pairs`,
-- :func:`infl_ens.utils.agent_init.resolve_agent_entries` and the
+- :func:`infl_ens.training.agent_init.resolve_agent_entries` and the
   ``nearest`` pairing rule,
 - de-duplication of soft rounds in
   :func:`infl_ens.training.baseline_replay.pooled_batch_from_round`,
@@ -43,7 +43,7 @@ from infl_ens.training.merge_training import (
     soft_pair_assignments,
     soft_pair_position_target,
 )
-from infl_ens.utils.agent_init import (
+from infl_ens.training.agent_init import (
     co_locate_theory_pairs,
     nearest_neighbour_pair_indices,
     pair_indices_for_method,
@@ -313,7 +313,7 @@ def test_co_locate_theory_pairs_nearest_is_bitwise() -> None:
 
 def test_theory_gradient_paired_meta_reports_pre_colocation_spread() -> None:
     """Paired init records the informative pre-co-location distances."""
-    from infl_ens.utils.agent_init import init_agents_theory_gradient_paired
+    from infl_ens.training.agent_init import init_agents_theory_gradient_paired
 
     grid = np.array([[0.1, 0.2], [0.9, 0.8], [0.1, 0.8], [0.9, 0.2]])
     space = TraitSpace(
@@ -396,28 +396,20 @@ def test_pooled_batch_hard_rounds_unchanged() -> None:
 
 def test_validation_matrix_soft_pairs() -> None:
     """Soft routing over merge groups is allowed; its incompatibilities are not."""
-    from infl_ens.training.__main__ import _validate_routing_and_loss_modes as check
+    from infl_ens.training.closed_loop import validate_routing_and_loss_modes as check
 
     check(
         "G", None, routing_mode="soft", soft_top_k=7, n_agents=14,
-        has_merge_groups=True, n_groups=7, merge_mode="fixed",
+        has_merge_groups=True, n_groups=7,
     )
     with pytest.raises(ValueError, match="merge groups"):
         check(
             "G", None, routing_mode="soft", soft_top_k=8, n_agents=14,
-            has_merge_groups=True, n_groups=7, merge_mode="fixed",
+            has_merge_groups=True, n_groups=7,
         )
-    with pytest.raises(ValueError, match="sft_also_train_individual"):
-        check(
-            "G", None, routing_mode="soft", soft_top_k=2, n_agents=14,
-            has_merge_groups=True, n_groups=7, merge_mode="fixed",
-            also_train_individual=True,
-        )
-    with pytest.raises(ValueError, match="proximity"):
-        check("G", None, routing_mode="soft", merge_mode="proximity")
     with pytest.raises(ValueError, match="loss_reweight"):
         check("G", "one_minus_G", routing_mode="soft", has_merge_groups=True,
-              n_groups=7, merge_mode="fixed")
+              n_groups=7)
     with pytest.raises(ValueError, match="loss_reweight"):
         check("G", "position_only", routing_mode="soft", soft_top_k=2,
               n_agents=4)
@@ -463,7 +455,7 @@ def test_validation_matrix_soft_pairs() -> None:
 def _install_fake_space(monkeypatch: pytest.MonkeyPatch, prompts: list[str]) -> None:
     """Point the training driver at a deterministic 2-D toy trait space."""
     from infl_ens.data.benchmarks import BenchmarkSplit
-    import infl_ens.training.__main__ as driver
+    import infl_ens.training.closed_loop as driver
 
     rng = np.random.default_rng(0)
     coords = {p: rng.random(2) for p in prompts}
@@ -519,7 +511,7 @@ def test_closed_loop_soft_pairs_round(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """One adapter and one shared position per pair, top-k over pairs."""
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     prompts = [f"q{i}" for i in range(24)]
     _install_fake_space(monkeypatch, prompts)
@@ -620,7 +612,7 @@ def test_closed_loop_soft_pairs_rejects_split_partners(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Soft pair routing refuses groups whose members are not co-located."""
-    from infl_ens.training.__main__ import _task_closed_loop
+    from infl_ens.training.closed_loop import run_closed_loop as _task_closed_loop
 
     prompts = [f"q{i}" for i in range(8)]
     _install_fake_space(monkeypatch, prompts)

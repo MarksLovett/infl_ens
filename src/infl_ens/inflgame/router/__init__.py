@@ -16,6 +16,9 @@ Top-level exports:
   the strategic-gradient routing weight :math:`G_i (1 - G_i)`.
 - :func:`top_k_allocation_weights` — top-:math:`k` sparsified, per-query
   renormalised allocation weights for soft (dense) routing.
+- :func:`sampled_top_k_mask` — draw :math:`k` distinct agents per query
+  without replacement from :math:`G` (Gumbel-top-:math:`k`), the stochastic
+  counterpart of the deterministic top-:math:`k` gate.
 - :func:`matched_centroid_mass` — gradient-matched centroid mass
   :math:`G_i (1 - G_i)`, dense over every query, for the theory-matched
   position update under soft routing.
@@ -32,9 +35,10 @@ from infl_ens.inflgame.router.allocation import (
     empirical_utility,
     expected_utilities,
     group_allocation_weights,
+    matched_centroid_mass,
+    sampled_top_k_mask,
     strategic_routing_weights,
     top_k_allocation_weights,
-    matched_centroid_mass,
     utility_gradient,
 )
 from infl_ens.inflgame.router.core import InfluencerRouter
@@ -49,5 +53,6 @@ __all__ = [
     "strategic_routing_weights",
     "top_k_allocation_weights",
     "matched_centroid_mass",
+    "sampled_top_k_mask",
     "utility_gradient",
 ]

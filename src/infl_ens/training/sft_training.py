@@ -165,7 +165,6 @@ def weighted_causal_lm_loss(
     :returns: Scalar weighted loss tensor.
     :rtype: torch.Tensor
     """
-    import torch
     from torch.nn import functional as F
 
     shift_logits = logits[..., :-1, :].contiguous()
@@ -331,7 +330,7 @@ def sft_train_agent(
     :type blend: float
     :param position_step: Optional adaptive step policy
         (``closed_loop.position_step``); see
-        :mod:`infl_ens.utils.position_step`.
+        :mod:`infl_ens.training.position_step`.
     :type position_step: dict | None
     :param skip_position_update: If ``True``, train LoRA only and leave
         ``agent.position`` unchanged (caller updates position separately).
