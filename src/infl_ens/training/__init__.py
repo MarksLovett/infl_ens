@@ -27,9 +27,8 @@ Lazy:
 - :class:`SFTTrainingConfig`, :func:`sft_train_agent` from
   :mod:`infl_ens.training.sft_training`.
 
-Theory-vs-SFT comparison helpers live in
-:mod:`infl_ens.training.theory_vs_sft` (not re-exported at package import
-time; import by submodule to avoid pulling trait-space builders eagerly).
+The closed loop itself lives in :mod:`infl_ens.training.closed_loop`
+and the task registry in :mod:`infl_ens.training.tasks`.
 
 Both trainers are reachable through the single CLI; see
 :mod:`infl_ens.training.__main__` for the dispatch table.
@@ -85,8 +84,8 @@ four orthogonal "rule" knobs in the YAML config:
   ``null`` (unit) or ``'one_minus_G'`` (:math:`w_m = 1 - G_i(\\mathbf{x},
   b_m)` on the SFT loss). ``'position_only'`` is a deprecated alias for
   ``null`` + ``position_update: theory_matched``.
-- ``closed_loop.save_per_round``: per-round adapter archiving for
-  :mod:`infl_ens.evaluation.capability_probe`.
+- ``closed_loop.save_per_round``: per-round adapter archiving, which the
+  per-round evaluation stage of the pipeline scores.
 - ``closed_loop.position_step``: adaptive EMA blend for trait-space
   position updates (:mod:`infl_ens.training.position_step`).
 

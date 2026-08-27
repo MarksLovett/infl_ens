@@ -54,7 +54,6 @@ _MOCK_MODULES: List[str] = [
     "trl",
     "accelerate",
     "bitsandbytes",
-    "sentence_transformers",
     "huggingface_hub",
     # Numerical / tabular
     "sklearn",
@@ -63,11 +62,10 @@ _MOCK_MODULES: List[str] = [
     "scipy.linalg",
     "matplotlib",
     "matplotlib.pyplot",
+    "matplotlib.figure",
     "pandas",
     # Config / orchestration
     "yaml",
-    "hydra",
-    "omegaconf",
     "tqdm",
 ]
 
@@ -175,12 +173,16 @@ else:
 # ---------------------------------------------------------------------------
 _SUBPACKAGES_TO_PREFLIGHT: List[str] = [
     "infl_ens",
+    "infl_ens.config",
+    "infl_ens.experiment",
     "infl_ens.data",
     "infl_ens.data.benchmarks",
     "infl_ens.inflgame",
     "infl_ens.inflgame.router",
     "infl_ens.training",
     "infl_ens.evaluation",
+    "infl_ens.figures",
+    "infl_ens.pipeline",
     "infl_ens.utils",
 ]
 
@@ -251,9 +253,7 @@ _EXPECTED_REEXPORTS: dict[str, tuple[str, ...]] = {
         "TraitSpace",
         "build_trait_space",
         "position_from_corpus",
-        "SentenceTransformerEncoder",
         "HuggingFaceEncoder",
-        "FrozenLinearTransform",
         "QuantileNormalizer",
     ),
     "infl_ens.data.benchmarks": (
@@ -292,6 +292,16 @@ _EXPECTED_REEXPORTS: dict[str, tuple[str, ...]] = {
         "weighted_mean",
         "weighted_covariance",
         "gaussian_stability_threshold",
+    ),
+    "infl_ens.figures": (
+        "plot_history",
+        "plot_final_positions",
+        "plot_within_pair",
+        "save_figure",
+    ),
+    "infl_ens.pipeline": (
+        "run_pipeline",
+        "run_smoke",
     ),
 }
 

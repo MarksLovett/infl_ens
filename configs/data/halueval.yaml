@@ -1,7 +1,0 @@
-# configs/data/halueval.yaml
-# Static loader settings for HaluEval.
-
-kind: halueval
-path: data/halueval
-tasks: [qa, dialogue]
-max_records: null

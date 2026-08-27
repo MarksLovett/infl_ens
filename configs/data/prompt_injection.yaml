@@ -1,6 +1,0 @@
-# configs/data/prompt_injection.yaml
-# Static loader settings for the prompt-injection axis.
-
-kind: prompt_injection
-path: data/prompt_injection
-max_records: null

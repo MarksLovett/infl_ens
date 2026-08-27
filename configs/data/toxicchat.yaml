@@ -1,9 +1,0 @@
-# configs/data/toxicchat.yaml
-# Static loader settings consumed by infl_ens.data when previewing or
-# building a trait space that includes the ToxicChat jailbreak axis.
-
-kind: toxicchat
-path: data/toxicchat                 # dir with toxic-chat_annotation_{train,test}.csv
-score_mode: jailbreaking             # one of: jailbreaking, toxicity, either
-human_annotated_only: false          # true = denser, higher-confidence split
-max_records: null                    # null = no cap

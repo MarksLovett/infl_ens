@@ -1,9 +1,0 @@
-{
-  "merge-overrefusal": 409,
-  "merge-injection": 329,
-  "merge-policy": 671,
-  "merge-harm": 744,
-  "merge-generalist": 263,
-  "merge-hallucination": 489,
-  "merge-privacy": 457
-}

@@ -1,63 +1,0 @@
-=== 2026-08-21T17:33:40-04:00 starting ===
-[job] python: Python 3.12.3
-[job] CUDA_VISIBLE_DEVICES=1
-=== 2026-08-21T17:33:40-04:00 pytest ===
-..............                                                           [100%]
-14 passed in 0.82s
-=== 2026-08-21T17:33:42-04:00 trait representation (builds cache; slow) ===
-[repr] loaded 7 benchmark splits
-Applying quantization config:   0%|          | 0/252 [00:00<?, ?it/s]Applying quantization config: 100%|██████████| 252/252 [00:00<00:00, 13679.73it/s]
-Compressing model:   0%|          | 0/252 [00:00<?, ?it/s]Compressing model: 100%|██████████| 252/252 [00:00<00:00, 15148.18it/s]
-Loading weights:   0%|          | 0/902 [00:00<?, ?it/s]Loading weights:   1%|          | 9/902 [00:00<00:10, 87.15it/s]Loading weights:  14%|█▍        | 127/902 [00:00<00:01, 717.46it/s]Loading weights:  26%|██▌       | 234/902 [00:00<00:00, 874.32it/s]Loading weights:  39%|███▉      | 353/902 [00:00<00:00, 985.45it/s]Loading weights:  51%|█████     | 460/902 [00:00<00:00, 1014.15it/s]Loading weights:  64%|██████▍   | 578/902 [00:00<00:00, 1065.82it/s]Loading weights:  76%|███████▌  | 685/902 [00:00<00:00, 1060.96it/s]Loading weights:  89%|████████▉ | 804/902 [00:00<00:00, 1101.31it/s]Loading weights: 100%|██████████| 902/902 [00:00<00:00, 1010.07it/s]
-[transformers] [1mQwen3Model LOAD REPORT[0m from: drawais/Qwen3-Embedding-8B-AWQ-INT4
-Key            | Status     |  | 
----------------+------------+--+-
-lm_head.weight | UNEXPECTED |  | 
-
-Notes:
-- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
-Applying quantization config:   0%|          | 0/252 [00:00<?, ?it/s]Applying quantization config: 100%|██████████| 252/252 [00:00<00:00, 13911.82it/s]
-Compressing model:   0%|          | 0/252 [00:00<?, ?it/s]Compressing model: 100%|██████████| 252/252 [00:00<00:00, 14956.98it/s]
-Loading weights:   0%|          | 0/902 [00:00<?, ?it/s]Loading weights:   1%|          | 9/902 [00:00<00:10, 87.66it/s]Loading weights:  14%|█▍        | 128/902 [00:00<00:01, 720.49it/s]Loading weights:  26%|██▋       | 239/902 [00:00<00:00, 894.82it/s]Loading weights:  39%|███▉      | 350/902 [00:00<00:00, 977.66it/s]Loading weights:  51%|█████     | 459/902 [00:00<00:00, 1016.55it/s]Loading weights:  64%|██████▍   | 578/902 [00:00<00:00, 1074.36it/s]Loading weights:  76%|███████▌  | 686/902 [00:00<00:00, 1074.20it/s]Loading weights:  89%|████████▉ | 805/902 [00:00<00:00, 1104.00it/s]Loading weights: 100%|██████████| 902/902 [00:00<00:00, 1017.57it/s]
-[transformers] [1mQwen3Model LOAD REPORT[0m from: drawais/Qwen3-Embedding-8B-AWQ-INT4
-Key            | Status     |  | 
----------------+------------+--+-
-lm_head.weight | UNEXPECTED |  | 
-
-Notes:
-- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
-Decompressing model:   0%|          | 0/252 [00:00<?, ?it/s]Decompressing model:   0%|          | 1/252 [00:00<00:37,  6.70it/s]Decompressing model:  17%|█▋        | 42/252 [00:00<00:01, 200.94it/s]Decompressing model:  33%|███▎      | 83/252 [00:00<00:00, 285.94it/s]Decompressing model:  49%|████▉     | 124/252 [00:00<00:00, 331.27it/s]Decompressing model:  65%|██████▌   | 165/252 [00:00<00:00, 357.41it/s]Decompressing model:  81%|████████  | 204/252 [00:00<00:00, 366.68it/s]Decompressing model:  97%|█████████▋| 244/252 [00:00<00:00, 376.53it/s]Decompressing model: 100%|██████████| 252/252 [00:00<00:00, 324.30it/s]
-[repr] trait space ready: L=7, K=2187
-[repr] encoding 7052 sampled prompts (single pass)
-Decompressing model:   0%|          | 0/252 [00:00<?, ?it/s]Decompressing model:  16%|█▋        | 41/252 [00:00<00:00, 406.26it/s]Decompressing model:  33%|███▎      | 82/252 [00:00<00:00, 407.86it/s]Decompressing model:  49%|████▉     | 123/252 [00:00<00:00, 407.43it/s]Decompressing model:  65%|██████▌   | 164/252 [00:00<00:00, 403.56it/s]Decompressing model:  81%|████████▏ | 205/252 [00:00<00:00, 400.13it/s]Decompressing model:  98%|█████████▊| 246/252 [00:00<00:00, 397.98it/s]Decompressing model: 100%|██████████| 252/252 [00:00<00:00, 400.88it/s]
-[repr] wrote ['scripts/figures/trait_repr_nostretch/trait_marginals_old_vs_new.pdf', 'scripts/figures/trait_repr_nostretch/trait_marginals_old_vs_new.png']
-[repr] wrote ['scripts/figures/trait_repr_nostretch/trait_pairs_old_vs_new.pdf', 'scripts/figures/trait_repr_nostretch/trait_pairs_old_vs_new.png']
-[repr] wrote ['scripts/figures/trait_repr_nostretch/dataset_composition.pdf', 'scripts/figures/trait_repr_nostretch/dataset_composition.png']
-[repr] wrote scripts/figures/trait_repr_nostretch/trait_repr_summary.json
-
-=== representation summary ===
-axis                  legacy sat   new sat  legacy KS   new KS
-harm                       4.5%     0.0%      0.295    0.011
-hallucination             84.8%     0.0%      0.841    0.018
-jailbreak                 96.9%     0.0%      0.969    0.026
-privacy                   94.1%     0.0%      0.837    0.015
-overrefusal               82.5%     0.0%      0.804    0.051
-injection                 15.3%     0.0%      0.241    0.018
-policy_violation          32.1%     0.0%      0.196    0.012
-
-new in_unit_box=True max_ks=0.051 max_sat=0.0%
-=== 2026-08-21T17:51:42-04:00 resource-density slices ===
-Applying quantization config:   0%|          | 0/252 [00:00<?, ?it/s]Applying quantization config: 100%|██████████| 252/252 [00:00<00:00, 13186.34it/s]
-Compressing model:   0%|          | 0/252 [00:00<?, ?it/s]Compressing model: 100%|██████████| 252/252 [00:00<00:00, 15188.46it/s]
-Loading weights:   0%|          | 0/902 [00:00<?, ?it/s]Loading weights:   1%|          | 10/902 [00:00<00:08, 99.97it/s]Loading weights:  14%|█▍        | 129/902 [00:00<00:01, 740.41it/s]Loading weights:  26%|██▋       | 239/902 [00:00<00:00, 902.80it/s]Loading weights:  39%|███▉      | 353/902 [00:00<00:00, 984.53it/s]Loading weights:  51%|█████     | 459/902 [00:00<00:00, 1010.81it/s]Loading weights:  64%|██████▍   | 578/902 [00:00<00:00, 1070.14it/s]Loading weights:  77%|███████▋  | 692/902 [00:00<00:00, 1087.58it/s]Loading weights:  89%|████████▉ | 806/902 [00:00<00:00, 1096.82it/s]Loading weights: 100%|██████████| 902/902 [00:00<00:00, 1019.36it/s]
-[transformers] [1mQwen3Model LOAD REPORT[0m from: drawais/Qwen3-Embedding-8B-AWQ-INT4
-Key            | Status     |  | 
----------------+------------+--+-
-lm_head.weight | UNEXPECTED |  | 
-
-Notes:
-- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
-Decompressing model:   0%|          | 0/252 [00:00<?, ?it/s]Decompressing model:   0%|          | 1/252 [00:00<00:42,  5.96it/s]Decompressing model:  17%|█▋        | 42/252 [00:00<00:01, 189.12it/s]Decompressing model:  33%|███▎      | 83/252 [00:00<00:00, 275.68it/s]Decompressing model:  49%|████▉     | 123/252 [00:00<00:00, 319.53it/s]Decompressing model:  64%|██████▍   | 161/252 [00:00<00:00, 335.57it/s]Decompressing model:  80%|████████  | 202/252 [00:00<00:00, 359.20it/s]Decompressing model:  96%|█████████▋| 243/252 [00:00<00:00, 374.62it/s]Decompressing model: 100%|██████████| 252/252 [00:00<00:00, 314.04it/s]
-wrote scripts/figures/trait_repr_nostretch/seven_axis_resource_density.png
-wrote scripts/figures/trait_repr_nostretch/seven_axis_resource_density.pdf
-=== 2026-08-21T18:04:08-04:00 DONE ===

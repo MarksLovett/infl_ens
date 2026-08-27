@@ -10,8 +10,7 @@ which upstream transforms are active.
 Fitting must use **unclipped** upstream scores — fitting a CDF on already
 clipped values piles ties at 0/1 and destroys marginal uniformity.
 
-Like :class:`~infl_ens.data.trait_linear_transform.FrozenLinearTransform`,
-maps are frozen at fit time and never see oracle labels.
+Maps are frozen at fit time and never see oracle labels.
 """
 
 from __future__ import annotations

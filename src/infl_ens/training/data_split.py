@@ -116,7 +116,7 @@ def shuffled_train_batch_indices(
 
     When ``batch_size * n_rounds != train_n``, the first
     ``train_n % n_rounds`` rounds receive one extra example each so every
-  row is used exactly once.
+    row is used exactly once.
 
     :param train_n: Number of training rows.
     :type train_n: int

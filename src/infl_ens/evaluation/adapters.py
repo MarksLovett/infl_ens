@@ -123,8 +123,8 @@ def discover_adapters(
 def load_base_causal_lm(base_model: str):
     """Load a base causal LM and tokenizer for inference.
 
-    Heavy dependencies are imported lazily. Dtype selection mirrors
-    :mod:`infl_ens.evaluation.capability_probe`.
+    Heavy dependencies are imported lazily. Dtype selection prefers
+    bfloat16 on CUDA and float32 elsewhere.
 
     :param base_model: HuggingFace model id.
     :type base_model: str

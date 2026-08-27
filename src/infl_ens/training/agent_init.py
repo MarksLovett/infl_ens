@@ -141,7 +141,7 @@ def random_separated_initial_positions(
     """Sample ``n_agents`` positions in trait space with pairwise separation.
 
     Draws uniformly in the grid bounding box until every pair is at least
-  ``min_pairwise`` apart in L2 (rejection sampling).
+    ``min_pairwise`` apart in L2 (rejection sampling).
 
     :param space: Trait space.
     :type space: TraitSpace
