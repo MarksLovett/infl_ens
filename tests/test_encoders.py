@@ -95,12 +95,15 @@ def test_encoder_uses_left_padded_final_token_pooling() -> None:
     ):
         encoder = HuggingFaceEncoder(
             "example/qwen-embedding",
+            device="cpu",
             device_map=None,
         )
         embeddings = encoder(["short", "long"])
 
     assert load_tok.call_args.kwargs["padding_side"] == "left"
     assert load_model.call_args.kwargs["trust_remote_code"] is False
+    # `device` is pinned above so this asserts the CONFIGURED device is applied,
+    # not the host's hardware -- the default resolves to CUDA where one exists.
     assert model.to_device == "cpu"
     expected = np.asarray([[0.6, 0.8], [0.6, 0.8]], dtype=np.float32)
     assert np.allclose(embeddings, expected)
@@ -118,6 +121,25 @@ def test_encoder_leaves_device_mapped_model_in_place() -> None:
 
     assert load_model.call_args.kwargs["device_map"] == "auto"
     assert not hasattr(model, "to_device")
+
+
+@pytest.mark.parametrize(("available", "expected"), [(True, "cuda"), (False, "cpu")])
+def test_encoder_default_device_follows_cuda_availability(
+    available: bool,
+    expected: str,
+) -> None:
+    """Without an explicit ``device``, placement follows CUDA availability."""
+    tokenizer = _FakeTokenizer()
+    model = _FakeModel()
+    with (
+        patch("transformers.AutoTokenizer.from_pretrained", return_value=tokenizer),
+        patch("transformers.AutoModel.from_pretrained", return_value=model),
+        patch("torch.cuda.is_available", return_value=available),
+    ):
+        encoder = HuggingFaceEncoder("example/qwen-embedding", device_map=None)
+
+    assert encoder.device == expected
+    assert model.to_device == expected
 
 
 def test_encoder_mean_pooling_with_right_padding() -> None:
