@@ -1,0 +1,19 @@
+# Base language model + LoRA hyperparameters for the SFT trainer.
+#
+# `output_dir` is intentionally absent: it defaults to <run output_dir>/agents.
+# A closed-loop config may still override any field under `closed_loop.sft`.
+sft:
+  base_model: Qwen/Qwen2.5-1.5B-Instruct
+  max_seq_length: 1024
+  per_device_batch_size: 8
+  gradient_accumulation_steps: 2
+  num_train_epochs: 1.0
+  learning_rate: 2.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bf16: true                     # A40/A100; set false to force fp16
+  gradient_checkpointing: true
+  logging_steps: 1
+  cumulative_lora: true          # each round continues the previous adapter
+  seed: 0

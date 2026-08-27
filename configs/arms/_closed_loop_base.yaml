@@ -1,0 +1,59 @@
+# Everything the two specialist arms share. An arm file includes this and
+# overrides only what differs (routing mode, output_dir).
+#
+# 2L = 14 clones start at L = 7 co-located grid-Nash positions
+# (`theory_gradient_paired`); `sft_merge_groups: from_init` gives one
+# cumulative LoRA per pair (pair-0 .. pair-6). `position_update:
+# theory_matched` is mandatory with a theory initialization: the trait-space
+# dynamics must stay the game's gradient flow.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: closed_loop
+seed: 0
+policy: proportional
+
+# Two clones per trait axis: N = 2L = 14 -> clone-0 .. clone-13.
+agents:
+  pairs_from_axes: true
+  name_prefix: clone
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  init_mode: theory_gradient_paired
+  init_noise: 0.0
+  theory_gradient:
+    learning_rate: 2.0e-2
+    n_steps: 8000
+    tol: 1.0e-8
+    min_pairwise: 0.2
+    pairing: nearest
+  snap_collapsed_pairs: true
+  collapse_merge_threshold: 0.01
+
+  routing_weight: G                 # canonical Lovett & Fu allocation
+  loss_reweight: null               # unit-weight loss, full LoRA ESS
+  position_update: theory_matched   # G(1-G)-matched centroid step
+  centroid_mode: batch
+  blend: 0.5
+
+  sft_merge_groups: from_init
+  merge_group_prefix: pair
+  save_per_round: true              # per-round adapters feed the per-round NLL table
+  val_eval:
+    every_n_rounds: 0               # the per-round val curve is produced post hoc
+
+# Final-round held-out NLL, run automatically when training finishes.
+eval:
+  partitions: [train, test]
+  rounds: final
+  agents: null                      # discovers agents/pair-*/round-NN
+  max_eval_records: 1000            # per benchmark
+  forward_batch_size: 8
+  max_seq_length: null              # defaults to sft.max_seq_length
+  after_training: true
+  baseline_run_dir: null            # the generalist is scored by its own arm

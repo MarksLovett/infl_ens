@@ -1,0 +1,12 @@
+# ARM 1: SOFT routing over co-located theory pairs, top-k = 3.
+# Each prompt trains its 3 highest-share pairs with the pair share as the
+# per-example loss weight (the "distributed learning" signal).
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_soft_topk3_pairs/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 3
+  soft_loss: weighted

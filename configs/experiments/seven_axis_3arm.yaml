@@ -1,0 +1,65 @@
+# Seven-axis three-arm comparison: the canonical experiment.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_3arm.yaml
+#   python -m infl_ens.pipeline --config ... --stages routing,figures   # re-run analysis
+#   python -m infl_ens.pipeline --config ... --smoke                    # cheap gate
+#   python -m infl_ens.pipeline --config ... --dry-run                  # validate only
+#
+# Arm configs are relative to this file. Every arm resolves to the same
+# `benchmarks` + `trait_space` blocks, so one trait-space cache serves all.
+name: seven_axis_3arm
+results_dir: results/seven_axis_3arm       # pipeline.log + stage_status.json
+figures_dir: figures/seven_axis_3arm
+
+arms:
+  - name: soft
+    label: "Soft top-3 pairs"
+    role: specialist
+    config: ../arms/soft_topk3_pairs.yaml
+  - name: hard
+    label: "Hard (SFT) pairs"
+    role: specialist
+    config: ../arms/hard_pairs_matched.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+# Stages run in this order. `download` and `prune` are opt-in
+# (--stages download,manifest,... or --stages prune).
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  first_round: 4                 # per-round NLL table covers rounds 4..final
+  max_eval_records: 1000         # per benchmark, for both per-round and routing stages
+  perround_partition: val
+  routing_partition: test
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto              # latexmk when available; `never` / `always`
+  include:
+    - oracle_routing
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+    - tests/test_topk_matched.py
+    - tests/test_unified_eval.py
+    - tests/test_merge_training.py
+    - tests/test_weighted_sft_loss.py
+    - tests/test_routing_eval.py
+  arms: [soft, hard]
+  output_root: results/_smoke
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

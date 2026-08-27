@@ -1,0 +1,25 @@
+# Seven-axis safety trait-space geometry.
+#
+# Every key under `trait_space` (except encoder_batch_size / cache /
+# cache_dir / cache_path) is hashed into the cache fingerprint, which is
+# 3b42c68a8dd334c5 with the default encoder and the seven_axis_safety data
+# fragment. DO NOT add or edit keys here casually: a changed value forces a
+# multi-hour re-encode. tests/test_config_fingerprint.py guards this.
+includes:
+  - ../encoders/qwen3_embedding_8b_awq.yaml
+
+trait_space:
+  cache: true
+  cache_dir: data/trait_space_cache
+  n_grid: 3                      # KDE grid per axis (3^7 cells)
+  kde_bandwidth: 0.08
+  threshold: 0.5                 # positive / negative label cut per axis
+  coordinate_residualize: true
+  mode_alignment_weight: 0.35    # blend each Fisher direction toward the positive mode
+  mode_alignment_weights:
+    jailbreak: 1.0
+    privacy: 1.0
+    overrefusal: 1.0
+    injection: 1.0
+    policy_violation: 1.0
+  coordinate_stretch_gamma: 1.0  # stretch disabled; the quantile normalizer supersedes it
