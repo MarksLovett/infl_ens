@@ -16,8 +16,9 @@ venv/
 # package is NOT matched.
 /data/
 
-# Sphinx build output
+# Sphinx build output and generated autosummary stubs
 docs/_build/
+docs/api/_autosummary/
 
 # Editor / OS noise
 .DS_Store
