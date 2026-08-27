@@ -87,10 +87,13 @@ def _load_positive_records(path: Path) -> list[tuple[str, float]]:
     if path.is_file():
         files = [path]
     else:
+        # The patterns overlap; de-duplicate so no file is read twice.
         files = sorted(
-            list(path.glob("do_not_answer*.jsonl"))
-            + list(path.glob("do_not_answer*.csv"))
-            + list(path.glob("*.jsonl"))
+            dict.fromkeys(
+                list(path.glob("do_not_answer*.jsonl"))
+                + list(path.glob("do_not_answer*.csv"))
+                + list(path.glob("*.jsonl"))
+            )
         )
         files = [
             f for f in files

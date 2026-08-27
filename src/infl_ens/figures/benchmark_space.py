@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence
 
 import numpy as np
 
-from infl_ens.vis.save import BboxInches, PathLike, save_figure
+from infl_ens.figures.save import BboxInches, PathLike, save_figure
 
 
 def _axis_values(grid: np.ndarray, dim: int) -> np.ndarray:

@@ -9,23 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from infl_ens.vis.save import save_figure
-
-
-def _setup_latex_style() -> None:
-    """Use Computer Modern–style math text when full LaTeX is unavailable."""
-    plt.rcParams.update(
-        {
-            "font.family": "serif",
-            "font.serif": ["Computer Modern Roman", "DejaVu Serif", "Times"],
-            "mathtext.fontset": "cm",
-            "axes.labelsize": 11,
-            "axes.titlesize": 12,
-            "xtick.labelsize": 10,
-            "ytick.labelsize": 10,
-            "legend.fontsize": 9,
-        }
-    )
+from infl_ens.figures.save import save_figure
+from infl_ens.figures.style import apply_paper_style
 
 
 def plot_benchmark_nll_comparison(
@@ -38,6 +23,7 @@ def plot_benchmark_nll_comparison(
     agents: Sequence[str] | None = None,
     include_base: bool = True,
     title: str | None = None,
+    base_label: str = "Base model",
     ylabel: str = r"Mean token NLL $\downarrow$",
     output_stem: str | Path | None = None,
     save_formats: Sequence[str] = ("pdf", "png"),
@@ -62,6 +48,8 @@ def plot_benchmark_nll_comparison(
     :type include_base: bool
     :param title: Optional figure title.
     :type title: str | None
+    :param base_label: Legend label of the base-model series.
+    :type base_label: str
     :param ylabel: Y-axis label (LaTeX allowed).
     :type ylabel: str
     :param output_stem: If set, write ``.<format>`` files under this stem.
@@ -75,7 +63,7 @@ def plot_benchmark_nll_comparison(
     :returns: Matplotlib figure.
     :rtype: matplotlib.figure.Figure
     """
-    _setup_latex_style()
+    apply_paper_style()
 
     if agents is None:
         seen: list[str] = []
@@ -102,7 +90,7 @@ def plot_benchmark_nll_comparison(
         "generalist": "#7b3294",
     }
     legend_labels = {
-        "Base": r"Base (Qwen2.5-1.5B)",
+        "Base": base_label,
         "clone-0": r"Clone 0 (high)",
         "clone-1": r"Clone 1 (low)",
         "clone-2": r"Clone 2 (low)",

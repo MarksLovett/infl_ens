@@ -7,7 +7,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 import numpy as np
 
-from infl_ens.vis.save import BboxInches, PathLike, save_figure
+from infl_ens.figures.save import BboxInches, PathLike, save_figure
 
 
 def _agent_order(records: Sequence[dict]) -> list[str]:
@@ -43,7 +43,7 @@ def _position_tensor(records: Sequence[dict], names: Sequence[str]) -> np.ndarra
 def plot_history(
     records: Sequence[dict],
     *,
-    axis_labels: tuple[str, str] = ("axis 0", "axis 1"),
+    axis_labels: Sequence[str] = ("axis 0", "axis 1"),
     title: Optional[str] = None,
     output_stem: Optional[PathLike] = None,
     save_formats: Sequence[str] = ("pdf", "png"),
@@ -52,14 +52,15 @@ def plot_history(
 ):
     """Render the two-panel closed-loop diagnostic figure.
 
-    Left panel: per-clone trajectory in 2-D trait space. Right panel:
+    Left panel: per-clone trajectory projected onto the first two trait
+    axes (the full plane when ``L == 2``). Right panel:
     per-round overlay of :math:`u_\\text{grid}`, :math:`\\hat u` (pool),
     and observed routing share, one subplot row per clone.
 
     :param records: Loaded history records.
     :type records: Sequence[dict]
-    :param axis_labels: Trait-space axis names.
-    :type axis_labels: tuple[str, str]
+    :param axis_labels: Trait-space axis names (at least two).
+    :type axis_labels: Sequence[str]
     :param title: Optional figure suptitle.
     :type title: str | None
     :param output_stem: If set, write ``.<format>`` files under this stem.
@@ -73,7 +74,7 @@ def plot_history(
     :returns: Matplotlib figure handle. Caller may save or display if
         ``output_stem`` is ``None``.
     :rtype: matplotlib.figure.Figure
-    :raises ValueError: If trait space is not 2-D.
+    :raises ValueError: If the trait space has fewer than two axes.
     """
     import matplotlib.pyplot as plt
 
@@ -81,8 +82,9 @@ def plot_history(
     n_agents = len(names)
     pos = _position_tensor(records, names)
     T, N, L = pos.shape
-    if L != 2:
-        raise ValueError(f"plot_history requires L=2 trait space, got L={L}")
+    if L < 2:
+        raise ValueError(f"plot_history needs at least two trait axes, got L={L}")
+    labels = list(axis_labels) + [f"axis {i}" for i in range(len(axis_labels), 2)]
 
     u_grid = np.stack([np.asarray(r["u_grid"]) for r in records], axis=0)
     u_pool = np.stack([np.asarray(r["u_pool"]) for r in records], axis=0)
@@ -118,10 +120,11 @@ def plot_history(
             )
     ax_traj.set_xlim(-0.02, 1.02)
     ax_traj.set_ylim(-0.02, 1.02)
-    ax_traj.set_xlabel(axis_labels[0])
-    ax_traj.set_ylabel(axis_labels[1])
+    ax_traj.set_xlabel(labels[0])
+    ax_traj.set_ylabel(labels[1])
     ax_traj.set_aspect("equal", adjustable="box")
-    ax_traj.set_title(f"trajectories over {T} round(s)  •  ○ = start, ★ = end")
+    projection = "" if L == 2 else f" (projection onto {labels[0]}, {labels[1]})"
+    ax_traj.set_title(f"trajectories over {T} round(s){projection} (o = start, * = end)")
     ax_traj.grid(True, alpha=0.3)
     ax_traj.legend(loc="best", fontsize=8, frameon=True)
 

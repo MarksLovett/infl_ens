@@ -1,4 +1,4 @@
-"""Optional figure export helpers for :mod:`infl_ens.vis`."""
+"""Optional figure export helpers for :mod:`infl_ens.figures`."""
 
 from __future__ import annotations
 

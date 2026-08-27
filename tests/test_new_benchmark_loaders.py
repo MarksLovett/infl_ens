@@ -78,7 +78,7 @@ def _write_do_not_answer_fixture(tmp_path: Path) -> Path:
 def test_load_orbench_roundtrip(tmp_path: Path) -> None:
     """:func:`load_orbench` parses positive and negative CSV configs."""
     d = _write_orbench_fixture(tmp_path)
-    split = load_orbench(d)
+    split = load_orbench(d, configs=("or-bench-80k", "or-bench-toxic"))
     assert isinstance(split, BenchmarkSplit)
     assert split.axis_name == "overrefusal"
     assert split.n == 2
