@@ -38,7 +38,7 @@ infl_ens/
 │       │   └── router/
 │       │       ├── __init__.py
 │       │       ├── agents.py                     RouterAgent
-│       │       ├── allocation.py                 G_i, u_i, ∇u_i
+│       │       ├── allocation.py                 G_i, u_i, ∇u_i, top-k / per-group soft weights
 │       │       └── core.py                       InfluencerRouter
 │       ├── training/
 │       │   ├── __init__.py
@@ -46,7 +46,7 @@ infl_ens/
 │       │   ├── router_training.py                gradient-ascent on positions
 │       │   ├── sft_training.py                   LoRA SFT (Qwen2.5-1.5B-Instruct by default)
 │       │   ├── baseline_replay.py                pooled baseline SFT from history.json batches
-│       │   ├── merge_training.py                 pair-merge SFT helpers (4 routers, 2 LoRAs)
+│       │   ├── merge_training.py                 pair-merge SFT helpers; soft routing over pairs
 │       │   ├── sweep_aggregate.py                sweep summaries, CSV export, seed×σ aggregation
 │       │   └── theory_vs_sft.py                  strategic ascent vs SFT trajectory helpers
 │       ├── evaluation/
@@ -72,10 +72,11 @@ infl_ens/
 │       ├── latex/
 │       │   ├── With canonical routing,.tex       derivation of position-only Gaussian update
 │       │   ├── kernel_agnostic_gradient_step.tex kernel-agnostic gradient-matched update note
+│       │   ├── position_update_comparison.tex    side-by-side expected-drift derivation of every routing / position-update method
 │       │   └── trait_axis_assignment.tex         how prompts get trait-axis coordinates
 │       └── utils/
 │           ├── __init__.py
-│           ├── agent_init.py                     mean_noise, pairs_near_theory, merge_near_theory, theory_gradient inits
+│           ├── agent_init.py                     mean_noise, pairs_near_theory, merge_near_theory, theory_gradient inits; pairing rules; agents-from-axes
 │           ├── checkpoints.py                    prune intermediate round-* LoRA dirs
 │           ├── position_step.py                  blend schedule + expected_pool centroid (re-exports position_blend)
 │           ├── resource.py                       weighted_mean, weighted_covariance, σ₀*
@@ -92,6 +93,13 @@ infl_ens/
 │   ├── build_safety_trait_space.py               wrapper around `python -m infl_ens.data`
 │   ├── plot_trait_representation.py              clipped-vs-quantile trait representation figures
 │   ├── run_trait_representation_on_doob.sh       sync to doob, build representation figures, pull back
+│   ├── run_soft_pairs_on_doob.sh                 sync to doob, run the soft-routing-over-pairs closed loop, pull back
+│   ├── run_seven_axis_3arm.sh                    queue the three-arm comparison (soft top-3 / hard SFT / generalist) + all analysis
+│   ├── build_per_round_pair_nll_table.py         per-round held-out NLL per pair (round 4 -> last) as csv/md/tex/json
+│   ├── plot_pair_final_positions.py              final pair positions over every axis pair + within-pair separation
+│   ├── write_arm_comparison_tex.py               cross-arm oracle/generalist/specialist pgfplots figure
+│   ├── cross_analyze_three_arms.py               data-matching check, routing headline, pair stability, learning curve
+│   ├── summarize_soft_pairs_history.py           per-round pair counts / shares / within-pair drift from history.json
 │   ├── compare_utility_estimators.py             u_grid vs u_pool vs share diagnostic
 │   ├── diagnose_axis_separability.py             axis AUC / Cohen's d / saturation diagnostics
 │   ├── diagnose_trait_support.py                 KDE vs empirical resource density; explains SFT-vs-theory gaps
@@ -165,10 +173,21 @@ infl_ens/
 │           ├── six_axis_theory_n12.yaml           12-agent theory-only Nash on 6-D safety space
 │           ├── six_axis_pair_merge_r40.yaml       12 routers + 6 pair-merged LoRAs, position_only, 40 rounds
 │           ├── six_axis_baseline_replay_r40.yaml  pooled baseline replay after pair-merge closed loop
+│           ├── seven_axis_soft_pairs.yaml          dense soft routing over seven co-located theory pairs
+│           ├── seven_axis_soft_pairs_baseline_replay.yaml  data-matched pooled-generalist replay
+│           ├── seven_axis_hard_pairs.yaml          categorical G routing over the same co-located theory pairs
+│           ├── seven_axis_hard_pairs_baseline_replay.yaml  data-matched pooled-generalist replay
+│           ├── seven_axis_soft_pairs_matched.yaml  dense soft routing with the theory-matched G_p(1-G_p) centroid
+│           ├── seven_axis_topk_pairs.yaml          top-k winners at unit loss (unified train + eval YAML)
+│           ├── seven_axis_topk_pairs_naive.yaml    same, renormalised-share centroid ablation arm
+│           ├── seven_axis_topk_pairs_baseline_replay.yaml  data-matched pooled-generalist replay
 │           ├── safety_truth_ai4privacy_n6_theory_only_sigma04.yaml  6-agent paired-theory no-SFT AI4Privacy run at 0.4σ*
 │           └── ai4privacy_fixed_theory_generalist_replay_r40.yaml  pooled replay generalist for the fixed-theory AI4Privacy sweep
 ├── tests/
 │   ├── test_weighted_sft_loss.py                 offline tests for weighted CE loss + top-k soft routing weights
+│   ├── test_soft_pairs.py                        offline tests for soft routing over co-located pairs (incl. an end-to-end round)
+│   ├── test_topk_matched.py                      offline tests for the theory-matched soft centroid + top-k winners ablation
+│   ├── test_unified_eval.py                      offline tests for the unified training + eval YAML
 │   ├── test_benchmark_loaders.py                 offline tests with synthetic JSON fixtures
 │   ├── test_ai4privacy_loader.py                 offline tests with synthetic AI4Privacy JSONL fixture
 │   ├── test_evaluation.py                        offline tests for adapter discovery + eval I/O
@@ -217,10 +236,10 @@ infl_ens/
 
 | File | Role | Key public symbols |
 |---|---|---|
-| `__init__.py` | Re-exports | `RouterAgent`, `InfluencerRouter`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `utility_gradient` |
+| `__init__.py` | Re-exports | `RouterAgent`, `InfluencerRouter`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `top_k_allocation_weights`, `matched_centroid_mass`, `group_allocation_weights`, `utility_gradient` |
 | `agents.py` | Router-agent dataclass and calibration-based init | `RouterAgent`, `RouterAgent.from_calibration` |
-| `allocation.py` | Allocation math :math:`G_i, u_i, \hat u_i, \nabla_{x_i} u_i, p_i^{strat}`; top-k sparsified renormalised weights for soft (dense) routing | `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `top_k_allocation_weights`, `utility_gradient` |
-| `verification.py` | Numerical drift-vs-gradient alignment for canonical/strategic routing rules | `run_reweighted_drift_report` |
+| `allocation.py` | Allocation math :math:`G_i, u_i, \hat u_i, \nabla_{x_i} u_i, p_i^{strat}`; top-k sparsified renormalised weights for soft (dense) routing; the theory-matched centroid mass :math:`G_i(1-G_i)` dense over every query (un-renormalised, so the drift stays exactly parallel to :math:`\nabla_{x_i} u_i`); per-group sums :math:`G_p = \sum_{i \in p} G_i` for soft routing over merge groups | `allocation_weights`, `expected_utilities`, `empirical_utility`, `strategic_routing_weights`, `top_k_allocation_weights`, `matched_centroid_mass`, `group_allocation_weights`, `utility_gradient` |
+| `verification.py` | Numerical drift-vs-gradient alignment for canonical/strategic hard routing and for soft routing (renormalised top-k share vs dense matched :math:`G(1-G)` centroid, per agent; co-located clone pairs shown to take identical independent steps vs the naive shared-pair rule), plus the Monte-Carlo variance comparison of the dense rule against the hard ``(1-G)`` rule | `run_reweighted_drift_report` |
 | `core.py` | Public router class | `InfluencerRouter` |
 
 ### `src/infl_ens/evaluation/`
@@ -228,11 +247,11 @@ infl_ens/
 | File | Role | Key public symbols |
 |---|---|---|
 | `__init__.py` | Re-exports eval API; lazy metrics | `AdapterEvalConfig`, `BenchmarkEvalResult`, `load_benchmark_splits`, `evaluate_adapter_on_splits`, `evaluate_run_adapters`, `run_eval_job`, `discover_adapters`, (lazy) `mean_token_nll` |
-| `__main__.py` | Single CLI: `python -m infl_ens.evaluation --config <path>` | `main` |
+| `__main__.py` | Single CLI: `python -m infl_ens.evaluation --config <path>`; also accepts a closed-loop training YAML carrying an `eval` block (unified config) | `main` |
 | `adapters.py` | Adapter path validation and HF+PEFT loading | `is_adapter_dir`, `resolve_adapter_dir`, `discover_adapters`, `AdapterRef`, `load_base_causal_lm`, `load_adapter_model` |
 | `benchmarks.py` | YAML ``benchmarks`` block → :class:`BenchmarkSplit` list; optional manifest partition | `BENCHMARK_KINDS`, `load_benchmark_splits`, `load_benchmark_splits_with_partition`, `subsample_split` |
 | `metrics.py` | Chat formatting + mean token NLL | `format_chat_example`, `split_to_texts`, `mean_token_nll` |
-| `evaluate.py` | Orchestration and JSON reports | `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `evaluate_adapter_on_split`, `evaluate_adapter_on_splits`, `evaluate_run_adapters`, `run_eval_job`, `write_eval_report` |
+| `evaluate.py` | Orchestration and JSON reports; `EvalJobConfig.from_unified` / `run_unified_eval` drive the held-out NLL eval straight from a training YAML's `eval` block (run dir, base model, benchmarks, manifest and seed come from the training blocks; `rounds: final` resolves from `history.json`) | `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `evaluate_adapter_on_split`, `evaluate_adapter_on_splits`, `evaluate_run_adapters`, `run_eval_job`, `run_unified_eval`, `is_unified_config`, `final_round_from_history`, `write_eval_report` |
 | `aggregate.py` | Mean ± std over seeds; matrix export | `AggregatedEvalMetric`, `EvalMatrix`, `aggregate_eval_across_seeds`, `build_eval_matrix`, `write_eval_matrix_outputs` |
 | `compare.py` | Baseline/specialist/merge adapter comparison; corner aggregation | `ModelScore`, `DEFAULT_SAFETY_BENCHMARKS`, `resolve_adapter_at`, `eval_adapter`, `compare_baseline_vs_specialists`, `compare_all_models`, `process_merge_seed`, `aggregate_merge_by_corner`, `aggregate_compare_reports`, `print_aggregate_compare_table` |
 | `specialist_tables.py` | Train/test tables: flat route-then-score headline + diagnostic per-benchmark specialist vs ``pooled-baseline`` | `build_specialist_vs_pooled_table`, `write_specialist_comparison_tables`, `load_routing_headline`, `merge_eval_scores`, `AXIS_SPECIALIST` |
@@ -245,11 +264,11 @@ infl_ens/
 | File | Role | Key public symbols |
 |---|---|---|
 | `__init__.py` | Eager re-export of router training; lazy proxy for SFT | `RouterTrainingConfig`, `train_router_positions`, (lazy) `SFTTrainingConfig`, `sft_train_agent` |
-| `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`), `closed_loop.routing_mode` (`hard` default / `soft` dense with `closed_loop.soft_top_k`: every agent trains each top-k query weighted by renormalised :math:`G_i`, requires `routing_weight=G`, `loss_reweight=null`, `centroid_mode=batch`, no merge groups), `closed_loop.loss_reweight`, `closed_loop.init_noise` (Gaussian symmetry-breaking at clone start), `closed_loop.sft_merge_groups` (optional pair-merge SFT: four routers, two physical LoRAs), and `closed_loop.save_per_round`; always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` / `routing_mode` / `soft_top_k` per round in `history.json` (plus `merge_*` fields when pair-merge is enabled). Baseline replay also writes a centroid-tracking `history.json` for pooled generalist plots. | `main` |
+| `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`), `closed_loop.routing_mode` (`hard` default / `soft` dense with `closed_loop.soft_top_k`: every agent trains each top-k query, share-weighted (`closed_loop.soft_loss: weighted`) or at unit weight (`soft_loss: unit`, the top-k winners ablation); requires `routing_weight=G`, `loss_reweight=null`, `centroid_mode=batch`; with `sft_merge_groups` the group replaces the clone as the routing unit and `soft_top_k` counts groups), `closed_loop.position_update` (`theory_matched` default: centroid mass :math:`(1-G_i)` under hard canonical routing, uniform under strategic routing, dense :math:`G_i(1-G_i)` over the whole batch under soft routing — independent of `soft_top_k` and of merge groups, every clone steps on its own and co-located pairs persist because identical positions get identical steps; `naive`: the historical unweighted / renormalised-share centroid (one shared step per pair), kept as an ablation arm), `closed_loop.loss_reweight` (loss side only; `position_only` is a deprecated alias for the default), `closed_loop.init_noise` (Gaussian symmetry-breaking at clone start), `closed_loop.sft_merge_groups` (optional pair-merge SFT, or the `from_init` sentinel that derives one group per co-located theory pair), and `closed_loop.save_per_round`; `agents` may also be the mapping `{pairs_from_axes: true}`, which expands to 2L clones. A top-level `eval` block (partitions, rounds, caps) makes the file a unified train + eval config: the held-out NLL eval runs automatically after the last round into `<output_dir>/eval_<partition>/` and can be re-run with `python -m infl_ens.evaluation --config <same yaml>`. Always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` / `routing_mode` / `soft_top_k` / `soft_loss` / `position_update` / `agent_position_weights` per round in `history.json` (plus `merge_*` fields when pair-merge is enabled, and `pair_positions` / `pair_share_batch` / `agent_batch_indices` / `batch_prompts` under soft pair routing). Writes `resolved_config.yaml` next to `history.json` with `agents` and `sft_merge_groups` expanded to literals -- that is what the evaluation entry points and `scripts/` tools should read -- and rewrites `history.json` after every round. Baseline replay also writes a centroid-tracking `history.json` for pooled generalist plots. | `main` |
 | `router_training.py` | Gradient-ascent loop on agent positions | `RouterTrainingConfig`, `train_router_positions` |
 | `sft_training.py` | LoRA SFT for a single :class:`RouterAgent`; accepts `out_dir_override` for per-round adapter archiving; accepts `cfg.cumulative_lora=True` to load and continue training the prior adapter rather than starting fresh; when `sample_weights` is supplied, routes through a per-example-weighted `WeightedSFTTrainer` (pre-tokenised, packing off) whose loss is `weighted_causal_lm_loss`; returns `log_history` and `loaded_prior_lora` from the SFT trainer's state | `SFTTrainingConfig`, `sft_train_agent`, `weighted_causal_lm_loss` |
-| `baseline_replay.py` | Replay pooled baseline/generalist SFT from closed-loop `history.json` routed batches; records pooled batch and cumulative centroids | `load_closed_loop_history`, `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
-| `merge_training.py` | Pair-merge closed loop: fixed or proximity merge groups, routed-batch concat, router-only centroid updates | `resolve_dynamic_merge_groups`, `merge_train_name`, `parse_sft_merge_groups`, `merge_routed_batch`, `closed_loop_weight_args` |
+| `baseline_replay.py` | Replay pooled baseline/generalist SFT from closed-loop `history.json` routed batches; records pooled batch and cumulative centroids. Soft rounds with `soft_top_k > 1` are de-duplicated back to the underlying batch so the pooled arm keeps matching the specialists' data volume | `load_closed_loop_history`, `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
+| `merge_training.py` | Pair-merge closed loop: fixed or proximity merge groups, routed-batch concat, router-only centroid updates (`closed_loop_weight_args` maps `loss_reweight` × `position_update` to loss / centroid weights). Under `routing_mode: soft` the group is the routing unit: member shares are summed, top-k gated per query (`soft_pair_assignments`, training gate only); positions move per clone under `theory_matched`, one shared step per group only in the `naive` arm | `resolve_dynamic_merge_groups`, `merge_train_name`, `parse_sft_merge_groups`, `merge_routed_batch`, `closed_loop_weight_args`, `merge_groups_from_theory_pairs`, `group_index_for_merge_groups`, `soft_pair_assignments`, `soft_pair_position_target` |
 | `sweep_aggregate.py` | Sweep summaries and seed×σ aggregation (orchestrates :mod:`infl_ens.vis.sweeps`) | `classify_equilibrium_clusters`, `summarise_flat_sweep_run`, `write_flat_sweep_csv`, `aggregate_group_seed_sweep`, `aggregate_final_positions`, `print_final_positions_report`, `summarize_pairs_near_theory_sweep` |
 | `position_only.py` | Position-only closed-loop simulation and replay (no SFT) | `simulate_position_only_loop`, `replay_position_updates`, `main` |
 | `history_audit.py` | Verify logged position updates against centroid predictions | `verify_history`, `build_trait_space_from_config`, `load_config` |
@@ -264,6 +283,7 @@ infl_ens/
 |---|---|
 | `With canonical routing,.tex` | Derivation note for canonical routing and position-only update under MV-Gaussian kernels |
 | `kernel_agnostic_gradient_step.tex` | Derivation note for gradient-matched position updates for any differentiable positive influence kernel |
+| `position_update_comparison.tex` | Verbose comparison of every implemented routing / centroid rule (hard canonical naive, theory-matched `(1-G)`, full re-weight, strategic, expected pool; soft naive top-k share vs dense `G(1-G)` mass over the whole batch, per agent, with co-located pairs persisting through identical independent steps; loss-side `soft_loss` weighted vs unit): one direction-matching lemma, each method's expected centroid mass, the Rao–Blackwell variance argument, the summary matrix, the `run_reweighted_drift_report` cosine and Monte-Carlo tables, and the config cheat-sheet. Compiled PDF alongside. |
 | `trait_axis_assignment.tex` | Methodology note: how prompts are mapped to safety trait-axis coordinates |
 
 ### `src/infl_ens/utils/`
@@ -290,6 +310,8 @@ infl_ens/
 | `build_safety_trait_space.py` | Convenience wrapper around `python -m infl_ens.data build-safety-trait-space` |
 | `plot_trait_representation.py` | Data-representation figures contrasting the legacy clipped calibration with the always-on quantile normalization. Derives both coordinate sets from **one** encode pass (a second pass would need a different `trait_space` block and thus a full re-encode). Writes `trait_marginals_old_vs_new`, `trait_pairs_old_vs_new`, `dataset_composition`, and `trait_repr_summary.json`. |
 | `run_trait_representation_on_doob.sh` | Sync (`scp -r`) to `mlovett@doob.dartmouth.edu`, run the representation + resource-density figures there under `nohup`, and pull figures back. `MODE=launch\|status\|pull`; `SMOKE=1` runs a cheap 2-axis foreground gate first. |
+| `run_soft_pairs_on_doob.sh` | Sync to doob and run the seven-axis soft-routing-over-pairs closed loop in tmux on a pinned GPU. Builds the split manifest, gates on the offline tests, refuses a GPU that already has a compute process. `CONFIG`/`ARM`/`GPU`/`SEED_DIR`/`MODE=launch\|status\|pull`; `SMOKE=1` runs two tiny off-manifest rounds in the foreground. |
+| `summarize_soft_pairs_history.py` | Per-round prompt counts, mean pair shares and worst within-pair L2 from a (possibly still-being-written) soft-pair `history.json`; used by `MODE=status`. |
 | `compare_utility_estimators.py` | Side-by-side comparison of grid :math:`u_i`, empirical-pool :math:`\hat u_i`, and finite-batch proportional share. `--mode {toy,safety}`. |
 | `diagnose_axis_separability.py` | Compares mean-difference vs shrinkage-Fisher trait-axis estimators, percentile calibration, saturation, and optional Gram-Schmidt decorrelation before changing the production trait-space builder. |
 | `diagnose_axis_confusability.py` | Diagnoses benchmark-origin confusion in learned trait coordinates, including field-map A/Bs, subspace residuals, nonlinear probes, score→coordinate leak matrices, and benchmark coordinate-overlap matrices. |
@@ -315,6 +337,11 @@ infl_ens/
 | `simulate_position_only_loop.py` | Thin CLI: calls :mod:`infl_ens.training.position_only` for fast routing + `(1-G)` centroid updates (no SFT). |
 | `run_seven_axis_posttrain.sh` | After pair-merge closed loop: pooled baseline replay, merge eval (round 39), baseline eval |
 | `routing_ensemble_diagnostics.py` | Flat test-pool route-then-score: expected/sampled/argmax proportional :math:`G` + oracle ceiling |
+| `run_seven_axis_3arm.sh` | Queue the whole three-arm seven-axis comparison on the GPU host in one resumable tmux pipeline: ARM 1 soft routing over pairs at `soft_top_k: 3`, ARM 2 matched hard (SFT) routing, ARM 3 pooled generalist replayed from ARM 1's batches, then per-round val eval, oracle diagnostics, three LaTeX bar figures, pair-position figures and the cross-arm report. `STAGES="manifest soft hard generalist perround routing figures"` selects a subset so analysis can be re-run without GPU time; `MODE=launch\|status\|pull`, `SMOKE=1`, `GPU`, `REMOTE`, `FIRST_ROUND`, `MAX_EVAL`. |
+| `build_per_round_pair_nll_table.py` | Pivot a multi-round eval report into a round x pair NLL table (csv/md/tex/json) with the change over the window. Reads either `<run>/eval_val/eval_results.json` (unified eval with an explicit `eval.rounds` list) or the `round-NN/` layout written by `val_eval`. |
+| `plot_pair_final_positions.py` | Final trait-space positions of each merge pair across every axis-pair projection, plus within-pair L2 across rounds — the audit that co-location is a prediction the theory-matched per-clone update keeps, not something the update enforces. Generic over `L` and over routing mode. |
+| `write_arm_comparison_tex.py` | Cross-arm standalone pgfplots `.tex`: oracle and pooled generalist bounds against each specialist arm's learned routing, flat-pool and per-benchmark. |
+| `cross_analyze_three_arms.py` | Cross-arm report (`cross_analysis.md`/`.json`): verifies the arms share round batches (so one generalist is data-matched to both), tabulates oracle/pooled/learned with both gaps, within-pair stability per arm, and per-round NLL movement. |
 | `diagnose_seven_axis_niche.py` | Seven-axis variance / ICA / mid-mass niche gates |
 | `compare_routing_weights.py` | Flat-pool naive-G vs G(1−G) expected routing comparison (adapter-free) |
 | `build_five_axis_split.py` | Build 70/10/20 manifest for five-axis collapse config |
@@ -429,6 +456,17 @@ infl_ens/
 | `evaluation/six_axis_run_eval.yaml` | Final-round eval on all 6 safety benchmarks for merge adapters |
 | `evaluation/six_axis_split_eval_train.yaml` | Final-round eval on train partition (cap 1000/benchmark) |
 | `benchmark/router/seven_axis_pair_merge_split.yaml` | 14 routers, 7 pair merges, 70/10/20 seven-axis split. Stretch-free (`coordinate_stretch_gamma: 1.0`): the quantile normalizer removes the saturation the stretch used to compensate for. |
+| `benchmark/router/seven_axis_soft_pairs.yaml` | Soft routing over co-located theory pairs. `agents: {pairs_from_axes: true}` gives 2L = 14 clones; `theory_gradient_paired` (`pairing: nearest`) puts them at L = 7 shared grid-Nash positions; `sft_merge_groups: from_init` makes one cumulative LoRA per pair (`pair-0..pair-6`); `routing_mode: soft` with `soft_top_k: 7` routes every prompt to all seven pairs weighted by the pair share. Same `benchmarks`/`trait_space` values as `seven_axis_pair_merge_split.yaml`, so the trait-space cache (`3b42c68a8dd334c5`) is reused. Fresh split manifest `data/splits/seven_axis_soft_seed0.json`. |
+| `benchmark/router/seven_axis_soft_pairs_baseline_replay.yaml` | Cumulative pooled-generalist replay from `seven_axis_soft_pairs` history. Dense soft-routed prompts are de-duplicated to one copy per source example per round, producing the data-matched comparator. |
+| `benchmark/router/seven_axis_hard_pairs.yaml` | Matched stochastic hard-routing counterpart to `seven_axis_soft_pairs.yaml`. Every prompt is sampled once under clone-level proportional :math:`G`; co-located clone-pair batches are merged into one LoRA per pair. It reuses the same seven-axis split manifest, paired-theory initialization, model, and 12-round schedule. |
+| `benchmark/router/seven_axis_hard_pairs_baseline_replay.yaml` | Pooled-generalist replay from the hard-pair history. Concatenating the disjoint hard-routed per-agent batches recovers each source batch once per round. |
+| `benchmark/router/seven_axis_soft_pairs_matched.yaml` | `seven_axis_soft_pairs.yaml` with the gradient-matched position step (`position_update: theory_matched`, the default): dense share-weighted loss, centroid mass :math:`G_p(1-G_p)`. The recorded soft arm is pinned to `position_update: naive`. Carries a unified `eval` block. |
+| `benchmark/router/seven_axis_topk_pairs.yaml` | Top-k winners ablation: each prompt goes to its `soft_top_k: 2` highest-share pairs, each trained at UNIT loss weight (`soft_loss: unit`) with the theory-matched centroid. One file drives encoding (`trait_space`), training and the automatic held-out eval (`eval`). |
+| `benchmark/router/seven_axis_topk_pairs_naive.yaml` | Same top-k winners routing with the renormalised-share centroid (`position_update: naive`); isolates the effect of gradient matching the position step. |
+| `benchmark/router/seven_axis_topk_pairs_baseline_replay.yaml` | De-duplicated pooled-generalist replay from the top-k winners history (data-matched comparator; specialists saw up to 2x at unit weight). |
+| `benchmark/router/seven_axis_soft_topk3_pairs.yaml` | ARM 1 of the three-arm comparison: 12-round soft routing over co-located theory pairs at `soft_top_k: 3`, share-weighted loss, `position_update: theory_matched` (required after a theory init). Unified `eval` block; `save_per_round` for the per-round NLL table. |
+| `benchmark/router/seven_axis_hard_pairs_matched.yaml` | ARM 2: matched hard (SFT) routing control — identical manifest, seed, init, sigma, LoRA and schedule; only the routing differs. Unlike the older `seven_axis_hard_pairs.yaml` (pinned `naive`), this one uses the gradient-matched `(1-G)` centroid. |
+| `benchmark/router/seven_axis_3arm_generalist_replay.yaml` | ARM 3: pooled generalist replayed from ARM 1's logged batches, named `pooled-baseline` (the name `routing_eval.score_pooled_nll` hardcodes). Data-matched to both specialist arms because they share the manifest, seed and init. |
 | `benchmark/router/seven_axis_collapse_dead_axes.yaml` | 5-axis collapse track (drops jailbreak + injection); 10 clones / 5 merges |
 | `benchmark/router/seven_axis_collapse_near_theory.yaml` | Collapse track with merge-pair-near init + theory pre-warmup |
 | `benchmark/router/seven_axis_collapse_hypercube_ga.yaml` | Collapse from hypercube GA positions; SFT-only collapsed-pair merge |
@@ -469,7 +507,10 @@ infl_ens/
 | `test_ai4privacy_loader.py` | Offline tests for AI4Privacy JSONL parsing and privacy-density scoring |
 | `test_evaluation.py` | Offline tests for adapter discovery, benchmark config loading, eval JSON reports |
 | `test_routing_eval.py` | Offline tests for merge-level :math:`G` aggregation in route-then-score eval |
-| `test_merge_training.py` | Offline tests for `sft_merge_groups` parsing and batch merge |
+| `test_merge_training.py` | Offline tests for `sft_merge_groups` parsing, batch merge and the `closed_loop_weight_args` loss/centroid mapping |
+| `test_topk_matched.py` | Offline tests for `matched_centroid_mass` (values :math:`G(1-G)`, never renormalised), the drift-vs-gradient verdict (dense matched soft drift parallel to :math:`\nabla u_i` at any `top_k`, naive share drift misaligned, co-located clones take identical independent steps so pairs persist unenforced, dense rule lower-variance than the hard `(1-G)` rule), the theory-matched hard-mode default and `position_update: naive` / `position_only` alias resolution, end-to-end `soft_loss: unit` rounds over pairs and over individual agents (whole-batch position step, `expected_pool` under soft routing), and unit-loss replay de-duplication |
+| `test_unified_eval.py` | Offline tests for the unified train + eval YAML: `EvalJobConfig.from_unified`, `run_unified_eval` (partitions, `rounds: final`, baseline run), the trainer's post-training eval hook, and CLI dispatch |
+| `test_soft_pairs.py` | Offline tests for soft routing over co-located pairs: per-group :math:`G` sums and their equivalence to one agent at the shared position, `soft_pair_assignments` top-k, `soft_pair_position_target`, `resolve_agent_entries`, `merge_groups_from_theory_pairs`, nearest-neighbour pairing, soft-round replay de-duplication, the routing/loss validation matrix, and an end-to-end `closed_loop` round (fake trait space, stubbed SFT) asserting one adapter and one shared position per pair |
 | `test_safety_trait_space.py` | Offline tests for `build_safety_trait_space` |
 | `test_trait_space_cache.py` | Embedding dedupe + on-disk trait-space cache roundtrip |
 | `test_trait_normalize.py` | Quantile-normalizer monotonicity, ties, out-of-range clamping, JSON roundtrip |
@@ -485,7 +526,7 @@ infl_ens/
 - `src/infl_ens/data/__init__.py`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `FrozenLinearTransform`, `QuantileNormalizer`, `benchmarks`.
 - `src/infl_ens/data/benchmarks/__init__.py`: `BenchmarkSplit`, `load_beavertails`, `load_halueval`, `load_jbb_behaviors`, `load_toxicchat`, `load_ai4privacy`, `load_orbench`, `load_prompt_injection`, `load_do_not_answer`, `build_safety_trait_space`, `LearnedAxis`, `BEAVERTAILS_CATEGORIES`, `HALUEVAL_TASKS`, `TOXICCHAT_SCORE_MODES`, `PII_SCORE_MODES`, `ORBENCH_CONFIGS`.
 - `src/infl_ens/inflgame/__init__.py`: re-exports the `router` subpackage.
-- `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `empirical_utility`, `expected_utilities`, `strategic_routing_weights`, `top_k_allocation_weights`, `utility_gradient`.
+- `src/infl_ens/inflgame/router/__init__.py`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `empirical_utility`, `expected_utilities`, `group_allocation_weights`, `strategic_routing_weights`, `top_k_allocation_weights`, `matched_centroid_mass`, `utility_gradient`.
 - `src/infl_ens/training/__init__.py`: `RouterTrainingConfig`, `train_router_positions`; lazy `SFTTrainingConfig`, `sft_train_agent` (avoids importing torch/transformers at package import time).
 - `src/infl_ens/evaluation/__init__.py`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `load_benchmark_splits`, `evaluate_adapter_on_splits`, `evaluate_run_adapters`, `run_eval_job`, `discover_adapters`, `resolve_adapter_dir`; lazy `mean_token_nll`, `format_chat_example`, `evaluate_base_model`, `write_base_eval_report`, compare helpers (`ModelScore`, `compare_baseline_vs_specialists`, …), capability probe (`probe_run`, `cross_batch_margin`).
 - `src/infl_ens/vis/__init__.py`: `plot_benchmark_nll_comparison`, `plot_pairwise_heatmaps`, `plot_history`, `plot_pairwise_position_updates`, `plot_trajectory_overlay`, `plot_probe`, `plot_theory_vs_sft_comparison`, `plot_sweep_grid`, `plot_trajectory_mean_std`, `plot_series_mean_std`, `plot_overview`, `plot_spread_by_mode_sigma`, `save_figure`.

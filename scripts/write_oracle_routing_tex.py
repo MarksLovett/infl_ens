@@ -43,11 +43,17 @@ def _fmt(x: float) -> str:
     return f"{x:.3f}"
 
 
-def build_tex(report: dict) -> str:
+def build_tex(
+    report: dict,
+    *,
+    experiment_label: str = "Seven-axis pair-merge",
+) -> str:
     """Build standalone pgfplots TeX from a routing comparison report.
 
     :param report: Loaded ``routing_weight_comparison.json``.
     :type report: dict
+    :param experiment_label: Concise label identifying the specialist arm.
+    :type experiment_label: str
     :returns: Standalone LaTeX source.
     :rtype: str
     """
@@ -71,7 +77,12 @@ def build_tex(report: dict) -> str:
     pooled_pts = series("pooled_nll")
     learned_pts = series("learned_expected_nll")
 
-    ymax_flat = max(pooled, learned, oracle) * 1.18
+    # Derive the flat-panel window from the data. A hardcoded floor silently
+    # clips the bars of any run whose NLL sits below it.
+    lo, hi = min(pooled, learned, oracle), max(pooled, learned, oracle)
+    span = max(hi - lo, 1e-3)
+    ymin_flat = max(0.0, lo - 2.5 * span)
+    ymax_flat = hi + 1.6 * span
     ymax_bench = (
         max(
             float(per[b][k])
@@ -81,7 +92,7 @@ def build_tex(report: dict) -> str:
         * 1.12
     )
     caption = (
-        f"Seven-axis pair-merge routing diagnostic (round {round_idx}): "
+        f"{experiment_label} routing diagnostic (round {round_idx}): "
         f"oracle {_fmt(oracle)}, pooled {_fmt(pooled)}, learned {_fmt(learned)}."
     )
 
@@ -100,7 +111,7 @@ def build_tex(report: dict) -> str:
   ybar=0pt,
   bar width=16pt,
   xmin=-0.55, xmax=2.55,
-  ymin=1.85, ymax={ymax_flat:.2f},
+  ymin={ymin_flat:.3f}, ymax={ymax_flat:.3f},
   ylabel={{Mean token NLL (lower is better)}},
   xtick={{0,1,2}},
   xticklabels={{Oracle,Pooled,Learned}},
@@ -129,7 +140,7 @@ def build_tex(report: dict) -> str:
   symbolic x coords={{{xcoords}}},
   xtick=data,
   x tick label style={{font=\scriptsize, align=center}},
-  legend style={{at={{(0.02,0.98)}}, anchor=north west, font=\small}},
+  legend style={{at={{(1.02,0.5)}}, anchor=west, font=\small}},
   legend columns=1,
   ymajorgrids=true,
   grid style={{dashed, gray!35}},
@@ -171,10 +182,15 @@ def main() -> None:
         type=Path,
         default=root / "scripts/figures/oracle_vs_generalist_vs_specialists.tex",
     )
+    parser.add_argument(
+        "--experiment-label",
+        default="Seven-axis pair-merge",
+        help="Specialist-arm label used in the figure caption.",
+    )
     args = parser.parse_args()
 
     report = json.loads(args.input.read_text(encoding="utf-8"))
-    tex = build_tex(report)
+    tex = build_tex(report, experiment_label=args.experiment_label)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(tex, encoding="utf-8")
     print(f"wrote {args.output}")

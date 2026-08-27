@@ -79,3 +79,26 @@ def test_closed_loop_weight_args_position_only() -> None:
         "position_only", "batch", [0.5, 0.5],
     )
     assert sw is None and ew == [0.5, 0.5] and skip is False
+
+
+def test_closed_loop_weight_args_position_update_knob() -> None:
+    """The centroid weights follow position_update; the loss follows loss_reweight."""
+    w = [0.5, 0.5]
+    # Default: unit loss, theory-matched (1-G) centroid == the old position_only.
+    assert closed_loop_weight_args(None, "batch", w) == (None, w, False)
+    # Naive centroid: nothing weighted.
+    assert closed_loop_weight_args(
+        None, "batch", w, position_update="naive",
+    ) == (None, None, False)
+    # one_minus_G weights the loss; the centroid still follows the knob.
+    assert closed_loop_weight_args("one_minus_G", "batch", w) == (w, w, False)
+    assert closed_loop_weight_args(
+        "one_minus_G", "batch", w, position_update="naive",
+    ) == (w, None, False)
+    # Strategic routing passes no weights: the centroid stays uniform.
+    assert closed_loop_weight_args(None, "batch", None) == (None, None, False)
+    # The alias overrides an explicit naive request (validation rejects it
+    # upstream; here it must at least stay gradient-matched).
+    assert closed_loop_weight_args(
+        "position_only", "batch", w, position_update="naive",
+    ) == (None, w, False)

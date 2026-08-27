@@ -1,9 +1,20 @@
-"""Evaluate saved LoRA adapters on BeaverTails and HaluEval."""
+"""Evaluate saved LoRA adapters on BeaverTails and HaluEval.
+
+Two configuration shapes are accepted:
+
+- a standalone evaluation YAML (``task: adapter_eval`` / ``run_eval``),
+  parsed by :meth:`EvalJobConfig.from_mapping`;
+- a **unified** closed-loop training YAML carrying a top-level ``eval``
+  block, parsed by :meth:`EvalJobConfig.from_unified` and driven end to end
+  by :func:`run_unified_eval`. The run directory, base model, benchmarks,
+  split manifest and seed are read from the training blocks so nothing is
+  duplicated between training and evaluation.
+"""
 
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
@@ -395,6 +406,175 @@ class EvalJobConfig:
             if isinstance(cfg.get("data_split"), dict)
             else cfg.get("data_split_partition"),
         )
+
+    @classmethod
+    def from_unified(
+        cls,
+        cfg: dict[str, Any],
+        *,
+        partition: str,
+        rounds: Optional[Sequence[int]] = None,
+    ) -> "EvalJobConfig":
+        """Derive a ``run_eval`` job from a unified closed-loop training config.
+
+        The training YAML is the single source of truth: ``run_dir`` is its
+        ``output_dir``, the base model and default sequence length come from
+        ``closed_loop.sft``, the benchmarks from ``benchmarks`` and the
+        held-out partitions from ``data_split.manifest``. Only the
+        evaluation-specific knobs live in the ``eval`` block
+        (``agents``, ``max_eval_records``, ``forward_batch_size``,
+        ``max_seq_length``; ``base_model`` may be overridden there).
+
+        :param cfg: Full training config mapping (must contain
+            ``closed_loop`` and ``benchmarks``).
+        :type cfg: dict
+        :param partition: Manifest partition to score (``train``, ``val``,
+            ``test`` or ``train_val``); the report lands in
+            ``<output_dir>/eval_<partition>/eval_results.json``.
+        :type partition: str
+        :param rounds: Checkpoint rounds to score; ``None`` scores every
+            discovered round.
+        :type rounds: Sequence[int] | None
+        :returns: Parsed job config.
+        :rtype: EvalJobConfig
+        :raises ValueError: If the mapping is not a closed-loop training
+            config or lacks a split manifest.
+        """
+        if not isinstance(cfg.get("closed_loop"), dict):
+            raise ValueError(
+                "from_unified expects a closed-loop training config with a "
+                "'closed_loop' block"
+            )
+        eval_block = dict(cfg.get("eval") or {})
+        sft = dict(cfg["closed_loop"].get("sft") or {})
+        data_split = cfg.get("data_split")
+        manifest = None
+        if isinstance(data_split, dict):
+            # ``manifest`` is the loaded split; ``write_manifest`` is where
+            # the trainer persisted a freshly built one.
+            manifest = data_split.get("manifest") or data_split.get(
+                "write_manifest",
+            )
+        if not manifest:
+            raise ValueError(
+                "unified eval needs data_split.manifest (or write_manifest) "
+                "to define the held-out partitions"
+            )
+        run_dir = str(cfg.get("output_dir", "results/closed_loop"))
+        eval_cfg = {
+            "max_seq_length": int(
+                eval_block.get("max_seq_length")
+                or sft.get("max_seq_length", 1024)
+            ),
+            "forward_batch_size": int(
+                eval_block.get("forward_batch_size")
+                or sft.get("forward_batch_size", 8)
+            ),
+            "max_eval_records": eval_block.get("max_eval_records"),
+        }
+        return cls(
+            task="run_eval",
+            seed=int(cfg.get("seed", 0)),
+            output_dir=str(Path(run_dir) / f"eval_{partition}"),
+            base_model=str(
+                eval_block.get("base_model")
+                or sft.get("base_model", "Qwen/Qwen2.5-1.5B-Instruct")
+            ),
+            run_dir=run_dir,
+            benchmarks=list(cfg.get("benchmarks", [])),
+            eval_cfg=eval_cfg,
+            agents=eval_block.get("agents"),
+            rounds=[int(r) for r in rounds] if rounds is not None else None,
+            data_split_manifest=str(manifest),
+            data_split_partition=str(partition),
+        )
+
+
+def is_unified_config(cfg: dict[str, Any]) -> bool:
+    """Whether ``cfg`` is a closed-loop training config with an ``eval`` block.
+
+    :param cfg: Loaded YAML mapping.
+    :type cfg: dict
+    :returns: ``True`` for the unified training + evaluation shape.
+    :rtype: bool
+    """
+    return isinstance(cfg.get("closed_loop"), dict) and isinstance(
+        cfg.get("eval"), dict,
+    )
+
+
+def final_round_from_history(run_dir: str | Path) -> int:
+    """Read the last completed round index from ``<run_dir>/history.json``.
+
+    :param run_dir: Closed-loop run root.
+    :type run_dir: str | pathlib.Path
+    :returns: Round index of the final history entry.
+    :rtype: int
+    :raises FileNotFoundError: If the history file is missing.
+    :raises ValueError: If the history is empty.
+    """
+    path = Path(run_dir) / "history.json"
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    history = json.loads(path.read_text(encoding="utf-8"))
+    if not history:
+        raise ValueError(f"{path} holds no rounds")
+    return int(history[-1]["round"])
+
+
+def run_unified_eval(
+    cfg: dict[str, Any],
+    *,
+    final_round: Optional[int] = None,
+) -> list[Path]:
+    """Run every evaluation described by a unified training config's ``eval`` block.
+
+    ``eval.partitions`` (default ``[train, test]``) selects the manifest
+    partitions; ``eval.rounds`` (default ``final``) either the literal
+    ``final`` or an explicit list of round indices. When
+    ``eval.baseline_run_dir`` is set, that run (typically the pooled
+    replay) is scored on the same partitions and rounds into
+    ``<baseline_run_dir>/eval_<partition>/``, optionally filtered by
+    ``eval.baseline_agents``.
+
+    The closed-loop trainer calls this right after training with
+    ``final_round`` known; the standalone CLI resolves it from
+    ``history.json``.
+
+    :param cfg: Unified training config.
+    :type cfg: dict
+    :param final_round: Last trained round, if the caller knows it.
+    :type final_round: int | None
+    :returns: Paths of the written ``eval_results.json`` reports.
+    :rtype: list[pathlib.Path]
+    """
+    eval_block = dict(cfg.get("eval") or {})
+    partitions = list(eval_block.get("partitions") or ["train", "test"])
+    rounds_spec = eval_block.get("rounds", "final")
+    run_dir = str(cfg.get("output_dir", "results/closed_loop"))
+    if rounds_spec in (None, "final"):
+        if final_round is None:
+            final_round = final_round_from_history(run_dir)
+        rounds: list[int] = [int(final_round)]
+    else:
+        rounds = [int(r) for r in rounds_spec]
+
+    baseline_run_dir = eval_block.get("baseline_run_dir")
+    reports: list[Path] = []
+    for partition in partitions:
+        job = EvalJobConfig.from_unified(cfg, partition=partition, rounds=rounds)
+        run_eval_job(job)
+        reports.append(Path(job.output_dir) / "eval_results.json")
+        if baseline_run_dir:
+            baseline_job = replace(
+                job,
+                run_dir=str(baseline_run_dir),
+                output_dir=str(Path(baseline_run_dir) / f"eval_{partition}"),
+                agents=eval_block.get("baseline_agents"),
+            )
+            run_eval_job(baseline_job)
+            reports.append(Path(baseline_job.output_dir) / "eval_results.json")
+    return reports
 
 
 def run_eval_job(job: EvalJobConfig) -> list[BenchmarkEvalResult]:

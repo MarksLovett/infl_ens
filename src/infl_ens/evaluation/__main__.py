@@ -11,6 +11,14 @@ Supported tasks (``task`` field in the YAML):
 - ``run_eval``: discover adapters under ``run_dir/agents/`` and score
   each on every benchmark.
 
+A closed-loop **training** YAML that carries a top-level ``eval`` block is
+also accepted as-is (``python -m infl_ens.evaluation --config
+configs/benchmark/router/seven_axis_topk_pairs.yaml``): the run directory,
+base model, benchmarks and split manifest are read from the training
+blocks and each ``eval.partitions`` entry is scored into
+``<output_dir>/eval_<partition>/``. See
+:func:`infl_ens.evaluation.evaluate.run_unified_eval`.
+
 Optional ``KEY=VAL`` overrides after ``--`` mirror
 :mod:`infl_ens.training.__main__`.
 """
@@ -23,7 +31,12 @@ import sys
 from pathlib import Path
 from typing import Any, Sequence
 
-from infl_ens.evaluation.evaluate import EvalJobConfig, run_eval_job
+from infl_ens.evaluation.evaluate import (
+    EvalJobConfig,
+    is_unified_config,
+    run_eval_job,
+    run_unified_eval,
+)
 
 _TASKS = frozenset({"adapter_eval", "run_eval"})
 
@@ -99,6 +112,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     cfg = _load_yaml(Path(args.config))
     _apply_overrides(cfg, args.overrides)
+    if is_unified_config(cfg):
+        reports = run_unified_eval(cfg)
+        for path in reports:
+            print(f"wrote {path}")
+        return 0
     job = EvalJobConfig.from_mapping(cfg)
     if job.task not in _TASKS:
         print(

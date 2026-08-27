@@ -64,6 +64,76 @@ def adjacent_harm_pair_indices(pos: np.ndarray) -> list[np.ndarray]:
     return [order[i : i + 2] for i in range(0, n_agents, 2)]
 
 
+def nearest_neighbour_pair_indices(pos: np.ndarray) -> list[np.ndarray]:
+    """Pair an even number of positions by greedy nearest-neighbour matching.
+
+    All pairwise L2 distances are sorted ascending; each closest still-unused
+    pair is taken in turn. Unlike :func:`adjacent_harm_pair_indices` this does
+    not assume that partners are adjacent in harm-axis order, so it recovers
+    the true pairing when a theory solve leaves clusters whose harm
+    coordinates interleave. Pairs are returned ordered by the harm (axis 0)
+    coordinate of their centroid so downstream naming stays deterministic.
+
+    :param pos: ``(N, L)`` positions with even ``N``.
+    :type pos: numpy.ndarray
+    :returns: List of length ``N/2``; each entry holds two row indices.
+    :rtype: list[numpy.ndarray]
+    :raises ValueError: If ``pos`` is not 2-D, or ``N`` is odd or below two.
+    """
+    if pos.ndim != 2:
+        raise ValueError(f"positions must be a 2-D array, got shape {pos.shape}")
+    n_agents = pos.shape[0]
+    if n_agents < 2 or n_agents % 2 != 0:
+        raise ValueError(
+            f"pairwise theory init requires an even number of agents >= 2, "
+            f"got {n_agents}"
+        )
+    dists = [
+        (float(np.linalg.norm(pos[i] - pos[j])), i, j)
+        for i in range(n_agents)
+        for j in range(i + 1, n_agents)
+    ]
+    dists.sort(key=lambda t: (t[0], t[1], t[2]))
+    used: set[int] = set()
+    pairs: list[np.ndarray] = []
+    for _d, i, j in dists:
+        if i in used or j in used:
+            continue
+        used.add(i)
+        used.add(j)
+        pairs.append(np.array([i, j], dtype=int))
+    pairs.sort(key=lambda pr: float(pos[pr].mean(axis=0)[0]))
+    return pairs
+
+
+#: Supported pairing rules for paired theory initialization.
+PAIRING_METHODS: tuple[str, ...] = ("harm_adjacent", "nearest")
+
+
+def pair_indices_for_method(
+    pos: np.ndarray,
+    pairing: str = "harm_adjacent",
+) -> list[np.ndarray]:
+    """Dispatch to a pairing rule by name.
+
+    :param pos: ``(N, L)`` positions with even ``N``.
+    :type pos: numpy.ndarray
+    :param pairing: ``'harm_adjacent'`` (default, historical) or
+        ``'nearest'`` (greedy nearest-neighbour matching).
+    :type pairing: str
+    :returns: List of index pairs.
+    :rtype: list[numpy.ndarray]
+    :raises ValueError: If ``pairing`` is not a known method.
+    """
+    if pairing == "harm_adjacent":
+        return adjacent_harm_pair_indices(pos)
+    if pairing == "nearest":
+        return nearest_neighbour_pair_indices(pos)
+    raise ValueError(
+        f"pairing must be one of {PAIRING_METHODS}, got {pairing!r}"
+    )
+
+
 def trait_box_bounds(space: TraitSpace) -> tuple[np.ndarray, np.ndarray]:
     """Axis-aligned bounds from the trait grid.
 
@@ -402,6 +472,52 @@ def init_agents_at_positions(
     return agents
 
 
+def resolve_agent_entries(
+    agents_cfg: Any,
+    n_axes: int,
+    *,
+    default_prefix: str = "clone",
+) -> list[dict[str, Any]]:
+    """Expand the config ``agents`` block into a concrete list of entries.
+
+    A list is returned unchanged. A mapping of the form
+    ``{pairs_from_axes: true, name_prefix: <str>}`` expands to
+    ``2 * n_axes`` entries named ``<prefix>-0`` through ``<prefix>-{2L-1}``:
+    two clones per trait axis, the population the pair-merge experiments use.
+    Resolving this once in the task driver keeps every downstream consumer
+    (``len(cfg["agents"])``, the initializers, the evaluation scripts) seeing
+    an ordinary list.
+
+    :param agents_cfg: Value of the top-level ``agents`` config key.
+    :type agents_cfg: list | dict | None
+    :param n_axes: Trait-space dimensionality :math:`L`.
+    :type n_axes: int
+    :param default_prefix: Name prefix when the mapping omits ``name_prefix``.
+    :type default_prefix: str
+    :returns: Concrete agent entries in population order.
+    :rtype: list[dict]
+    :raises ValueError: If ``agents_cfg`` is a mapping without
+        ``pairs_from_axes: true``, if ``n_axes < 1``, or if the value is
+        neither a list nor a mapping.
+    """
+    if isinstance(agents_cfg, list):
+        return list(agents_cfg)
+    if isinstance(agents_cfg, dict):
+        if not agents_cfg.get("pairs_from_axes", False):
+            raise ValueError(
+                "an agents mapping must set pairs_from_axes: true; got keys "
+                f"{sorted(agents_cfg)}"
+            )
+        if int(n_axes) < 1:
+            raise ValueError(f"n_axes must be >= 1, got {n_axes}")
+        prefix = str(agents_cfg.get("name_prefix", default_prefix))
+        return [{"name": f"{prefix}-{i}"} for i in range(2 * int(n_axes))]
+    raise ValueError(
+        "config agents must be a list of entries or a mapping with "
+        f"pairs_from_axes: true, got {type(agents_cfg).__name__}"
+    )
+
+
 def init_agents_pairs_near_reference(
     cfg: dict[str, Any],
     space: TraitSpace,
@@ -530,20 +646,26 @@ def init_agents_theory_gradient(
 def co_locate_theory_pairs(
     theory_end: np.ndarray,
     agent_names: Sequence[str],
+    *,
+    pairing: str = "harm_adjacent",
 ) -> np.ndarray:
-    """Place each harm-sorted pair at its theory-endpoint centroid.
+    """Place each pair of agents at its theory-endpoint centroid.
 
     :param theory_end: ``(N, L)`` gradient-ascent endpoints.
     :type theory_end: numpy.ndarray
     :param agent_names: Names in row order of ``theory_end``.
     :type agent_names: Sequence[str]
-    :returns: ``(N, L)`` positions with duplicates within each adjacent
-        harm-sorted pair.
+    :param pairing: Pairing rule, ``'harm_adjacent'`` (default) or
+        ``'nearest'``; see :func:`pair_indices_for_method`.
+    :type pairing: str
+    :returns: ``(N, L)`` positions, bit-identical within each pair.
     :rtype: numpy.ndarray
+    :raises ValueError: If the row count does not match ``agent_names``, or
+        ``pairing`` is unknown.
     """
     if theory_end.shape[0] != len(agent_names):
         raise ValueError("theory_end rows must match agent_names length")
-    pairs = adjacent_harm_pair_indices(theory_end)
+    pairs = pair_indices_for_method(theory_end, pairing)
     out = np.empty_like(theory_end)
     for pair in pairs:
         centroid = theory_end[pair].mean(axis=0)
@@ -942,6 +1064,7 @@ def init_agents_theory_gradient_paired(
     n_steps = int(tc.get("n_steps", 5000))
     tol = float(tc.get("tol", 1e-8))
     min_pairwise = float(tc.get("min_pairwise", 0.2))
+    pairing = str(tc.get("pairing", "harm_adjacent"))
 
     if skip_initial_theory:
         p0 = random_separated_initial_positions(
@@ -950,7 +1073,7 @@ def init_agents_theory_gradient_paired(
             seed,
             min_pairwise=min_pairwise,
         )
-        paired_start = co_locate_theory_pairs(p0, names)
+        paired_start = co_locate_theory_pairs(p0, names, pairing=pairing)
         meta0 = {
             "initial": p0,
             "theory_end": paired_start.copy(),
@@ -971,7 +1094,9 @@ def init_agents_theory_gradient_paired(
             tol=tol,
             min_pairwise=min_pairwise,
         )
-        paired_start = co_locate_theory_pairs(meta0["theory_end"], names)
+        paired_start = co_locate_theory_pairs(
+            meta0["theory_end"], names, pairing=pairing,
+        )
     grad1 = run_gradient_ascent_theory(
         space,
         paired_start,
@@ -982,21 +1107,42 @@ def init_agents_theory_gradient_paired(
         tol=tol,
         seed=seed,
     )
-    theory_end = co_locate_theory_pairs(grad1["positions"][-1], names)
-    pair_indices = adjacent_harm_pair_indices(theory_end)
+    second_pass_end = np.asarray(grad1["positions"][-1], dtype=float)
+    theory_end = co_locate_theory_pairs(
+        second_pass_end, names, pairing=pairing,
+    )
+    pair_indices = pair_indices_for_method(theory_end, pairing)
     pair_names = [
         [names[int(i)] for i in pair]
         for pair in pair_indices
     ]
-    within_pair_distances = {
-        "pair_" + "_".join(names[int(i)] for i in pair): float(
-            np.linalg.norm(theory_end[int(pair[0])] - theory_end[int(pair[1])])
-        )
+    pair_keys = [
+        "pair_" + "_".join(names[int(i)] for i in pair)
         for pair in pair_indices
-    }
+    ]
+
+    def _within(positions: np.ndarray) -> dict[str, float]:
+        """Partner L2 distance under the resolved pairing."""
+        return {
+            key: float(
+                np.linalg.norm(
+                    positions[int(pair[0])] - positions[int(pair[1])]
+                )
+            )
+            for key, pair in zip(pair_keys, pair_indices)
+        }
+
+    # After co-location partners are identical by construction, so
+    # ``within_pair_distance_after_pair`` is always zero and says nothing.
+    # The informative diagnostics are the distances measured *before* each
+    # co-location: the first pass shows how tightly the free Nash solve
+    # clustered the partners, the second whether the paired refinement
+    # pulled them apart again.
+    within_pair_distances = _within(theory_end)
     meta = {
         **meta0,
         "init_mode": "theory_gradient_paired",
+        "pairing_method": pairing,
         "theory_layout_initial": meta0["layout"],
         "theory_layout_paired_refine": grad1["layout"],
         "theory_converged_paired_refine": grad1["converged"],
@@ -1004,7 +1150,20 @@ def init_agents_theory_gradient_paired(
         "theory_end": theory_end,
         "paired_harm_order": pair_names,
         "within_pair_distance_after_pair": within_pair_distances,
+        "within_pair_distance_second_pass": _within(second_pass_end),
+        "pair_positions": {
+            key: theory_end[int(pair[0])].tolist()
+            for key, pair in zip(pair_keys, pair_indices)
+        },
+        "pair_dominant_axis": {
+            key: int(np.argmax(theory_end[int(pair[0])]))
+            for key, pair in zip(pair_keys, pair_indices)
+        },
     }
+    if not skip_initial_theory:
+        meta["within_pair_distance_first_pass"] = _within(
+            np.asarray(meta0["theory_end"], dtype=float),
+        )
     agents = init_agents_at_positions(
         cfg, theory_end, space, seed=seed, init_noise=init_noise,
     )

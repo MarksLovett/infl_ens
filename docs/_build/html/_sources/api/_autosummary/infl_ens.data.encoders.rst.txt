@@ -9,5 +9,4 @@
    .. autosummary::
    
       HuggingFaceEncoder
-      SentenceTransformerEncoder
    

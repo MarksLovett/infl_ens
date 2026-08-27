@@ -9,6 +9,7 @@
    .. autosummary::
    
       sft_train_agent
+      weighted_causal_lm_loss
    
    .. rubric:: Classes
 

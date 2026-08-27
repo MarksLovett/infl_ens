@@ -1,0 +1,175 @@
+# Seven-axis "top-k winners" routing over co-located theory pairs.
+#
+# One file drives the whole pipeline: `trait_space:` configures the encoder,
+# `closed_loop:` the training, and `eval:` the held-out evaluation that runs
+# automatically once training finishes (and can be re-run standalone with
+# `python -m infl_ens.evaluation --config <this file>`).
+#
+# Routing: this is the top-k generalisation of one-prompt-per-winning-agent.
+# Under `routing_mode: soft` the PAIR is the routing unit and each prompt is
+# assigned to its `soft_top_k` highest-share pairs. `soft_loss: unit` trains
+# every assigned pair on the prompt at UNIT loss weight — exactly as the
+# single winner is trained under hard routing — instead of the share-weighted
+# "distributed" signal of seven_axis_soft_pairs.yaml. `soft_top_k` is the
+# ablation axis: k = 1 is deterministic argmax routing, k = 7 would train
+# seven near-identical generalists, k = 2 is the interesting winners regime.
+#
+# Position update: `position_update` is left at its default `theory_matched`.
+# Dense assignment has no sampling factor, so EACH CLONE steps toward the
+# G_i(1-G_i)-weighted centroid of the WHOLE batch — the coefficient of its own
+# strategic gradient in the 14-player game, on every prompt, independent of
+# soft_top_k (the top-k gate only decides which pair adapter trains on what).
+# Nothing ties partners together: co-located clones have identical shares and
+# therefore take identical steps, so the theory's stable pairs persist on
+# their own (audited by the within-pair distance logged in agent_geometry).
+# See infl_ens.inflgame.router.verification for the numerical alignment check
+# and seven_axis_topk_pairs_naive.yaml for the un-matched ablation arm.
+#
+# The `benchmarks:` and `trait_space:` blocks are copied verbatim from
+# seven_axis_soft_pairs.yaml so the trait-space cache fingerprint
+# (3b42c68a8dd334c5, Qwen3-Embedding-8B-AWQ) is reused. DO NOT EDIT THEM —
+# any value change forces a multi-hour re-encode of the 28k-prompt corpus.
+#
+# Pipeline (one command trains, then writes eval_train/ and eval_test/):
+#   python -m infl_ens.training --config configs/benchmark/router/seven_axis_topk_pairs.yaml
+#   ARM=seven_axis_topk_pairs MODE=status bash scripts/run_soft_pairs_on_doob.sh
+
+task: closed_loop
+seed: 0
+output_dir: results/seven_axis_topk_pairs/seed0
+policy: proportional
+
+data_split:
+  seed: 0
+  train_frac: 0.7
+  val_frac: 0.1
+  test_frac: 0.2
+  manifest: data/splits/seven_axis_soft_seed0.json
+  cover_train_exactly: true
+  target_n_rounds: 12
+  preferred_batch_sizes: [4900, 2450, 1225, 980, 700, 350]
+  min_rounds: 5
+  max_rounds: 50
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+  - kind: jbb_behaviors
+    path: data/jbb_behaviors
+    include_benign: true
+    max_records: null
+  - kind: ai4privacy
+    path: data/ai4privacy
+    score_mode: density
+    english_only: true
+    max_records: 5000
+  - kind: orbench
+    path: data/orbench
+    configs: [or-bench-80k, or-bench-toxic]
+    max_records: 5000
+  - kind: prompt_injection
+    path: data/prompt_injection
+    max_records: 5000
+  - kind: do_not_answer
+    path: data/do_not_answer
+    include_benign: true
+    max_records: 5000
+
+# Encoding: the sentence encoder and the trait-space geometry built on it.
+# Everything except `encoder_batch_size` / `cache*` is part of the cache
+# fingerprint.
+trait_space:
+  encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
+  encoder_batch_size: 32
+  cache: true
+  cache_dir: data/trait_space_cache
+  n_grid: 3
+  kde_bandwidth: 0.08
+  threshold: 0.5
+  coordinate_residualize: true
+  mode_alignment_weight: 0.35
+  mode_alignment_weights:
+    jailbreak: 1.0
+    privacy: 1.0
+    overrefusal: 1.0
+    injection: 1.0
+    policy_violation: 1.0
+  coordinate_stretch_gamma: 1.0
+
+# Two clones per trait axis: N = 2L = 14 -> clone-0 .. clone-13.
+agents:
+  pairs_from_axes: true
+  name_prefix: clone
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  # Theory steps: grid-Nash gradient ascent, then paired refinement.
+  init_mode: theory_gradient_paired
+  init_noise: 0.0
+  theory_gradient:
+    learning_rate: 2.0e-2
+    n_steps: 8000
+    tol: 1.0e-8
+    min_pairwise: 0.2
+    pairing: nearest
+  snap_collapsed_pairs: true
+  collapse_merge_threshold: 0.01
+
+  # Top-k winners: each prompt goes to its two highest-share pairs, both
+  # trained at unit weight.
+  routing_mode: soft
+  soft_top_k: 2
+  soft_loss: unit
+  routing_weight: G
+  loss_reweight: null
+  # Gradient-matched centroid (the default; stated for readability).
+  position_update: theory_matched
+  centroid_mode: batch
+  blend: 0.5
+
+  sft_merge_groups: from_init
+  merge_group_prefix: pair
+  save_per_round: true
+
+  val_eval:
+    every_n_rounds: 5
+    max_eval_records: null
+    agents: null
+
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/seven_axis_topk_pairs/seed0/agents
+    max_seq_length: 1024
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 2
+    num_train_epochs: 1.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    logging_steps: 1
+    cumulative_lora: true
+    seed: 0
+
+# Evaluation: mean per-token NLL of the final-round pair adapters on the
+# held-out partitions of `data_split.manifest`. The base model, benchmarks and
+# manifest come from the blocks above. Reports land in
+# results/seven_axis_topk_pairs/seed0/eval_train/ and .../eval_test/.
+eval:
+  partitions: [train, test]
+  rounds: final            # or an explicit list, e.g. [5, 11]
+  agents: null             # discovers agents/pair-*/round-NN
+  max_eval_records: 1000   # per benchmark; null scores the full partition
+  forward_batch_size: 8
+  max_seq_length: null     # defaults to closed_loop.sft.max_seq_length
+  after_training: true     # run as soon as the closed loop finishes
+  baseline_run_dir: null   # e.g. results/seven_axis_topk_pairs_pooled_replay/seed0

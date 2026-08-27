@@ -30,6 +30,7 @@ This site is built from the package source on every push to ``main`` by
    api/data
    api/inflgame
    api/training
+   api/evaluation
    api/utils
 
 .. toctree::

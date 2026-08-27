@@ -1,4 +1,14 @@
-"""Numerical verification of routing drift vs strategic gradient."""
+"""Numerical verification of routing drift vs strategic gradient.
+
+Covers the hard-routing rules (strategic, canonical + ``(1-G)`` re-weight,
+canonical naive) and the soft (dense, top-``k``) rules: the historical
+renormalised-share centroid (``position_update: naive``) and the
+theory-matched dense :math:`G_i(1-G_i)` mass over the whole batch
+(``position_update: theory_matched``), per agent — including co-located
+clone pairs, whose members take identical independent steps. The
+Monte-Carlo section also shows the variance reduction of the dense rule
+over the hard ``(1-G)`` rule at equal expectation.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +16,10 @@ import numpy as np
 
 from infl_ens.inflgame.router.allocation import (
     allocation_weights,
+    group_allocation_weights,
+    matched_centroid_mass,
     strategic_routing_weights,
+    top_k_allocation_weights,
     utility_gradient,
 )
 
@@ -39,6 +52,17 @@ def _build_landscape(
     return grid, weights
 
 
+def _normalised_drift(
+    positions: np.ndarray,
+    grid: np.ndarray,
+    mass: np.ndarray,
+) -> np.ndarray:
+    """Mass-weighted centroid minus position, per agent row of ``mass``."""
+    Z = mass.sum(axis=1, keepdims=True)
+    diff = grid[None, :, :] - positions[:, None, :]
+    return (mass[..., None] * diff).sum(axis=1) / np.maximum(Z, 1e-30)
+
+
 def _expected_drift_strategic(
     positions: np.ndarray,
     grid: np.ndarray,
@@ -47,10 +71,7 @@ def _expected_drift_strategic(
 ) -> np.ndarray:
     """Expected centroid-blend drift under strategic routing."""
     P = strategic_routing_weights(positions, grid, cov)
-    mass = weights[None, :] * P
-    Z = mass.sum(axis=1, keepdims=True)
-    diff = grid[None, :, :] - positions[:, None, :]
-    return (mass[..., None] * diff).sum(axis=1) / np.maximum(Z, 1e-30)
+    return _normalised_drift(positions, grid, weights[None, :] * P)
 
 
 def _expected_drift_canonical_reweighted(
@@ -61,10 +82,7 @@ def _expected_drift_canonical_reweighted(
 ) -> np.ndarray:
     """Expected drift under canonical routing with per-query :math:`(1-G_i)` weighting."""
     G = allocation_weights(positions, grid, cov)
-    mass = weights[None, :] * G * (1.0 - G)
-    Z = mass.sum(axis=1, keepdims=True)
-    diff = grid[None, :, :] - positions[:, None, :]
-    return (mass[..., None] * diff).sum(axis=1) / np.maximum(Z, 1e-30)
+    return _normalised_drift(positions, grid, weights[None, :] * G * (1.0 - G))
 
 
 def _expected_drift_canonical_naive(
@@ -75,10 +93,80 @@ def _expected_drift_canonical_naive(
 ) -> np.ndarray:
     """Expected drift under canonical routing with an unweighted centroid SFT."""
     G = allocation_weights(positions, grid, cov)
-    mass = weights[None, :] * G
-    Z = mass.sum(axis=1, keepdims=True)
-    diff = grid[None, :, :] - positions[:, None, :]
-    return (mass[..., None] * diff).sum(axis=1) / np.maximum(Z, 1e-30)
+    return _normalised_drift(positions, grid, weights[None, :] * G)
+
+
+def _expected_drift_topk_naive(
+    positions: np.ndarray,
+    grid: np.ndarray,
+    weights: np.ndarray,
+    cov: np.ndarray,
+    *,
+    top_k: int,
+) -> np.ndarray:
+    """Expected soft-routing drift with the renormalised top-``k`` share centroid.
+
+    This is ``routing_mode: soft`` with ``position_update: naive``: every
+    query is assigned to its top-``k`` agents deterministically and the
+    centroid mass is the per-query renormalised share. There is no sampling
+    factor, so the mass carries a bare :math:`G_i` (times the per-query
+    renormaliser) rather than :math:`G_i(1-G_i)`.
+    """
+    G = allocation_weights(positions, grid, cov)
+    mass = weights[None, :] * top_k_allocation_weights(G, top_k)
+    return _normalised_drift(positions, grid, mass)
+
+
+def _expected_drift_dense_matched(
+    positions: np.ndarray,
+    grid: np.ndarray,
+    weights: np.ndarray,
+    cov: np.ndarray,
+) -> np.ndarray:
+    """Expected soft-routing drift with the dense :math:`G_i(1-G_i)` centroid mass.
+
+    This is ``routing_mode: soft`` with ``position_update: theory_matched``:
+    the mass is applied to every query regardless of ``soft_top_k``, so the
+    drift equals the gradient coefficient exactly and is parallel to
+    :math:`\\nabla_{x_i} u_i` under isotropic :math:`\\Sigma`. Analytically
+    it coincides with :func:`_expected_drift_canonical_reweighted`; the two
+    differ only in finite-batch variance (see :func:`_monte_carlo_drift`).
+    """
+    G = allocation_weights(positions, grid, cov)
+    mass = weights[None, :] * matched_centroid_mass(G)
+    return _normalised_drift(positions, grid, mass)
+
+
+def _expected_drift_naive_pairs(
+    positions: np.ndarray,
+    grid: np.ndarray,
+    weights: np.ndarray,
+    cov: np.ndarray,
+    group_index: np.ndarray,
+    n_groups: int,
+    *,
+    top_k: int,
+) -> np.ndarray:
+    """Expected drift of each pair's shared position under the naive pair rule.
+
+    The historical soft-pairs ablation arm: clone allocations are summed per
+    group (:func:`group_allocation_weights`), top-``k`` renormalised, and the
+    resulting share is the centroid mass of ONE step written to both
+    members. Rows are groups; the drift is measured from the shared position
+    (the position of the first member).
+
+    :returns: Drift per group, shape ``(P, L)``.
+    :rtype: numpy.ndarray
+    """
+    G = allocation_weights(positions, grid, cov)
+    G_group = group_allocation_weights(G, group_index, n_groups)
+    mass = weights[None, :] * top_k_allocation_weights(G_group, top_k)
+    idx = np.asarray(group_index, dtype=int)
+    group_pos = np.stack(
+        [positions[np.flatnonzero(idx == p)[0]] for p in range(n_groups)],
+        axis=0,
+    )
+    return _normalised_drift(group_pos, grid, mass)
 
 
 def _cos(a: np.ndarray, b: np.ndarray, eps: float = 1e-30) -> float:
@@ -113,7 +201,15 @@ def _monte_carlo_drift(
     n_trials: int = 200,
     seed: int = 0,
 ) -> dict[str, np.ndarray]:
-    """Finite-batch Monte-Carlo realisations of the three drifts."""
+    """Finite-batch Monte-Carlo realisations of the four drift rules.
+
+    ``dense_matched`` uses every sampled query with mass
+    :math:`G_i(1-G_i)` (soft theory-matched); ``canonical_reweight`` uses
+    only the queries a categorical :math:`G` draw routed to the agent, with
+    weight :math:`1-G_i` (hard theory-matched). They share the same
+    expectation; the dense rule is the conditional expectation of the hard
+    rule given the batch, so its spread is never larger.
+    """
     rng = np.random.default_rng(seed)
     n_agents, _ = positions.shape
     g_strat = strategic_routing_weights(positions, grid, cov)
@@ -123,6 +219,7 @@ def _monte_carlo_drift(
     strat = np.zeros((n_trials, n_agents, positions.shape[1]))
     can_rw = np.zeros((n_trials, n_agents, positions.shape[1]))
     can_naive = np.zeros((n_trials, n_agents, positions.shape[1]))
+    dense = np.zeros((n_trials, n_agents, positions.shape[1]))
 
     for t in range(n_trials):
         u = rng.random(batch_size)
@@ -155,10 +252,18 @@ def _monte_carlo_drift(
                     )
                 can_naive[t, i] = b_samp[mask_c].mean(axis=0) - positions[i]
 
+            m_i = g_at_k[:, i] * (1.0 - g_at_k[:, i])
+            m_sum = m_i.sum()
+            if m_sum > 1e-30:
+                dense[t, i] = (
+                    (m_i[:, None] * b_samp).sum(0) / m_sum - positions[i]
+                )
+
     return {
         "strategic": strat,
         "canonical_reweight": can_rw,
         "canonical_naive": can_naive,
+        "dense_matched": dense,
     }
 
 
@@ -170,13 +275,26 @@ def _report_config(
     cov: np.ndarray,
     *,
     mc_seed: int,
+    soft_top_ks: tuple[int, ...] = (),
 ) -> None:
-    """Print analytic and Monte-Carlo diagnostics for one agent configuration."""
+    """Print analytic and Monte-Carlo diagnostics for one agent configuration.
+
+    :param soft_top_ks: Soft-routing ``top_k`` values for which the naive
+        renormalised-share centroid is reported (one column each); the
+        dense matched rule does not depend on ``top_k`` and gets a single
+        column.
+    :type soft_top_ks: tuple[int, ...]
+    """
     print(f"\n=== {label} ===")
     grad = utility_gradient(positions, grid, weights, cov)
     d_strat = _expected_drift_strategic(positions, grid, weights, cov)
     d_rw = _expected_drift_canonical_reweighted(positions, grid, weights, cov)
     d_naive = _expected_drift_canonical_naive(positions, grid, weights, cov)
+    d_dense = _expected_drift_dense_matched(positions, grid, weights, cov)
+    d_soft_naive = {
+        k: _expected_drift_topk_naive(positions, grid, weights, cov, top_k=k)
+        for k in soft_top_ks
+    }
     ess = _ess_per_query(positions, grid, weights, cov)
 
     print("positions:")
@@ -184,15 +302,24 @@ def _report_config(
         print(f"  agent-{i}: {pos}")
 
     print("\nCosine similarity of expected drift with grad u_i:")
-    header = f"  {'agent':<8} {'strategic':>11} {'canon+rw':>11} {'canon naive':>13}"
+    header = (
+        f"  {'agent':<8} {'strategic':>11} {'canon+rw':>11} "
+        f"{'canon naive':>13} {'dense match':>13}"
+    )
+    for k in soft_top_ks:
+        header += f" {f'top{k} naive':>12}"
     print(header)
     for i in range(positions.shape[0]):
-        print(
+        row = (
             f"  {i:<8} "
             f"{_cos(d_strat[i], grad[i]):>11.4f} "
             f"{_cos(d_rw[i], grad[i]):>11.4f} "
-            f"{_cos(d_naive[i], grad[i]):>13.4f}"
+            f"{_cos(d_naive[i], grad[i]):>13.4f} "
+            f"{_cos(d_dense[i], grad[i]):>13.4f}"
         )
+        for k in soft_top_ks:
+            row += f" {_cos(d_soft_naive[k][i], grad[i]):>12.4f}"
+        print(row)
 
     print("\nESS ratio (canonical+reweight ÷ strategic batch count):")
     for i, ratio in enumerate(ess):
@@ -218,8 +345,62 @@ def _report_config(
             )
 
 
+def _report_group_config(
+    label: str,
+    pair_positions: np.ndarray,
+    grid: np.ndarray,
+    weights: np.ndarray,
+    cov: np.ndarray,
+    *,
+    top_k: int,
+) -> None:
+    """Print the soft-pairs alignment check for co-located clone pairs.
+
+    Two clones per pair sit at ``pair_positions``. Under the kept design
+    every clone takes its own dense matched step in the ``2P``-player game
+    (twin included as a competitor); the report shows that each clone's
+    drift is parallel to its own utility gradient and that the two members
+    of a pair receive bitwise identical drifts, so the pair persists
+    without any shared step. The naive column is the historical pair rule
+    (renormalised top-``k`` group share, one step per pair), compared with
+    the members' common gradient.
+    """
+    print(f"\n=== {label} ===")
+    n_pairs = pair_positions.shape[0]
+    clones = np.repeat(pair_positions, 2, axis=0)
+    group_index = np.repeat(np.arange(n_pairs), 2)
+    grad_clones = utility_gradient(clones, grid, weights, cov)
+    d_match = _expected_drift_dense_matched(clones, grid, weights, cov)
+    d_naive = _expected_drift_naive_pairs(
+        clones, grid, weights, cov, group_index, n_pairs, top_k=top_k,
+    )
+    print(
+        f"per-clone dense match vs own grad u_i in the {2 * n_pairs}-player "
+        f"game; naive pair rule at top_k={top_k}:"
+    )
+    print(
+        f"  {'pair':<6} {'clone':<6} {'naive pair':>11} {'dense match':>12} "
+        f"{'|d_twin - d|':>13}"
+    )
+    for p in range(n_pairs):
+        i, j = 2 * p, 2 * p + 1
+        for c in (i, j):
+            twin = j if c == i else i
+            print(
+                f"  {p:<6} {c:<6} {_cos(d_naive[p], grad_clones[c]):>11.4f} "
+                f"{_cos(d_match[c], grad_clones[c]):>12.4f} "
+                f"{np.linalg.norm(d_match[c] - d_match[twin]):>13.2e}"
+            )
+
+
 def run_reweighted_drift_report() -> None:
-    """Run the comparison across three off-symmetry configurations."""
+    """Run the comparison across three off-symmetry configurations.
+
+    Each hard-routing configuration also reports the dense matched soft
+    column and the naive soft column at full (``top_k = N``) and truncated
+    (``top_k = 2``) support, followed by a co-located-pairs configuration
+    for the merge-group variant.
+    """
     grid, weights = _build_landscape()
     sigma = 0.20
     cov = sigma ** 2 * np.eye(2)
@@ -239,16 +420,22 @@ def run_reweighted_drift_report() -> None:
         [0.30, 0.30],
         [0.75, 0.75],
     ])
+    soft_ks = (3, 2)
 
     _report_config(
         "Configuration A: near symmetric Nash",
-        positions_a, grid, weights, cov, mc_seed=0,
+        positions_a, grid, weights, cov, mc_seed=0, soft_top_ks=soft_ks,
     )
     _report_config(
         "Configuration B: one agent per mode + contested centre",
-        positions_b, grid, weights, cov, mc_seed=1,
+        positions_b, grid, weights, cov, mc_seed=1, soft_top_ks=soft_ks,
     )
     _report_config(
         "Configuration C: two agents on one mode + one alone",
-        positions_c, grid, weights, cov, mc_seed=2,
+        positions_c, grid, weights, cov, mc_seed=2, soft_top_ks=soft_ks,
+    )
+    _report_group_config(
+        "Configuration D: two co-located clone pairs (soft pairs)",
+        np.array([[0.30, 0.35], [0.70, 0.60]]),
+        grid, weights, cov, top_k=2,
     )

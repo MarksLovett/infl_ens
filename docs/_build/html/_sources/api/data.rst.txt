@@ -19,6 +19,8 @@ regardless of whether ``__init__.py`` re-exports the symbol or not.
 - :func:`~infl_ens.data.position_blend.apply_position_update`
 - :class:`~infl_ens.data.encoders.SentenceTransformerEncoder`
 - :class:`~infl_ens.data.encoders.HuggingFaceEncoder`
+- :class:`~infl_ens.data.trait_linear_transform.FrozenLinearTransform`
+- :class:`~infl_ens.data.trait_normalize.QuantileNormalizer`
 
 Submodules
 ----------
@@ -32,6 +34,8 @@ new file to ``src/infl_ens/data/`` is enough — no doc edits required.
    :recursive:
 
    infl_ens.data.trait_space
+   infl_ens.data.trait_normalize
+   infl_ens.data.trait_linear_transform
    infl_ens.data.position_blend
    infl_ens.data.encoders
    infl_ens.data.benchmarks

@@ -45,6 +45,7 @@ def main() -> None:
         test_frac=float(ds.get("test_frac", 0.2)),
         seed=seed,
     )
+    target_n_rounds = ds.get("target_n_rounds")
     batch_size, n_rounds = choose_exact_train_coverage(
         manifest.n_train,
         preferred_batch_sizes=tuple(
@@ -52,6 +53,9 @@ def main() -> None:
                 "preferred_batch_sizes",
                 [4900, 2450, 1225, 980, 700, 350],
             )
+        ),
+        target_n_rounds=(
+            int(target_n_rounds) if target_n_rounds is not None else None
         ),
         min_rounds=int(ds.get("min_rounds", 5)),
         max_rounds=int(ds.get("max_rounds", 50)),

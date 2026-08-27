@@ -3,9 +3,9 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="infl_ens.utils" href="../utils.html"><link rel="prev" title="infl_ens.training.router_training" href="infl_ens.training.router_training.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="infl_ens.evaluation" href="../evaluation.html"><link rel="prev" title="infl_ens.training.router_training" href="infl_ens.training.router_training.html">
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 8.1.3 and Furo 2025.12.19 -->
         <title>infl_ens.training.sft_training - infl_ens</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
@@ -200,13 +200,21 @@
 <ul class="current">
 <li class="toctree-l1 has-children"><a class="reference internal" href="../data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.data</span></code></a><input aria-label="Toggle navigation of infl_ens.data" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="infl_ens.data.trait_space.html">infl_ens.data.trait_space</a></li>
+<li class="toctree-l2"><a class="reference internal" href="infl_ens.data.trait_normalize.html">infl_ens.data.trait_normalize</a></li>
+<li class="toctree-l2"><a class="reference internal" href="infl_ens.data.trait_linear_transform.html">infl_ens.data.trait_linear_transform</a></li>
 <li class="toctree-l2"><a class="reference internal" href="infl_ens.data.position_blend.html">infl_ens.data.position_blend</a></li>
 <li class="toctree-l2"><a class="reference internal" href="infl_ens.data.encoders.html">infl_ens.data.encoders</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="infl_ens.data.benchmarks.html">infl_ens.data.benchmarks</a><input aria-label="Toggle navigation of infl_ens.data.benchmarks" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.ai4privacy.html">infl_ens.data.benchmarks.ai4privacy</a></li>
 <li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.base.html">infl_ens.data.benchmarks.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.beavertails.html">infl_ens.data.benchmarks.beavertails</a></li>
+<li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.do_not_answer.html">infl_ens.data.benchmarks.do_not_answer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.halueval.html">infl_ens.data.benchmarks.halueval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.jbb_behaviors.html">infl_ens.data.benchmarks.jbb_behaviors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.orbench.html">infl_ens.data.benchmarks.orbench</a></li>
+<li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.prompt_injection.html">infl_ens.data.benchmarks.prompt_injection</a></li>
 <li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.safety_trait_space.html">infl_ens.data.benchmarks.safety_trait_space</a></li>
+<li class="toctree-l3"><a class="reference internal" href="infl_ens.data.benchmarks.toxicchat.html">infl_ens.data.benchmarks.toxicchat</a></li>
 </ul>
 </li>
 </ul>
@@ -222,7 +230,14 @@
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">infl_ens.training.sft_training</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../utils.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.utils</span></code></a><input aria-label="Toggle navigation of infl_ens.utils" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../evaluation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.evaluation</span></code></a><input aria-label="Toggle navigation of infl_ens.evaluation" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="infl_ens.evaluation.adapters.html">infl_ens.evaluation.adapters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="infl_ens.evaluation.benchmarks.html">infl_ens.evaluation.benchmarks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="infl_ens.evaluation.metrics.html">infl_ens.evaluation.metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="infl_ens.evaluation.evaluate.html">infl_ens.evaluation.evaluate</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../utils.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.utils</span></code></a><input aria-label="Toggle navigation of infl_ens.utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="infl_ens.utils.resource.html">infl_ens.utils.resource</a></li>
 </ul>
 </li>
@@ -305,6 +320,9 @@ them.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#infl_ens.training.sft_training.sft_train_agent" title="infl_ens.training.sft_training.sft_train_agent"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sft_train_agent</span></code></a>(agent, prompts, responses, ...)</p></td>
 <td><p>Run one LoRA SFT round for a single agent and refresh its position.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#infl_ens.training.sft_training.weighted_causal_lm_loss" title="infl_ens.training.sft_training.weighted_causal_lm_loss"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weighted_causal_lm_loss</span></code></a>(logits, labels, ...)</p></td>
+<td><p>Per-example-weighted causal-LM cross-entropy.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -321,35 +339,35 @@ them.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">infl_ens.training.sft_training.</span></span><span class="sig-name descname"><span class="pre">SFTTrainingConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_model='Qwen/Qwen2.5-1.5B-Instruct'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir='results/sft'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_seq_length=1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">per_device_batch_size=8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradient_accumulation_steps=2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_train_epochs=1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate=0.0002</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_r=16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_alpha=32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_dropout=0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_target_modules=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bf16=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradient_checkpointing=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logging_steps=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cumulative_lora=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed=0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/infl_ens/training/sft_training.html#SFTTrainingConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Hyperparameters for one LoRA SFT round of one agent.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>base_model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – HuggingFace repo id of the base model.</p></li>
-<li><p><strong>output_dir</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Per-agent output directory. LoRA adapters and the
+<li><p><strong>base_model</strong> (<em>str</em>) – HuggingFace repo id of the base model.</p></li>
+<li><p><strong>output_dir</strong> (<em>str</em>) – Per-agent output directory. LoRA adapters and the
 tokenizer config are written here.</p></li>
-<li><p><strong>max_seq_length</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Token cap per training example.</p></li>
-<li><p><strong>per_device_batch_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Batch size per device.</p></li>
-<li><p><strong>gradient_accumulation_steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of micro-batches per
+<li><p><strong>max_seq_length</strong> (<em>int</em>) – Token cap per training example.</p></li>
+<li><p><strong>per_device_batch_size</strong> (<em>int</em>) – Batch size per device.</p></li>
+<li><p><strong>gradient_accumulation_steps</strong> (<em>int</em>) – Number of micro-batches per
 optimiser step.</p></li>
-<li><p><strong>num_train_epochs</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Epochs over the training corpus.</p></li>
-<li><p><strong>learning_rate</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Peak learning rate.</p></li>
-<li><p><strong>lora_r</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – LoRA rank.</p></li>
-<li><p><strong>lora_alpha</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – LoRA alpha scaling.</p></li>
-<li><p><strong>lora_dropout</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – LoRA dropout probability.</p></li>
-<li><p><strong>lora_target_modules</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>...</em><em>]</em>) – Modules to attach LoRA adapters to.
+<li><p><strong>num_train_epochs</strong> (<em>float</em>) – Epochs over the training corpus.</p></li>
+<li><p><strong>learning_rate</strong> (<em>float</em>) – Peak learning rate.</p></li>
+<li><p><strong>lora_r</strong> (<em>int</em>) – LoRA rank.</p></li>
+<li><p><strong>lora_alpha</strong> (<em>int</em>) – LoRA alpha scaling.</p></li>
+<li><p><strong>lora_dropout</strong> (<em>float</em>) – LoRA dropout probability.</p></li>
+<li><p><strong>lora_target_modules</strong> (<em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em>) – Modules to attach LoRA adapters to.
 Defaults to all attention projections in the Qwen2.5 family.</p></li>
-<li><p><strong>bf16</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to train in bfloat16 (recommended on A100; falls
+<li><p><strong>bf16</strong> (<em>bool</em>) – Whether to train in bfloat16 (recommended on A100; falls
 back to fp16 on A40 if the device does not support bf16).</p></li>
-<li><p><strong>gradient_checkpointing</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to enable activation
+<li><p><strong>gradient_checkpointing</strong> (<em>bool</em>) – Whether to enable activation
 checkpointing (saves memory at moderate compute cost).</p></li>
-<li><p><strong>logging_steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – How often (in optimiser steps) to log training
+<li><p><strong>logging_steps</strong> (<em>int</em>) – How often (in optimiser steps) to log training
 loss. With small per-round batches (e.g. 4 optimiser steps), the
 default value of <code class="docutils literal notranslate"><span class="pre">10</span></code> produces no per-step records — only a
 final summary. Set to <code class="docutils literal notranslate"><span class="pre">1</span></code> for full per-step capture, which is
-what <code class="xref py py-mod docutils literal notranslate"><span class="pre">scripts.probe_sft_capability</span></code>’s Tier 1 panel needs.</p></li>
-<li><p><strong>cumulative_lora</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – <p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, when <code class="docutils literal notranslate"><span class="pre">agent.metadata['lora_dir']</span></code>
+what <code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.evaluation.capability_probe</span></code>’s Tier 1 panel needs.</p></li>
+<li><p><strong>cumulative_lora</strong> (<em>bool</em>) – <p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, when <code class="docutils literal notranslate"><span class="pre">agent.metadata['lora_dir']</span></code>
 points to an existing adapter from a previous round, that adapter
 is loaded and <strong>kept training</strong> rather than being replaced by a
 fresh LoRA. The agent’s capability therefore accumulates across
@@ -368,90 +386,130 @@ with the capability probe to detect it (look for diagonal NLL
 dropping while off-diagonal stays flat or rises).</p></li>
 </ul>
 </p></li>
-<li><p><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – RNG seed.</p></li>
+<li><p><strong>seed</strong> (<em>int</em>) – RNG seed.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.base_model">
-<span class="sig-name descname"><span class="pre">base_model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Qwen/Qwen2.5-1.5B-Instruct'</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.base_model" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">base_model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'Qwen/Qwen2.5-1.5B-Instruct'</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.base_model" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.output_dir">
-<span class="sig-name descname"><span class="pre">output_dir</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'results/sft'</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.output_dir" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">output_dir</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'results/sft'</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.output_dir" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.max_seq_length">
-<span class="sig-name descname"><span class="pre">max_seq_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1024</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.max_seq_length" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">max_seq_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1024</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.max_seq_length" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.per_device_batch_size">
-<span class="sig-name descname"><span class="pre">per_device_batch_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.per_device_batch_size" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">per_device_batch_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.per_device_batch_size" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.gradient_accumulation_steps">
-<span class="sig-name descname"><span class="pre">gradient_accumulation_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.gradient_accumulation_steps" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">gradient_accumulation_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.gradient_accumulation_steps" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.num_train_epochs">
-<span class="sig-name descname"><span class="pre">num_train_epochs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1.0</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.num_train_epochs" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">num_train_epochs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1.0</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.num_train_epochs" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.learning_rate">
-<span class="sig-name descname"><span class="pre">learning_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0002</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.learning_rate" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">learning_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0002</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.learning_rate" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.lora_r">
-<span class="sig-name descname"><span class="pre">lora_r</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">16</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_r" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">lora_r</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">16</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_r" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.lora_alpha">
-<span class="sig-name descname"><span class="pre">lora_alpha</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">32</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_alpha" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">lora_alpha</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">32</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_alpha" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.lora_dropout">
-<span class="sig-name descname"><span class="pre">lora_dropout</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.05</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_dropout" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">lora_dropout</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.05</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_dropout" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.lora_target_modules">
-<span class="sig-name descname"><span class="pre">lora_target_modules</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_target_modules" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">lora_target_modules</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.lora_target_modules" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.bf16">
-<span class="sig-name descname"><span class="pre">bf16</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.bf16" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">bf16</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.bf16" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.gradient_checkpointing">
-<span class="sig-name descname"><span class="pre">gradient_checkpointing</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.gradient_checkpointing" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">gradient_checkpointing</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.gradient_checkpointing" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.logging_steps">
-<span class="sig-name descname"><span class="pre">logging_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.logging_steps" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">logging_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.logging_steps" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.cumulative_lora">
-<span class="sig-name descname"><span class="pre">cumulative_lora</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.cumulative_lora" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">cumulative_lora</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.cumulative_lora" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="infl_ens.training.sft_training.SFTTrainingConfig.seed">
-<span class="sig-name descname"><span class="pre">seed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.seed" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">seed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#infl_ens.training.sft_training.SFTTrainingConfig.seed" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="infl_ens.training.sft_training.weighted_causal_lm_loss">
+<span class="sig-prename descclassname"><span class="pre">infl_ens.training.sft_training.</span></span><span class="sig-name descname"><span class="pre">weighted_causal_lm_loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/infl_ens/training/sft_training.html#weighted_causal_lm_loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#infl_ens.training.sft_training.weighted_causal_lm_loss" title="Link to this definition">¶</a></dt>
+<dd><p>Per-example-weighted causal-LM cross-entropy.</p>
+<p>Computes the standard next-token cross-entropy, averages it over the
+(non-ignored) answer tokens of each sequence, then takes a per-example
+weighted mean:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathcal{L} \;=\; \frac{1}{B} \sum_{b=1}^{B} w_b \,
+\Big( \frac{1}{T_b} \sum_{t} \mathrm{CE}(z_{b,t}, y_{b,t}) \Big),\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(T_b\)</span> is the number of supervised tokens in example
+<span class="math notranslate nohighlight">\(b\)</span>. The weight <span class="math notranslate nohighlight">\(w_b\)</span> acts as a per-example learning-rate
+multiplier: doubling <span class="math notranslate nohighlight">\(w_b\)</span> doubles that example’s contribution to
+the batch loss (and hence its gradient), which is exactly the semantics
+the soft (dense) router relies on — each agent trains on every routed
+query scaled by its (renormalised) allocation share <span class="math notranslate nohighlight">\(G_i\)</span>.</p>
+<p>This is a pure function of tensors so it can be unit-tested without
+<code class="docutils literal notranslate"><span class="pre">trl</span></code>. It is consumed by the <code class="docutils literal notranslate"><span class="pre">WeightedSFTTrainer</span></code> built inside
+<a class="reference internal" href="#infl_ens.training.sft_training.sft_train_agent" title="infl_ens.training.sft_training.sft_train_agent"><code class="xref py py-func docutils literal notranslate"><span class="pre">sft_train_agent()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logits</strong> (<em>torch.Tensor</em>) – Model logits, shape <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">T,</span> <span class="pre">V)</span></code>.</p></li>
+<li><p><strong>labels</strong> (<em>torch.Tensor</em>) – Target token ids, shape <code class="docutils literal notranslate"><span class="pre">(B,</span> <span class="pre">T)</span></code>; positions equal to
+<code class="docutils literal notranslate"><span class="pre">ignore_index</span></code> are excluded from the loss.</p></li>
+<li><p><strong>weights</strong> (<em>torch.Tensor</em>) – Per-example weights, shape <code class="docutils literal notranslate"><span class="pre">(B,)</span></code>.</p></li>
+<li><p><strong>ignore_index</strong> (<em>int</em>) – Label value marking non-supervised positions.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Scalar weighted loss tensor.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -463,31 +521,38 @@ dropping while off-diagonal stays flat or rises).</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>agent</strong> (<a class="reference internal" href="infl_ens.inflgame.router.agents.html#infl_ens.inflgame.router.agents.RouterAgent" title="infl_ens.inflgame.router.agents.RouterAgent"><em>RouterAgent</em></a>) – Agent to train (mutated in place: <code class="docutils literal notranslate"><span class="pre">agent.position</span></code> is
 re-estimated, <code class="docutils literal notranslate"><span class="pre">agent.metadata['lora_dir']</span></code> is set).</p></li>
-<li><p><strong>prompts</strong> (<em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Training prompts for this agent (from the router’s
+<li><p><strong>prompts</strong> (<em>Sequence</em><em>[</em><em>str</em><em>]</em>) – Training prompts for this agent (from the router’s
 per-round routing decisions).</p></li>
-<li><p><strong>responses</strong> (<em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em><em>] </em><em>| </em><em>None</em>) – Optional target responses, same length as
+<li><p><strong>responses</strong> (<em>Sequence</em><em>[</em><em>str</em><em> | </em><em>None</em><em>] </em><em>| </em><em>None</em>) – Optional target responses, same length as
 <code class="docutils literal notranslate"><span class="pre">prompts</span></code>. Items may be <code class="docutils literal notranslate"><span class="pre">None</span></code> for prompt-only training.</p></li>
 <li><p><strong>cfg</strong> (<a class="reference internal" href="#infl_ens.training.sft_training.SFTTrainingConfig" title="infl_ens.training.sft_training.SFTTrainingConfig"><em>SFTTrainingConfig</em></a>) – Training configuration.</p></li>
-<li><p><strong>eval_prompts</strong> (<em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Held-out prompts used to re-estimate the agent’s
+<li><p><strong>eval_prompts</strong> (<em>Sequence</em><em>[</em><em>str</em><em>]</em>) – Held-out prompts used to re-estimate the agent’s
 trait-space position after training.</p></li>
-<li><p><strong>project</strong> (<em>Callable</em><em>[</em><em>[</em><em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>]</em><em>, </em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)"><em>numpy.ndarray</em></a><em>]</em>) – Trait-space projector (from
+<li><p><strong>project</strong> (<em>Callable</em><em>[</em><em>[</em><em>Sequence</em><em>[</em><em>str</em><em>]</em><em>]</em><em>, </em><em>numpy.ndarray</em><em>]</em>) – Trait-space projector (from
 <a class="reference internal" href="infl_ens.data.trait_space.html#infl_ens.data.trait_space.TraitSpace.project" title="infl_ens.data.trait_space.TraitSpace.project"><code class="xref py py-class docutils literal notranslate"><span class="pre">infl_ens.data.trait_space.TraitSpace.project</span></code></a>).</p></li>
-<li><p><strong>blend</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – EMA blend ceiling for the position update, in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>.</p></li>
-<li><p><strong>position_step</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>) – Optional adaptive step policy
+<li><p><strong>blend</strong> (<em>float</em>) – EMA blend ceiling for the position update, in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>.</p></li>
+<li><p><strong>position_step</strong> (<em>dict</em><em> | </em><em>None</em>) – Optional adaptive step policy
 (<code class="docutils literal notranslate"><span class="pre">closed_loop.position_step</span></code>); see
 <code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.utils.position_step</span></code>.</p></li>
-<li><p><strong>skip_position_update</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, train LoRA only and leave
+<li><p><strong>skip_position_update</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, train LoRA only and leave
 <code class="docutils literal notranslate"><span class="pre">agent.position</span></code> unchanged (caller updates position separately).</p></li>
-<li><p><strong>formatting_func</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>] </em><em>| </em><em>None</em>) – Optional <code class="docutils literal notranslate"><span class="pre">(prompt,</span> <span class="pre">response)</span> <span class="pre">-&gt;</span> <span class="pre">str</span></code> hook
+<li><p><strong>formatting_func</strong> (<em>Callable</em><em>[</em><em>[</em><em>str</em><em>, </em><em>str</em><em> | </em><em>None</em><em>]</em><em>, </em><em>str</em><em>] </em><em>| </em><em>None</em>) – Optional <code class="docutils literal notranslate"><span class="pre">(prompt,</span> <span class="pre">response)</span> <span class="pre">-&gt;</span> <span class="pre">str</span></code> hook
 overriding the default Qwen2.5 chat template.</p></li>
-<li><p><strong>out_dir_override</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional explicit output directory for the
+<li><p><strong>out_dir_override</strong> (<em>str</em><em> | </em><em>None</em>) – Optional explicit output directory for the
 adapter. When <code class="docutils literal notranslate"><span class="pre">None</span></code>, defaults to <code class="docutils literal notranslate"><span class="pre">Path(cfg.output_dir)</span> <span class="pre">/</span>
 <span class="pre">agent.name</span></code> (current behaviour). When provided, the adapter is
 saved exactly at the given path — useful for per-round adapter
 archiving (e.g. <code class="docutils literal notranslate"><span class="pre">agents/clone-0/round-03</span></code>) so a capability probe
 can reload each round’s checkpoint independently.</p></li>
-<li><p><strong>sample_weights</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><em>Sequence</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
-<li><p><strong>eval_weights</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><em>Sequence</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>sample_weights</strong> (<em>Sequence</em><em>[</em><em>float</em><em>] </em><em>| </em><em>None</em>) – Optional per-prompt loss weights, same length as
+<code class="docutils literal notranslate"><span class="pre">prompts</span></code>. When provided, training routes through a
+<code class="docutils literal notranslate"><span class="pre">WeightedSFTTrainer</span></code> that scales each example’s cross-entropy by
+its weight (a per-example learning-rate multiplier); see
+<a class="reference internal" href="#infl_ens.training.sft_training.weighted_causal_lm_loss" title="infl_ens.training.sft_training.weighted_causal_lm_loss"><code class="xref py py-func docutils literal notranslate"><span class="pre">weighted_causal_lm_loss()</span></code></a>. When <code class="docutils literal notranslate"><span class="pre">None</span></code>, the stock
+unit-weight trainer is used. Used by soft/dense routing (weight =
+renormalised <span class="math notranslate nohighlight">\(G_i\)</span>) and by <code class="docutils literal notranslate"><span class="pre">loss_reweight='one_minus_G'</span></code>.</p></li>
+<li><p><strong>eval_weights</strong> (<em>Sequence</em><em>[</em><em>float</em><em>] </em><em>| </em><em>None</em>) – Optional per-eval-prompt weights forwarded as
+<code class="docutils literal notranslate"><span class="pre">scores</span></code> to the post-SFT position update (weighted centroid).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -497,13 +562,13 @@ if available), and <code class="docutils literal notranslate"><span class="pre">
 the SFT trainer; usable for plotting per-round loss curves).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+<dd class="field-odd"><p>dict</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ImportError" title="(in Python v3.14)"><strong>ImportError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">transformers</span></code>/<code class="docutils literal notranslate"><span class="pre">peft</span></code>/<code class="docutils literal notranslate"><span class="pre">trl</span></code>/<code class="docutils literal notranslate"><span class="pre">datasets</span></code>
+<li><p><strong>ImportError</strong> – If <code class="docutils literal notranslate"><span class="pre">transformers</span></code>/<code class="docutils literal notranslate"><span class="pre">peft</span></code>/<code class="docutils literal notranslate"><span class="pre">trl</span></code>/<code class="docutils literal notranslate"><span class="pre">datasets</span></code>
 are not installed.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">prompts</span></code> is empty or shape-mismatched with
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">prompts</span></code> is empty or shape-mismatched with
 <code class="docutils literal notranslate"><span class="pre">responses</span></code>.</p></li>
 </ul>
 </dd>
@@ -517,12 +582,12 @@ are not installed.</p></li>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../utils.html">
+          <a class="next-page" href="../evaluation.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.utils</span></code></div>
+                <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">infl_ens.evaluation</span></code></div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -588,6 +653,7 @@ are not installed.</p></li>
 <li><a class="reference internal" href="#infl_ens.training.sft_training.SFTTrainingConfig.seed"><code class="docutils literal notranslate"><span class="pre">SFTTrainingConfig.seed</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#infl_ens.training.sft_training.weighted_causal_lm_loss"><code class="docutils literal notranslate"><span class="pre">weighted_causal_lm_loss()</span></code></a></li>
 <li><a class="reference internal" href="#infl_ens.training.sft_training.sft_train_agent"><code class="docutils literal notranslate"><span class="pre">sft_train_agent()</span></code></a></li>
 </ul>
 </li>
@@ -601,10 +667,12 @@ are not installed.</p></li>
     </aside>
   </div>
 </div><script src="../../_static/documentation_options.js?v=38b66d78"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=df1a032d"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </body>
 </html>

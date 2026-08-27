@@ -42,6 +42,9 @@ closed_loop:
   n_rounds: 5
   batch_size: 256
   blend: 0.5
+  # Pinned to the historical unweighted centroid this demo was recorded
+  # with. The default is now `theory_matched` ((1-G)-weighted centroid).
+  position_update: naive
   sft:
     base_model: Qwen/Qwen2.5-1.5B-Instruct
     output_dir: results/safety_truth/agents

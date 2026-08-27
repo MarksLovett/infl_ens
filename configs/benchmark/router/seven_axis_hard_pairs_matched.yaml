@@ -1,0 +1,160 @@
+# ARM 2 of 3 — seven-axis HARD (SFT) routing over co-located theory pairs.
+#
+# Specialist control arm for seven_axis_soft_topk3_pairs.yaml. Identical in
+# EVERYTHING except routing: same manifest, seed, theory initialization, sigma,
+# LoRA settings and 12-round schedule. Every source prompt is sampled ONCE from
+# the clone-level proportional allocation G (`policy: proportional`), so each
+# prompt trains exactly one specialist adapter; the two co-located clones of a
+# pair share one LoRA, whose batch is the union of their sampled prompts.
+#
+# Position update: `theory_matched` (the default), mandatory here because the
+# run starts from a theory initialization. Under hard canonical routing the
+# sampling step already contributes the G_i factor, so the centroid is weighted
+# by (1 - G_i) on each clone's routed prompts — the H2 rule, exactly the
+# expected dynamics of the position-only simulator. NOTE this differs from the
+# older seven_axis_hard_pairs.yaml, which is pinned to `position_update: naive`
+# (unweighted centroid) to preserve its recorded semantics.
+#
+# Expect the within-pair L2 in `agent_geometry` to grow here, unlike ARM 1:
+# partners draw DIFFERENT prompt subsets, so their (1-G) centroids differ by
+# sampling noise and the pair slowly separates. That contrast is a result, not
+# a bug — it is the finite-batch variance the dense soft rule removes.
+#
+# The `benchmarks:` and `trait_space:` blocks are copied verbatim from
+# seven_axis_soft_pairs.yaml so the trait-space cache fingerprint
+# (3b42c68a8dd334c5, Qwen3-Embedding-8B-AWQ) is reused. DO NOT EDIT THEM.
+#
+# Launch:
+#   ARM=seven_axis_hard_pairs_matched GPU=1 \
+#   CONFIG=configs/benchmark/router/seven_axis_hard_pairs_matched.yaml \
+#   REMOTE=mslovett@doob.dartmouth.edu bash scripts/run_soft_pairs_on_doob.sh
+
+task: closed_loop
+seed: 0
+output_dir: results/seven_axis_hard_pairs_matched/seed0
+policy: proportional
+
+data_split:
+  seed: 0
+  train_frac: 0.7
+  val_frac: 0.1
+  test_frac: 0.2
+  # MUST match ARM 1 exactly: same partitions and same per-round batch
+  # schedule, so the arms and the shared generalist are data-matched.
+  manifest: data/splits/seven_axis_soft_seed0.json
+  cover_train_exactly: true
+  target_n_rounds: 12
+  preferred_batch_sizes: [4900, 2450, 1225, 980, 700, 350]
+  min_rounds: 5
+  max_rounds: 50
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+  - kind: jbb_behaviors
+    path: data/jbb_behaviors
+    include_benign: true
+    max_records: null
+  - kind: ai4privacy
+    path: data/ai4privacy
+    score_mode: density
+    english_only: true
+    max_records: 5000
+  - kind: orbench
+    path: data/orbench
+    configs: [or-bench-80k, or-bench-toxic]
+    max_records: 5000
+  - kind: prompt_injection
+    path: data/prompt_injection
+    max_records: 5000
+  - kind: do_not_answer
+    path: data/do_not_answer
+    include_benign: true
+    max_records: 5000
+
+trait_space:
+  encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
+  encoder_batch_size: 32
+  cache: true
+  cache_dir: data/trait_space_cache
+  n_grid: 3
+  kde_bandwidth: 0.08
+  threshold: 0.5
+  coordinate_residualize: true
+  mode_alignment_weight: 0.35
+  mode_alignment_weights:
+    jailbreak: 1.0
+    privacy: 1.0
+    overrefusal: 1.0
+    injection: 1.0
+    policy_violation: 1.0
+  coordinate_stretch_gamma: 1.0
+
+agents:
+  pairs_from_axes: true
+  name_prefix: clone
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  # Identical theory initialization to ARM 1 (same seed, same RNG draws), so
+  # both arms start from the same seven co-located positions and receive the
+  # same round batches.
+  init_mode: theory_gradient_paired
+  init_noise: 0.0
+  theory_gradient:
+    learning_rate: 2.0e-2
+    n_steps: 8000
+    tol: 1.0e-8
+    min_pairwise: 0.2
+    pairing: nearest
+  snap_collapsed_pairs: true
+  collapse_merge_threshold: 0.01
+
+  # Exactly one categorical G draw per prompt.
+  routing_mode: hard
+  routing_weight: G
+  loss_reweight: null               # unit-weight loss, full LoRA ESS
+  position_update: theory_matched   # (1-G) centroid on each clone's own draws
+  centroid_mode: batch
+  blend: 0.5
+
+  sft_merge_groups: from_init
+  merge_group_prefix: pair
+  save_per_round: true
+
+  val_eval:
+    every_n_rounds: 0
+
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/seven_axis_hard_pairs_matched/seed0/agents
+    max_seq_length: 1024
+    per_device_batch_size: 8
+    gradient_accumulation_steps: 2
+    num_train_epochs: 1.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    logging_steps: 1
+    cumulative_lora: true
+    seed: 0
+
+eval:
+  partitions: [train, test]
+  rounds: final
+  agents: null
+  max_eval_records: 1000
+  forward_batch_size: 8
+  max_seq_length: null
+  after_training: true
+  baseline_run_dir: null

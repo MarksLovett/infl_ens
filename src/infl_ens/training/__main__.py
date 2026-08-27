@@ -22,7 +22,7 @@ Supported tasks (selected by the ``task`` field of the config):
   per-round routed batches logged in an existing ``history.json`` (see
   :mod:`infl_ens.training.baseline_replay`).
 
-Closed-loop honours three orthogonal "rule" knobs:
+Closed-loop honours four orthogonal "rule" knobs:
 
 - ``closed_loop.routing_weight`` selects how queries are routed:
   ``'G'`` (canonical, Lovett & Fu 2024) or ``'G_times_1mG'`` (strategic).
@@ -30,33 +30,65 @@ Closed-loop honours three orthogonal "rule" knobs:
 
   - ``'hard'`` (default): each query is sampled to exactly one agent, which
     then SFTs on its won subset.
-  - ``'soft'``: dense routing. Every agent trains on each query with a
-    per-example loss weight equal to its renormalised allocation share
-    :math:`G_i` (the Rao-Blackwellised / deterministic realisation of the
-    fractional allocation), keeping only the top-``closed_loop.soft_top_k``
-    agents per query to bound the ~:math:`N\\times` SFT cost. The position
-    update targets the same :math:`G_i`-weighted batch centroid. Requires
-    ``routing_weight='G'``, ``loss_reweight=null``, ``centroid_mode='batch'``,
-    and no ``sft_merge_groups``. ``soft_top_k=1`` recovers a deterministic
+  - ``'soft'``: dense routing. Every query is assigned to its
+    top-``closed_loop.soft_top_k`` agents by allocation share (the
+    deterministic realisation of the fractional allocation), bounding the
+    ~:math:`N\\times` SFT cost. ``closed_loop.soft_loss`` picks the loss
+    weighting: ``'weighted'`` (default) trains each assigned agent with a
+    per-example loss weight equal to its renormalised share :math:`G_i`;
+    ``'unit'`` trains each of the top-``k`` agents at unit weight — the
+    "top-``k`` winners" generalisation of one-prompt-per-winning-agent
+    routing, and an ablation of the weighted signal. Requires
+    ``routing_weight='G'`` and ``loss_reweight=null``; ``centroid_mode``
+    may be ``batch`` or ``expected_pool``. ``soft_top_k=1`` recovers a deterministic
     hard (argmax) assignment; symmetry breaking then relies on
     ``closed_loop.init_noise`` rather than routing RNG.
-- ``closed_loop.loss_reweight`` selects whether per-query weights are
-  applied, and where:
 
-  - ``null``: no weighting; loss is unit-weight CE, centroid is the
-    unweighted mean of routed embeddings (naive canonical when paired
-    with ``routing_weight='G'``).
+    With ``sft_merge_groups`` the **merge group, not the clone, is the
+    routing unit**: member allocations are summed into a group share (see
+    :func:`infl_ens.inflgame.router.allocation.group_allocation_weights`),
+    the top-``soft_top_k`` groups per query are kept and renormalised, and
+    each group trains its single LoRA on those queries. Positions are NOT
+    grouped: every clone takes its own theory-matched step, and co-located
+    partners stay together because identical positions receive identical
+    steps (the theory's stable pair), which the logged within-pair distance
+    verifies rather than enforces. The adapter's routing position tracks
+    its members. ``soft_top_k`` is then bounded by the number of groups.
+- ``closed_loop.position_update`` selects the centroid mass of the
+  position step, i.e. whether the trait-space drift is matched to the
+  strategic gradient :math:`\\nabla_{x_i} u_i \\propto \\sum_b B(b)
+  G_i(1-G_i)(b - x_i)`:
+
+  - ``'theory_matched'`` (default): always apply whatever mass makes the
+    expected drift proportional to :math:`G_i(1-G_i)`. Under hard
+    canonical routing the sampling step already contributes :math:`G_i`,
+    so the centroid is weighted by :math:`w_m = 1 - G_i(\\mathbf{x},
+    b_m)`. Under strategic routing (``'G_times_1mG'``) sampling carries
+    the whole coefficient and the centroid stays unweighted. Under soft
+    routing nothing is sampled, so the centroid is the
+    :math:`G_i(1-G_i)`-weighted mean of the **entire** round batch
+    (:func:`infl_ens.inflgame.router.allocation.matched_centroid_mass`),
+    independent of ``soft_top_k`` and of merge groups — the top-k gate
+    only decides who trains on what, and every clone steps on its own.
+  - ``'naive'``: the historical uninstrumented centroid — the unweighted
+    mean of routed embeddings under hard routing, the renormalised
+    top-``k`` share under soft routing. Kept as an ablation arm; it is NOT
+    gradient-matched (see
+    :mod:`infl_ens.inflgame.router.verification`).
+- ``closed_loop.loss_reweight`` selects the loss-side weighting under hard
+  routing:
+
+  - ``null``: unit-weight CE.
   - ``'one_minus_G'``: per-query weight :math:`w_m = 1 - G_i(\\mathbf{x},
-    b_m)` applied to BOTH the SFT loss and the centroid update.
-    Gradient-aligned position drift; full ESS cost (most weight goes to
-    contested-trait queries, near-stronghold queries get weight ≈ 0).
-  - ``'position_only'``: per-query weight :math:`w_m = 1 - G_i(\\mathbf{x},
-    b_m)` applied to ONLY the centroid update; the SFT loss runs at unit
-    weight. Decouples LoRA capability training from trait-space drift —
-    you get the gradient-aligned position update of ``one_minus_G`` plus
-    the full ESS of the naive / strategic methods, because every routed
-    query is trained at unit weight and contributes equally to the LoRA
-    gradient.
+    b_m)` applied to the SFT loss (with the default ``position_update``
+    the centroid carries the same weight, i.e. the historical "full
+    reweight"). Reduced ESS: most weight goes to contested-trait queries.
+  - ``'position_only'``: **deprecated alias** for ``loss_reweight: null``
+    plus ``position_update: theory_matched`` (unit-weight loss,
+    gradient-matched centroid). Accepted so existing configs keep working;
+    combining it with ``position_update: naive`` is rejected.
+- ``closed_loop.soft_loss``: ``'weighted'`` (default) or ``'unit'``; soft
+  routing only (see ``routing_mode`` above).
 
 - ``closed_loop.save_per_round`` selects per-round adapter archiving.
 - ``closed_loop.init_noise``: std of Gaussian perturbation added to each
@@ -93,7 +125,45 @@ Closed-loop honours three orthogonal "rule" knobs:
   :mod:`infl_ens.training.merge_training`). Router agents still route and
   receive centroid updates; merged trainers concatenate each group's routed
   batch each round. At deployment, copy each merge checkpoint to every
-  clone in that group.
+  clone in that group. The sentinel string ``from_init`` derives the groups
+  from a ``theory_gradient_paired`` initialization, naming them
+  ``<closed_loop.merge_group_prefix>-<k>`` in harm order.
+- ``agents`` may be a list of entries or the mapping
+  ``{pairs_from_axes: true, name_prefix: clone}``, which expands to
+  :math:`2L` clones — two per trait axis. See
+  :func:`infl_ens.utils.agent_init.resolve_agent_entries`.
+- ``closed_loop.theory_gradient.pairing``: ``harm_adjacent`` (default) or
+  ``nearest`` (greedy nearest-neighbour matching) when co-locating pairs
+  under ``init_mode='theory_gradient_paired'``.
+
+One YAML drives training, encoding and evaluation. The ``trait_space``
+block configures the encoder (it is also what the trait-space cache
+fingerprint hashes, together with ``benchmarks``), and an optional
+top-level ``eval`` block configures the held-out NLL evaluation of the
+trained adapters:
+
+- ``eval.partitions`` (default ``[train, test]``): each partition of
+  ``data_split.manifest`` is scored into
+  ``<output_dir>/eval_<partition>/eval_results.json``.
+- ``eval.rounds`` (default ``final``): the checkpoint rounds to score, or
+  an explicit list of round indices.
+- ``eval.after_training`` (default ``true``): run the evaluation as soon
+  as the closed loop finishes. The same file can be re-evaluated standalone
+  with ``python -m infl_ens.evaluation --config <the training yaml>``; see
+  :func:`infl_ens.evaluation.evaluate.run_unified_eval`.
+- ``eval.agents``, ``eval.max_eval_records``, ``eval.forward_batch_size``,
+  ``eval.max_seq_length`` (defaults to ``closed_loop.sft.max_seq_length``)
+  and ``eval.baseline_run_dir`` (an optional pooled-baseline run to score
+  under the same partitions) mirror the legacy evaluation configs. The
+  base model, benchmarks, split manifest and seed are taken from the
+  training blocks, never duplicated.
+
+Every closed-loop run writes ``resolved_config.yaml`` next to
+``history.json``: the config with ``agents`` and ``sft_merge_groups``
+resolved to concrete lists, which is what the evaluation entry points and
+``scripts/`` analysis tools should be pointed at. ``history.json`` is
+rewritten after every round so a long run can be inspected (and survives a
+crash) mid-flight.
 
 Run with::
 
@@ -128,6 +198,7 @@ from infl_ens.training.router_training import (
     RouterTrainingConfig,
     train_router_positions,
 )
+from infl_ens.utils.agent_init import resolve_agent_entries
 from infl_ens.utils.resource import gaussian_stability_threshold
 
 
@@ -175,6 +246,80 @@ def _apply_overrides(cfg: dict[str, Any], overrides: Sequence[str]) -> None:
             node[path[-1]] = json.loads(val)
         except json.JSONDecodeError:
             node[path[-1]] = val
+
+
+def _write_history(path: Path, history: list[dict[str, Any]]) -> None:
+    """Write the closed-loop history to disk.
+
+    Called after every round so a long run is inspectable mid-flight and a
+    crash does not lose the trajectory.
+
+    :param path: Destination ``history.json`` path.
+    :type path: pathlib.Path
+    :param history: Per-round records accumulated so far.
+    :type history: list[dict]
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(history, fh, indent=2)
+
+
+def _write_resolved_config(cfg: dict[str, Any], path: Path) -> Optional[Path]:
+    """Dump the config with every generated block resolved to a literal.
+
+    ``agents`` may be written as a mapping and ``sft_merge_groups`` as the
+    ``from_init`` sentinel; both are expanded in-process before the run
+    starts. Evaluation entry points and the ``scripts/`` analysis tools read
+    those keys literally, so the resolved copy is what they should be
+    pointed at.
+
+    :param cfg: Fully resolved configuration dictionary.
+    :type cfg: dict
+    :param path: Destination path (``resolved_config.yaml``).
+    :type path: pathlib.Path
+    :returns: The written path, or ``None`` if PyYAML is unavailable.
+    :rtype: pathlib.Path | None
+    """
+    try:
+        import yaml
+    except ImportError:  # pragma: no cover - environment-level
+        print("warning: PyYAML unavailable; skipping resolved_config.yaml")
+        return None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        yaml.safe_dump(cfg, fh, sort_keys=False, default_flow_style=False)
+    return path
+
+
+def _coords_for_prompts(
+    prompts: Sequence[str],
+    coord_by_text: dict[str, np.ndarray],
+    project: Any,
+) -> np.ndarray:
+    """Look up projected coordinates, encoding only what is missing.
+
+    The trait-space projector re-encodes with the sentence encoder on every
+    call, and the closed loop projects the same prompt pool every round.
+    Caching the pool projection once and reusing rows here removes one full
+    corpus encode per round.
+
+    :param prompts: Prompts to locate in trait space.
+    :type prompts: Sequence[str]
+    :param coord_by_text: Prompt text to coordinate row, from the pool
+        projection.
+    :type coord_by_text: dict[str, numpy.ndarray]
+    :param project: Trait-space projector for prompts absent from the cache.
+    :type project: Callable[[Sequence[str]], numpy.ndarray]
+    :returns: Coordinates, shape ``(len(prompts), L)``.
+    :rtype: numpy.ndarray
+    """
+    prompts = list(prompts)
+    missing = [q for q in prompts if q not in coord_by_text]
+    if missing:
+        extra = np.asarray(project(missing), dtype=float)
+        for q, row in zip(missing, extra):
+            coord_by_text[q] = row
+    return np.stack([coord_by_text[q] for q in prompts], axis=0)
 
 
 def _load_splits(cfg: dict[str, Any]) -> list[BenchmarkSplit]:
@@ -559,6 +704,18 @@ _VALID_LOSS_REWEIGHT_MODES: tuple[Optional[str], ...] = (
     None, "one_minus_G", "position_only",
 )
 
+#: Valid values for ``closed_loop.position_update``. ``theory_matched``
+#: (default) always applies the centroid mass that makes the expected
+#: trait-space drift proportional to the strategic gradient coefficient
+#: :math:`G_i(1-G_i)`; ``naive`` keeps the historical uninstrumented centroid
+#: (unweighted under hard routing, renormalised share under soft routing).
+_VALID_POSITION_UPDATE_MODES: tuple[str, ...] = ("theory_matched", "naive")
+
+#: Valid values for ``closed_loop.soft_loss`` (soft routing only).
+#: ``weighted`` trains each assigned agent with its renormalised share as the
+#: per-example loss weight; ``unit`` trains the top-k agents at unit weight.
+_VALID_SOFT_LOSS_MODES: tuple[str, ...] = ("weighted", "unit")
+
 
 def _validate_routing_and_loss_modes(
     routing_weight: str,
@@ -568,57 +725,104 @@ def _validate_routing_and_loss_modes(
     soft_top_k: int = 1,
     n_agents: Optional[int] = None,
     has_merge_groups: bool = False,
+    n_groups: Optional[int] = None,
+    merge_mode: str = "none",
+    also_train_individual: bool = False,
+    position_update: str = "theory_matched",
+    soft_loss: str = "weighted",
+    centroid_mode: str = "batch",
 ) -> None:
-    """Validate combinations of ``routing_weight`` and ``loss_reweight``.
+    """Validate combinations of the closed-loop rule knobs.
 
     Also validates the soft (dense) routing knobs. ``routing_mode='soft'``
-    trains every agent on each query with a per-example loss weight equal
-    to its renormalised allocation share :math:`G_i` (top-``soft_top_k``
-    gated). It requires the canonical routing weight ``'G'`` and its own
-    weighting scheme, so it is mutually exclusive with ``loss_reweight``
-    and (for now) with pair-merge ``sft_merge_groups``.
+    assigns each query to its top-``soft_top_k`` agents by allocation share
+    and trains them either share-weighted or at unit weight
+    (``soft_loss``). It requires the canonical routing weight ``'G'`` and
+    carries its own loss weighting, so it is mutually exclusive with
+    ``loss_reweight``; the centroid side is chosen by ``position_update``
+    in both routing modes.
+
+    With fixed ``sft_merge_groups`` the merge group replaces the clone as
+    the routing unit, so ``soft_top_k`` counts groups rather than agents and
+    per-clone SFT (``sft_also_train_individual``) is not meaningful. Merge
+    groups resolved per round by proximity are not supported: soft routing
+    needs a stable group partition for the whole batch.
 
     :param routing_mode: ``'hard'`` (sample one agent per query) or
         ``'soft'`` (dense, top-k weighted).
     :type routing_mode: str
-    :param soft_top_k: Number of agents each query trains under soft mode.
+    :param soft_top_k: Number of agents (or merge groups) each query trains
+        under soft mode.
     :type soft_top_k: int
     :param n_agents: Agent count, used to bound ``soft_top_k``.
     :type n_agents: int | None
     :param has_merge_groups: Whether ``sft_merge_groups`` is configured.
     :type has_merge_groups: bool
+    :param n_groups: Merge-group count, used to bound ``soft_top_k`` when
+        merge groups are configured.
+    :type n_groups: int | None
+    :param merge_mode: Resolved SFT merge mode (``none``/``fixed``/
+        ``proximity``).
+    :type merge_mode: str
+    :param also_train_individual: Whether ``sft_also_train_individual`` is
+        set.
+    :type also_train_individual: bool
+    :param position_update: Value of ``closed_loop.position_update``.
+    :type position_update: str
+    :param soft_loss: Value of ``closed_loop.soft_loss``.
+    :type soft_loss: str
+    :param centroid_mode: Value of ``closed_loop.centroid_mode``.
+    :type centroid_mode: str
 
-    The matrix of valid combinations is
+    The centroid mass applied by ``position_update='theory_matched'`` is
+
+    +--------------+------------------+----------------------------------+
+    | routing_mode | routing_weight   | centroid mass                    |
+    +==============+==================+==================================+
+    | ``hard``     | ``'G'``          | ``(1 - G_i)`` on routed prompts  |
+    +--------------+------------------+----------------------------------+
+    | ``hard``     | ``'G_times_1mG'``| uniform (routing carries (1-G))  |
+    +--------------+------------------+----------------------------------+
+    | ``soft``     | ``'G'``          | ``G_i (1 - G_i)`` over the whole |
+    |              |                  | batch (not renormalised)         |
+    +--------------+------------------+----------------------------------+
+
+    while ``position_update='naive'`` gives the uniform centroid under hard
+    routing and the renormalised top-k share under soft routing.
+
+    The loss-side matrix under hard routing is
 
     +------------------+----------------------+--------------------------+
     | routing_weight   | loss_reweight        | semantics                |
     +==================+======================+==========================+
-    | ``'G'``          | ``None``             | naive canonical          |
+    | ``'G'``          | ``None``             | unit-weight loss         |
     +------------------+----------------------+--------------------------+
     | ``'G_times_1mG'``| ``None``             | strategic routing        |
     +------------------+----------------------+--------------------------+
-    | ``'G'``          | ``'one_minus_G'``    | full reweight (loss +    |
-    |                  |                      | centroid both weighted)  |
+    | ``'G'``          | ``'one_minus_G'``    | (1-G)-weighted loss      |
+    |                  |                      | (reduced ESS)            |
     +------------------+----------------------+--------------------------+
-    | ``'G'``          | ``'position_only'``  | centroid weighted only;  |
-    |                  |                      | SFT loss is unit-weight  |
+    | ``'G'``          | ``'position_only'``  | deprecated alias for     |
+    |                  |                      | ``None`` +               |
+    |                  |                      | ``theory_matched``       |
     +------------------+----------------------+--------------------------+
     | ``'G_times_1mG'``| ``'one_minus_G'`` or | **rejected**: strategic  |
     |                  | ``'position_only'``  | routing already carries  |
     |                  |                      | the (1-G) factor; adding |
-    |                  |                      | it on the centroid       |
-    |                  |                      | weight double-counts and |
-    |                  |                      | breaks gradient          |
-    |                  |                      | alignment.               |
+    |                  |                      | it on the loss weight    |
+    |                  |                      | double-counts and breaks |
+    |                  |                      | gradient alignment.      |
     +------------------+----------------------+--------------------------+
+
+    and under soft routing ``loss_reweight`` must be ``None`` while
+    ``soft_loss`` picks ``'weighted'`` (renormalised share) or ``'unit'``.
 
     :param routing_weight: Value of ``closed_loop.routing_weight``.
     :type routing_weight: str
     :param loss_reweight: Value of ``closed_loop.loss_reweight``; may be
         ``None``.
     :type loss_reweight: str | None
-    :raises ValueError: For unknown values or the disallowed
-        strategic-routing-plus-reweight combinations.
+    :raises ValueError: For unknown values or the disallowed combinations.
     """
     if routing_weight not in ("G", "G_times_1mG"):
         raise ValueError(
@@ -628,6 +832,29 @@ def _validate_routing_and_loss_modes(
         raise ValueError(
             f"loss_reweight must be one of {_VALID_LOSS_REWEIGHT_MODES}, "
             f"got {loss_reweight!r}"
+        )
+    if position_update not in _VALID_POSITION_UPDATE_MODES:
+        raise ValueError(
+            "closed_loop.position_update must be one of "
+            f"{_VALID_POSITION_UPDATE_MODES}, got {position_update!r}"
+        )
+    if soft_loss not in _VALID_SOFT_LOSS_MODES:
+        raise ValueError(
+            f"closed_loop.soft_loss must be one of {_VALID_SOFT_LOSS_MODES}, "
+            f"got {soft_loss!r}"
+        )
+    if loss_reweight == "position_only" and position_update == "naive":
+        raise ValueError(
+            "loss_reweight='position_only' is a deprecated alias for the "
+            "gradient-matched centroid (position_update='theory_matched'); "
+            "it contradicts position_update='naive'. Drop loss_reweight or "
+            "set position_update='theory_matched'."
+        )
+    if centroid_mode == "expected_pool" and position_update == "naive":
+        raise ValueError(
+            "centroid_mode='expected_pool' is the gradient-matched "
+            "expected-pool centroid; it has no naive variant. Use "
+            "position_update='theory_matched' or centroid_mode='batch'."
         )
     if (
         loss_reweight in ("one_minus_G", "position_only")
@@ -650,6 +877,13 @@ def _validate_routing_and_loss_modes(
             f"closed_loop.routing_mode must be 'hard' or 'soft', "
             f"got {routing_mode!r}"
         )
+    if routing_mode != "soft" and soft_loss != "weighted":
+        raise ValueError(
+            f"closed_loop.soft_loss={soft_loss!r} applies only to "
+            "routing_mode='soft'; hard routing always trains the sampled "
+            "winner at unit weight (use loss_reweight for hard-mode loss "
+            "weighting)."
+        )
     if routing_mode == "soft":
         if routing_weight != "G":
             raise ValueError(
@@ -658,20 +892,37 @@ def _validate_routing_and_loss_modes(
             )
         if loss_reweight is not None:
             raise ValueError(
-                "routing_mode='soft' carries its own per-query loss weights "
-                f"(renormalised G_i); loss_reweight must be null, got "
-                f"{loss_reweight!r}."
+                "routing_mode='soft' carries its own loss weighting "
+                f"(closed_loop.soft_loss); loss_reweight must be null, got "
+                f"{loss_reweight!r}. The centroid side is chosen by "
+                "closed_loop.position_update ('theory_matched' = dense "
+                "G_i(1-G_i) mass over the batch, 'naive' = renormalised share)."
             )
-        if has_merge_groups:
+        if merge_mode == "proximity":
             raise ValueError(
-                "routing_mode='soft' is not yet supported with pair-merge "
-                "sft_merge_groups; use routing_mode='hard' for merge runs."
+                "routing_mode='soft' is not supported with proximity merge "
+                "(closed_loop.sft_merge_mode); soft routing needs a stable "
+                "group partition. Use fixed sft_merge_groups or "
+                "routing_mode='hard'."
+            )
+        if has_merge_groups and also_train_individual:
+            raise ValueError(
+                "routing_mode='soft' with sft_merge_groups trains exactly one "
+                "adapter per group at the group's shared position; "
+                "sft_also_train_individual is not supported."
             )
         if soft_top_k < 1:
             raise ValueError(
                 f"closed_loop.soft_top_k must be >= 1, got {soft_top_k}"
             )
-        if n_agents is not None and soft_top_k > n_agents:
+        if has_merge_groups and n_groups is not None:
+            if soft_top_k > n_groups:
+                raise ValueError(
+                    f"closed_loop.soft_top_k={soft_top_k} exceeds the number "
+                    f"of merge groups ({n_groups}); under soft routing with "
+                    "sft_merge_groups the group is the routing unit."
+                )
+        elif n_agents is not None and soft_top_k > n_agents:
             raise ValueError(
                 f"closed_loop.soft_top_k={soft_top_k} exceeds the number of "
                 f"agents ({n_agents})."
@@ -791,6 +1042,7 @@ def _task_router_training(cfg: dict[str, Any]) -> int:
     """
     splits = _load_splits(cfg)
     space = _make_trait_space(cfg, splits)
+    cfg["agents"] = resolve_agent_entries(cfg.get("agents"), space.L)
     train_cfg = cfg.get("training", {})
     rng = np.random.default_rng(int(cfg.get("seed", 0)))
     sigma = _sigma_from_cfg(cfg, len(cfg.get("agents", [])), space)
@@ -876,16 +1128,21 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         closed_loop_weight_args,
         collapsed_sft_merge_groups,
         get_merge_train_agent,
+        group_index_for_merge_groups,
+        merge_groups_from_theory_pairs,
         merge_mode_from_config,
         merge_routed_batch,
         parse_sft_merge_groups,
         resolve_dynamic_merge_groups,
         snap_configured_merge_pairs,
+        soft_pair_assignments,
+        soft_pair_position_target,
     )
     from infl_ens.training.sft_training import SFTTrainingConfig, sft_train_agent
 
     splits = _load_splits(cfg)
     space = _make_trait_space(cfg, splits)
+    cfg["agents"] = resolve_agent_entries(cfg.get("agents"), space.L)
     cl = cfg.get("closed_loop", {})
     rng = np.random.default_rng(int(cfg.get("seed", 0)))
     n_agents = len(cfg.get("agents", []))
@@ -904,6 +1161,48 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
             f"converged={theory_init_meta.get('theory_converged')} "
             f"steps={theory_init_meta.get('theory_n_steps')}",
         )
+        if "paired_harm_order" in theory_init_meta:
+            # After co-location partners coincide by construction; the
+            # honest measure of the pairing is how far apart they were
+            # BEFORE each co-location step.
+            first = theory_init_meta.get("within_pair_distance_first_pass") or {}
+            second = (
+                theory_init_meta.get("within_pair_distance_second_pass") or {}
+            )
+            print(
+                f"  pairing={theory_init_meta.get('pairing_method', '?')} "
+                f"pairs={theory_init_meta['paired_harm_order']}",
+            )
+            print(
+                "  within-pair L2 before co-location: "
+                f"max_first_pass="
+                f"{max(first.values()) if first else float('nan'):.4f} "
+                f"max_second_pass="
+                f"{max(second.values()) if second else float('nan'):.4f}",
+            )
+
+    # ``sft_merge_groups: from_init`` derives one merge group per co-located
+    # theory pair, so a run can set the population size and the adapter
+    # partition from the trait space alone (pairs = axes).
+    if cl.get("sft_merge_groups") == "from_init":
+        if not theory_init_meta or "paired_harm_order" not in theory_init_meta:
+            raise ValueError(
+                "closed_loop.sft_merge_groups='from_init' requires a paired "
+                "theory initialization (closed_loop.init_mode="
+                "'theory_gradient_paired'), which supplies paired_harm_order",
+            )
+        cl["sft_merge_groups"] = merge_groups_from_theory_pairs(
+            theory_init_meta["paired_harm_order"],
+            name_prefix=str(cl.get("merge_group_prefix", "pair")),
+        )
+        theory_init_meta["sft_merge_groups_resolved"] = cl["sft_merge_groups"]
+        print(
+            "merge groups from theory init: "
+            + ", ".join(
+                f"{g['train_as']}<-{g['names']}" for g in cl["sft_merge_groups"]
+            ),
+        )
+
     collapse_merge_threshold = float(cl.get("collapse_merge_threshold", 0.01))
     router_names = [a.name for a in agents]
     sft_merge_mode = merge_mode_from_config(cl)
@@ -952,24 +1251,41 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
     )
 
     routing_weight = str(cl.get("routing_weight", "G"))
-    # Per-query weighting mode. See ``_VALID_LOSS_REWEIGHT_MODES`` and
-    # ``_validate_routing_and_loss_modes`` for the full semantics.
-    #
-    # 'one_minus_G' applies (1-G_i) to BOTH the SFT loss and the
-    # centroid update — gradient-matched position drift with reduced
-    # ESS. 'position_only' applies (1-G_i) to the centroid update ONLY
-    # while the SFT loss runs at unit weight — same gradient-matched
-    # drift in trait space, full ESS in the LoRA, broader effective
-    # training distribution (canonical, including strongholds at unit
-    # weight).
+    # Loss-side weighting under hard routing. See
+    # ``_VALID_LOSS_REWEIGHT_MODES`` and ``_validate_routing_and_loss_modes``
+    # for the full semantics. 'one_minus_G' applies (1-G_i) to the SFT
+    # loss (reduced ESS). The deprecated 'position_only' value is an alias
+    # for a unit-weight loss plus the gradient-matched centroid, which is
+    # now the default `position_update`, so it is folded away here.
     loss_reweight = cl.get("loss_reweight", None)
-    # Soft (dense) routing: train every agent on each query with a
-    # per-example loss weight equal to its renormalised allocation share
-    # G_i, keeping only the top-`soft_top_k` agents per query to bound the
-    # ~Nx SFT cost. routing_mode='hard' (default) preserves the original
-    # sample-one-agent behaviour.
+    # Centroid mass of the position step. 'theory_matched' (default) makes
+    # the expected trait-space drift proportional to the strategic
+    # gradient coefficient G_i(1-G_i) in every routing mode; 'naive' keeps
+    # the historical uninstrumented centroid as an ablation arm.
+    position_update = str(cl.get("position_update", "theory_matched"))
+    centroid_mode = str(cl.get("centroid_mode", "batch"))
+    if loss_reweight == "position_only":
+        if str(cl.get("position_update", "theory_matched")) == "naive":
+            raise ValueError(
+                "loss_reweight='position_only' contradicts "
+                "position_update='naive'; drop one of them."
+            )
+        print(
+            "closed_loop.loss_reweight='position_only' is deprecated: it is "
+            "the default (loss_reweight: null, position_update: "
+            "theory_matched).",
+        )
+        loss_reweight = None
+        position_update = "theory_matched"
+    # Soft (dense) routing: assign every query to its top-`soft_top_k`
+    # agents by allocation share, bounding the ~Nx SFT cost.
+    # routing_mode='hard' (default) preserves the original sample-one-agent
+    # behaviour. `soft_loss` picks share-weighted vs unit-weight training
+    # of the assigned agents.
     routing_mode = str(cl.get("routing_mode", "hard"))
     soft_top_k = int(cl.get("soft_top_k", 1))
+    soft_loss = str(cl.get("soft_loss", "weighted"))
+    also_train_individual = bool(cl.get("sft_also_train_individual", False))
     _validate_routing_and_loss_modes(
         routing_weight,
         loss_reweight,
@@ -977,14 +1293,66 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         soft_top_k=soft_top_k,
         n_agents=len(agents),
         has_merge_groups=static_merge_groups is not None,
+        n_groups=(
+            len(static_merge_groups) if static_merge_groups is not None else None
+        ),
+        merge_mode=sft_merge_mode,
+        also_train_individual=also_train_individual,
+        position_update=position_update,
+        soft_loss=soft_loss,
+        centroid_mode=centroid_mode,
     )
+    # Whether hard canonical routing needs the per-query (1-G) weights this
+    # round: for the loss (one_minus_G) and/or the matched centroid.
+    hard_needs_one_minus_g = routing_mode != "soft" and (
+        loss_reweight == "one_minus_G"
+        or (position_update == "theory_matched" and routing_weight == "G")
+    )
+    # Soft routing over merge groups: the group is the routing, training and
+    # position-update unit. Requires equal-size groups whose members are
+    # co-located, because only then does the summed member allocation equal
+    # the allocation of one agent at the shared position.
+    soft_pairs = routing_mode == "soft" and static_merge_groups is not None
+    if soft_pairs:
+        assert static_merge_groups is not None
+        sizes = {len(members) for _t, members in static_merge_groups}
+        if sizes != {2}:
+            raise ValueError(
+                "routing_mode='soft' with sft_merge_groups requires every "
+                f"group to hold exactly two agents, got sizes {sorted(sizes)}"
+            )
+        if cl.get("sft_merge_only_if_collapsed"):
+            raise ValueError(
+                "closed_loop.sft_merge_only_if_collapsed would leave agents "
+                "outside any group; it is not supported with "
+                "routing_mode='soft'."
+            )
+        by_name_check = {a.name: a for a in agents}
+        drifted = {
+            train_as: float(
+                np.linalg.norm(
+                    by_name_check[members[0]].position
+                    - by_name_check[members[1]].position
+                )
+            )
+            for train_as, members in static_merge_groups
+        }
+        worst = max(drifted, key=drifted.get)
+        if drifted[worst] > collapse_merge_threshold:
+            raise ValueError(
+                "routing_mode='soft' with sft_merge_groups requires "
+                f"co-located partners; {worst} members are "
+                f"{drifted[worst]:.4f} apart (> collapse_merge_threshold="
+                f"{collapse_merge_threshold}). Use "
+                "init_mode='theory_gradient_paired' with init_noise: 0.0, or "
+                "snap_collapsed_pairs: true."
+            )
 
     save_per_round = bool(cl.get("save_per_round", False))
     position_step = cl.get("position_step")
     blend_base = float(cl.get("blend", 0.5))
     blend_schedule = cl.get("blend_schedule")
     blend_start = cl.get("blend_start")
-    centroid_mode = str(cl.get("centroid_mode", "batch"))
     if centroid_mode not in ("batch", "expected_pool"):
         raise ValueError(
             f"closed_loop.centroid_mode must be 'batch' or 'expected_pool', "
@@ -994,10 +1362,15 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         raise ValueError(
             "centroid_mode='expected_pool' requires routing_weight='G'"
         )
-    if routing_mode == "soft" and centroid_mode != "batch":
+    if (
+        routing_mode == "soft"
+        and centroid_mode == "expected_pool"
+        and position_update != "theory_matched"
+    ):
         raise ValueError(
-            "routing_mode='soft' requires centroid_mode='batch' (the "
-            "position update uses the soft G_i-weighted batch centroid)."
+            "routing_mode='soft' with centroid_mode='expected_pool' is the "
+            "gradient-matched pool centroid; it requires "
+            "position_update='theory_matched'."
         )
     if routing_mode == "soft" and sft_merge_mode == "proximity":
         raise ValueError(
@@ -1120,8 +1493,27 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
     merge_layout_spread_thresh = float(cl.get("merge_layout_spread_thresh", 0.45))
     merge_train_registry: dict[str, RouterAgent] = {}
     use_router_only_sft = sft_merge_mode in ("fixed", "proximity")
-    also_train_individual = bool(cl.get("sft_also_train_individual", False))
-    if static_merge_groups:
+    print(
+        f"position update: {position_update} "
+        f"(routing_mode={routing_mode}, routing_weight={routing_weight}, "
+        f"loss_reweight={loss_reweight}"
+        + (f", soft_loss={soft_loss}" if routing_mode == "soft" else "")
+        + ")",
+    )
+    if soft_pairs:
+        assert static_merge_groups is not None
+        unit = (
+            "one adapter per pair, independent per-clone position steps"
+            if position_update == "theory_matched"
+            else "one adapter and one shared position step per pair"
+        )
+        print(
+            f"soft routing over pairs: top_k={soft_top_k} of "
+            f"{len(static_merge_groups)} groups, soft_loss={soft_loss}; "
+            f"{unit}: "
+            + ", ".join(f"{t}<-{m}" for t, m in static_merge_groups),
+        )
+    elif static_merge_groups:
         print(
             "pair-merge SFT only (routing + position updates stay per-clone): "
             + ", ".join(f"{t}<-{m}" for t, m in static_merge_groups),
@@ -1137,6 +1529,36 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         blend_for_round,
         expected_pool_centroid,
     )
+
+    history_path = (
+        Path(cfg.get("output_dir", "results/closed_loop")) / "history.json"
+    )
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_path = _write_resolved_config(
+        cfg, history_path.parent / "resolved_config.yaml",
+    )
+    if resolved_path is not None:
+        print(f"resolved config: {resolved_path}")
+    if split_manifest is not None:
+        split_meta_path = history_path.parent / "data_split.json"
+        with split_meta_path.open("w", encoding="utf-8") as fh:
+            json.dump(split_manifest.to_dict(), fh, indent=2)
+        print(f"data split manifest: {split_meta_path}")
+
+    # The projector re-encodes on every call, and the pool is the same every
+    # round; project it once and serve batch coordinates from the cache.
+    pool_coords = space.project(pool_prompts)
+    coord_by_text: dict[str, np.ndarray] = {
+        text: pool_coords[i] for i, text in enumerate(pool_prompts)
+    }
+
+    by_name: dict[str, RouterAgent] = {a.name: a for a in agents}
+    group_index: Optional[np.ndarray] = None
+    if soft_pairs:
+        assert static_merge_groups is not None
+        group_index = group_index_for_merge_groups(
+            static_merge_groups, router_names,
+        )
 
     history: list[dict[str, Any]] = []
     for r in range(n_rounds):
@@ -1161,29 +1583,60 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         # or eval_weights ultimately receives the values.
         G_batch: Optional[np.ndarray] = None
         name_to_idx: dict[str, int] = {}
-        if loss_reweight in ("one_minus_G", "position_only"):
+        if hard_needs_one_minus_g:
             from infl_ens.inflgame.router.allocation import allocation_weights
-            batch_coords = space.project(batch_prompts)             # (M, L)
+            batch_coords = _coords_for_prompts(
+                batch_prompts, coord_by_text, space.project,
+            )                                                       # (M, L)
             G_batch = allocation_weights(
                 router.positions, batch_coords, router.cov,
             )                                                       # (N, M)
             name_to_idx = {a.name: i for i, a in enumerate(agents)}
 
-        # Soft (dense) routing: every agent trains on each top-k query with
-        # a loss weight equal to its renormalised allocation share G_i. This
+        # Soft (dense) routing: every agent trains on each of its top-k
+        # queries, share-weighted or at unit weight (`soft_loss`). This
         # bypasses the hard `choices` partition below; `choices` is still
         # sampled for the `observed_share` diagnostic in the history log.
+        # `soft_pos_mass` carries every clone's theory-matched centroid
+        # mass G_i(1-G_i) over the WHOLE batch: the position step is
+        # per clone and independent of the top-k training gate (and of
+        # merge groups).
         soft_weights: Optional[np.ndarray] = None
+        soft_pos_mass: Optional[np.ndarray] = None
+        pair_weight_matrix: Optional[np.ndarray] = None
+        pair_idx: Optional[list[np.ndarray]] = None
+        pair_weights: Optional[list[np.ndarray]] = None
+        batch_coords_soft: Optional[np.ndarray] = None
         if routing_mode == "soft":
             from infl_ens.inflgame.router.allocation import (
                 allocation_weights,
+                matched_centroid_mass,
                 top_k_allocation_weights,
             )
-            batch_coords_soft = space.project(batch_prompts)         # (M, L)
+            batch_coords_soft = _coords_for_prompts(
+                batch_prompts, coord_by_text, space.project,
+            )                                                       # (M, L)
             G_soft = allocation_weights(
                 router.positions, batch_coords_soft, router.cov,
             )                                                       # (N, M)
-            soft_weights = top_k_allocation_weights(G_soft, soft_top_k)
+            soft_pos_mass = matched_centroid_mass(G_soft)
+            if soft_pairs:
+                assert static_merge_groups is not None
+                assert group_index is not None
+                # Members of a group are co-located, so summing their
+                # shares gives the allocation of one agent at the shared
+                # position: the top-k TRAINING gate is taken over groups,
+                # not clones. Positions still move per clone.
+                pair_weight_matrix, pair_idx, pair_weights = (
+                    soft_pair_assignments(
+                        G_soft,
+                        group_index,
+                        len(static_merge_groups),
+                        soft_top_k,
+                    )
+                )                                                   # (P, M)
+            else:
+                soft_weights = top_k_allocation_weights(G_soft, soft_top_k)
 
         agent_prompts: dict[str, list[str]] = {a.name: [] for a in agents}
         agent_responses: dict[str, list[str]] = {a.name: [] for a in agents}
@@ -1196,20 +1649,38 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         agent_blend_effective: dict[str, list[float]] = {
             a.name: [] for a in agents
         }
-        # Per-agent per-query (1-G) weights computed this round. Used
-        # for the loss when ``loss_reweight == 'one_minus_G'`` and for
-        # the centroid when ``loss_reweight in {'one_minus_G',
-        # 'position_only'}``. Empty list when ``loss_reweight is None``.
+        # Per-agent per-query weights computed this round. Under hard
+        # canonical routing these are the (1-G) weights (used for the loss
+        # when ``loss_reweight == 'one_minus_G'`` and for the centroid when
+        # ``position_update == 'theory_matched'``); under soft routing they
+        # are the renormalised top-k shares, logged even when the loss ran
+        # at unit weight (``soft_loss == 'unit'``) so per-query share totals
+        # stay auditable. Empty list when nothing was computed.
         agent_sample_weights: dict[str, list[float]] = {
             a.name: [] for a in agents
         }
+        # The centroid weights actually applied by the position step, when
+        # they differ from ``agent_sample_weights`` (soft routing with the
+        # theory-matched G(1-G) mass over the whole batch, aligned with
+        # ``batch_prompts``). Keyed by training unit.
+        agent_position_weights: dict[str, list[float]] = {}
         merge_sft_logs: dict[str, list[dict[str, Any]]] = {}
         merge_prompt_counts: dict[str, int] = {}
         merge_loaded_prior: dict[str, Optional[str]] = {}
+        # Soft-pair bookkeeping: which batch rows each pair trained on, the
+        # shared position it moved to, and its mean share of the batch.
+        agent_batch_indices: dict[str, list[int]] = {}
+        pair_positions: dict[str, list[float]] = {}
+        pair_blend_effective: dict[str, float] = {}
+        pair_share_batch: dict[str, float] = {}
         round_merge_meta: Optional[dict[str, Any]] = None
         active_merge_groups: Optional[list[tuple[str, list[str]]]] = None
         unpaired_agents: list[str] = []
         for i_agent, agent in enumerate(agents):
+            if soft_pairs:
+                # The pair, not the clone, routes and trains; the per-pair
+                # block below owns SFT and the single shared position step.
+                break
             if routing_mode == "soft":
                 assert soft_weights is not None
                 mine_idx_soft = np.flatnonzero(soft_weights[i_agent] > 0.0)
@@ -1232,15 +1703,26 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
             weights_i: Optional[list[float]] = None
             if routing_mode == "soft":
                 assert soft_weights is not None
-                # Soft weights carry both the loss weighting and the
-                # G_i-weighted centroid target (via eval_weights → scores).
-                weights_i = soft_weights[i_agent, mine_idx_soft].tolist()
-                agent_sample_weights[agent.name] = list(weights_i)
-                sample_weights_arg: Optional[list[float]] = list(weights_i)
-                eval_weights_arg: Optional[list[float]] = list(weights_i)
-                skip_pos = False
+                # Renormalised shares are always logged; the loss uses them
+                # only under soft_loss='weighted', and the centroid target
+                # (via eval_weights → scores) uses them only under
+                # position_update='naive'. The theory-matched position step
+                # uses the whole batch and is applied in the dense block
+                # after this loop, so SFT skips its own position update.
+                share_i = soft_weights[i_agent, mine_idx_soft].tolist()
+                weights_i = share_i
+                agent_sample_weights[agent.name] = list(share_i)
+                sample_weights_arg: Optional[list[float]] = (
+                    None if soft_loss == "unit" else list(share_i)
+                )
+                if position_update == "theory_matched":
+                    eval_weights_arg: Optional[list[float]] = None
+                    skip_pos = True
+                else:
+                    eval_weights_arg = list(share_i)
+                    skip_pos = False
             else:
-                if loss_reweight in ("one_minus_G", "position_only"):
+                if hard_needs_one_minus_g:
                     mine_idx = [
                         m for m, c in enumerate(choices) if c.name == agent.name
                     ]
@@ -1252,6 +1734,7 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 sample_weights_arg, eval_weights_arg, skip_pos = (
                     closed_loop_weight_args(
                         loss_reweight, centroid_mode, weights_i,
+                        position_update=position_update,
                     )
                 )
 
@@ -1300,12 +1783,8 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
             empirical_utility,
             strategic_routing_weights,
         )
-        pool_coords = space.project(pool_prompts)
 
-        if (
-            centroid_mode == "expected_pool"
-            and loss_reweight in ("one_minus_G", "position_only")
-        ):
+        if centroid_mode == "expected_pool" and position_update == "theory_matched":
             G_pool = allocation_weights(
                 router.positions, pool_coords, router.cov,
             )
@@ -1319,7 +1798,130 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 )
                 agent_blend_effective[agent.name].append(float(beta_eff))
 
-        if use_router_only_sft:
+        if (
+            routing_mode == "soft"
+            and position_update == "theory_matched"
+            and centroid_mode == "batch"
+        ):
+            # Dense theory-matched position step: every clone moves toward
+            # the G_i(1-G_i)-weighted centroid of the WHOLE batch, whether
+            # or not it trained on a given query, and independently of any
+            # merge group. Nothing is sampled under soft routing, so this
+            # mass is the full strategic-gradient coefficient and the
+            # expected drift is exactly parallel to grad u_i (no top-k
+            # truncation, no per-query renormaliser). Co-located partners
+            # have identical G_i rows and therefore take identical steps:
+            # pairs persist because the theory says so, not by fiat.
+            assert soft_pos_mass is not None and batch_coords_soft is not None
+            all_rows = np.arange(len(batch_prompts))
+            for i_agent, agent in enumerate(agents):
+                mass_i = soft_pos_mass[i_agent]
+                agent_position_weights[agent.name] = mass_i.tolist()
+                target = soft_pair_position_target(
+                    batch_coords_soft, all_rows, mass_i,
+                )
+                agent.position, beta_eff = apply_position_update(
+                    agent.position,
+                    target,
+                    blend=blend_r,
+                    position_step=position_step,
+                )
+                agent_blend_effective[agent.name].append(float(beta_eff))
+
+        if soft_pairs:
+            assert static_merge_groups is not None
+            assert pair_idx is not None and pair_weights is not None
+            assert pair_weight_matrix is not None
+            assert batch_coords_soft is not None
+            active_merge_groups = static_merge_groups
+            unpaired_agents = []
+            for i_pair, (train_name, members) in enumerate(
+                static_merge_groups,
+            ):
+                idx_p = pair_idx[i_pair]
+                w_p = pair_weights[i_pair]
+                mine_p = [batch_prompts[int(m)] for m in idx_p]
+                mine_r = [batch_responses[int(m)] for m in idx_p]
+                agent_prompts[train_name] = list(mine_p)
+                agent_responses[train_name] = list(mine_r)
+                agent_sample_weights[train_name] = [float(x) for x in w_p]
+                agent_batch_indices[train_name] = [int(m) for m in idx_p]
+                merge_prompt_counts[train_name] = len(mine_p)
+                pair_share_batch[train_name] = float(
+                    pair_weight_matrix[i_pair].mean()
+                )
+                merge_agent = get_merge_train_agent(
+                    merge_train_registry, train_name, members, agents,
+                )
+                if mine_p:
+                    out_override = (
+                        str(sft_base_output_dir / train_name / f"round-{r:02d}")
+                        if save_per_round else None
+                    )
+                    sft_result = sft_train_agent(
+                        merge_agent,
+                        prompts=mine_p,
+                        responses=mine_r if any(mine_r) else None,
+                        cfg=sft_cfg,
+                        eval_prompts=mine_p,
+                        project=space.project,
+                        blend=blend_r,
+                        position_step=position_step,
+                        out_dir_override=out_override,
+                        sample_weights=(
+                            None if soft_loss == "unit"
+                            else [float(x) for x in w_p]
+                        ),
+                        eval_weights=None,
+                        skip_position_update=True,
+                    )
+                    merge_sft_logs[train_name] = sft_result.get("log_history", [])
+                    merge_loaded_prior[train_name] = sft_result.get(
+                        "loaded_prior_lora",
+                    )
+                    agent_sft_logs[train_name] = merge_sft_logs[train_name]
+                    agent_loaded_prior[train_name] = merge_loaded_prior[train_name]
+                if position_update == "theory_matched":
+                    # Each member already took its own theory-matched step
+                    # (dense batch block or expected-pool block above). The
+                    # trainer's routing position simply tracks its members;
+                    # nothing forces them together — co-location is an
+                    # outcome the theory predicts, audited via the logged
+                    # within-pair distance in `agent_geometry`.
+                    member_pos = np.stack(
+                        [by_name[m].position for m in members], axis=0,
+                    )
+                    merge_agent.position = member_pos.mean(axis=0)
+                    pair_positions[train_name] = merge_agent.position.tolist()
+                    betas = [
+                        agent_blend_effective[m][-1]
+                        for m in members
+                        if agent_blend_effective[m]
+                    ]
+                    pair_blend_effective[train_name] = (
+                        float(np.mean(betas)) if betas else float("nan")
+                    )
+                else:
+                    # Historical naive arm: ONE renormalised-share step per
+                    # pair on its top-k queries, written to both members.
+                    if not mine_p:
+                        continue
+                    target = soft_pair_position_target(
+                        batch_coords_soft, idx_p, w_p,
+                    )
+                    new_pos, beta_eff = apply_position_update(
+                        merge_agent.position,
+                        target,
+                        blend=blend_r,
+                        position_step=position_step,
+                    )
+                    for member in members:
+                        by_name[member].position = new_pos.copy()
+                        agent_blend_effective[member].append(float(beta_eff))
+                    merge_agent.position = new_pos.copy()
+                    pair_positions[train_name] = new_pos.tolist()
+                    pair_blend_effective[train_name] = float(beta_eff)
+        elif use_router_only_sft:
             if sft_merge_mode == "fixed":
                 active_merge_groups = static_merge_groups
                 unpaired_agents = []
@@ -1364,12 +1966,9 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 merge_prompt_counts[train_name] = len(mp)
                 if not mp:
                     continue
-                if loss_reweight == "one_minus_G":
-                    m_sample_weights = merged_weights
-                elif loss_reweight == "position_only":
-                    m_sample_weights = None
-                else:
-                    m_sample_weights = None
+                m_sample_weights = (
+                    merged_weights if loss_reweight == "one_minus_G" else None
+                )
                 out_override = (
                     str(sft_base_output_dir / train_name / f"round-{r:02d}")
                     if save_per_round else None
@@ -1402,6 +2001,7 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                     weights_i = agent_sample_weights.get(agent.name) or None
                     sw, ew, _skip_pos = closed_loop_weight_args(
                         loss_reweight, centroid_mode, weights_i,
+                        position_update=position_update,
                     )
                     out_override = (
                         str(sft_base_output_dir / agent.name / f"round-{r:02d}")
@@ -1437,6 +2037,7 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 weights_i = agent_sample_weights.get(name) or None
                 sw, ew, skip_pos = closed_loop_weight_args(
                     loss_reweight, centroid_mode, weights_i,
+                    position_update=position_update,
                 )
                 out_override = (
                     str(sft_base_output_dir / name / f"round-{r:02d}")
@@ -1472,6 +2073,7 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                     weights_i = agent_sample_weights.get(agent.name) or None
                     sw, ew, skip_pos = closed_loop_weight_args(
                         loss_reweight, centroid_mode, weights_i,
+                        position_update=position_update,
                     )
                     out_override = (
                         str(sft_base_output_dir / agent.name / f"round-{r:02d}")
@@ -1503,6 +2105,9 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
         strategic_share_pool = strategic_routing_weights(
             router.positions, pool_coords, router.cov,
         ).mean(axis=1)
+        u_pool_round = empirical_utility(
+            router.positions, pool_coords, router.cov,
+        ).tolist()
         from infl_ens.training.pool_dynamics import agent_pairwise_geometry
 
         pos_stack = np.stack([a.position for a in agents], axis=0)
@@ -1517,23 +2122,35 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
             "positions": {a.name: a.position.tolist() for a in agents},
             "agent_geometry": round_geometry,
             "u_grid": router.expected_utilities().tolist(),
-            "u_pool": empirical_utility(
-                router.positions, pool_coords, router.cov,
-            ).tolist(),
+            "u_pool": u_pool_round,
             "strategic_share_pool": strategic_share_pool.tolist(),
             "observed_share": observed.tolist(),
             "routing_weight": routing_weight,
             "routing_mode": routing_mode,
             "soft_top_k": soft_top_k if routing_mode == "soft" else None,
+            "soft_loss": soft_loss if routing_mode == "soft" else None,
             "loss_reweight": loss_reweight,
+            "position_update": position_update,
             "agent_prompts": agent_prompts,
             "agent_responses": agent_responses,
             "agent_sft_logs": agent_sft_logs,
-            # Per-agent per-query (1-G) weights computed this round.
-            # See the agent_sample_weights variable above: these values
-            # are populated whenever loss_reweight is set, even if the
-            # SFT loss itself ran at unit weight (position_only mode).
+            # Per-agent per-query weights computed this round: (1-G) under
+            # hard canonical routing, renormalised shares under soft
+            # routing. Populated whenever they were computed, even if the
+            # SFT loss itself ran at unit weight.
             "agent_sample_weights": agent_sample_weights,
+            # Centroid weights actually applied when they differ from the
+            # above: under soft theory-matched routing the dense G(1-G)
+            # mass over the whole batch, aligned with `batch_prompts`.
+            "agent_position_weights": agent_position_weights,
+            **(
+                {
+                    "batch_prompts": list(batch_prompts),
+                    "batch_responses": list(batch_responses),
+                }
+                if routing_mode == "soft" and not soft_pairs
+                else {}
+            ),
             "agent_loaded_prior": agent_loaded_prior,
             "agent_blend_effective": agent_blend_effective,
             "position_step": position_step,
@@ -1556,6 +2173,29 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 else {}
             ),
             **(
+                {
+                    "soft_routing_units": "pairs",
+                    "pair_members": {
+                        t: list(m) for t, m in static_merge_groups or []
+                    },
+                    "pair_positions": pair_positions,
+                    "pair_blend_effective": pair_blend_effective,
+                    "pair_share_batch": pair_share_batch,
+                    "pair_u_pool": {
+                        t: sum(
+                            u_pool_round[router_names.index(name)]
+                            for name in m
+                        )
+                        for t, m in static_merge_groups or []
+                    },
+                    "agent_batch_indices": agent_batch_indices,
+                    "batch_prompts": list(batch_prompts),
+                    "batch_responses": list(batch_responses),
+                }
+                if soft_pairs
+                else {}
+            ),
+            **(
                 {"theory_init": theory_init_meta}
                 if r == 0 and theory_init_meta is not None
                 else {}
@@ -1574,6 +2214,8 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 else {}
             ),
         })
+
+        _write_history(history_path, history)
 
         if (
             split_manifest is not None
@@ -1594,16 +2236,22 @@ def _task_closed_loop(cfg: dict[str, Any]) -> int:
                 max_eval_records=val_eval_max_records,
             )
 
-    out = Path(cfg.get("output_dir", "results/closed_loop")) / "history.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8") as fh:
-        json.dump(history, fh, indent=2)
-    if split_manifest is not None:
-        split_meta_path = out.parent / "data_split.json"
-        with split_meta_path.open("w", encoding="utf-8") as fh:
-            json.dump(split_manifest.to_dict(), fh, indent=2)
-        print(f"data split manifest: {split_meta_path}")
-    print(f"closed-loop done: {n_rounds} rounds, wrote {out}")
+    _write_history(history_path, history)
+    print(f"closed-loop done: {n_rounds} rounds, wrote {history_path}")
+
+    eval_block = cfg.get("eval")
+    if eval_block and bool(eval_block.get("after_training", True)):
+        from infl_ens.evaluation.evaluate import run_unified_eval
+
+        if split_manifest is None:
+            print(
+                "eval: skipped — the eval block needs data_split.manifest "
+                "to define held-out partitions.",
+            )
+        else:
+            reports = run_unified_eval(cfg, final_round=n_rounds - 1)
+            for path in reports:
+                print(f"eval: wrote {path}")
     return 0
 
 

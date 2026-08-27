@@ -80,6 +80,7 @@ def verify_history(
     summary: dict[str, Any] = {
         "history": str(history_path),
         "loss_reweight": records[0].get("loss_reweight"),
+        "position_update": records[0].get("position_update"),
         "n_rounds": len(records),
         "blend": blend,
         "rounds": [],
