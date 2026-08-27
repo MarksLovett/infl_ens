@@ -337,9 +337,9 @@ def run_axis_niche_diagnostic(
 
     cfg = _load_yaml(router_config)
     splits = _load_splits(cfg)
-    from infl_ens.data.trait_space_cache import make_trait_space_encoder
+    from infl_ens.data.encoders import make_encoder
 
-    encoder = make_trait_space_encoder(cfg)
+    encoder = make_encoder(cfg)
 
     blocks: list[np.ndarray] = []
     origin_blocks: list[np.ndarray] = []

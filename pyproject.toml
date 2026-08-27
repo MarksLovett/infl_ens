@@ -122,11 +122,10 @@ dev = [
 ]
 
 [project.scripts]
-# Console-script aliases for the two single CLIs (per AGENTS.md §4 rule 1).
-# ``python -m infl_ens.training ...`` and ``python -m infl_ens.data ...``
-# continue to work whether or not the package is installed.
+# Console-script aliases for the package CLIs (per AGENTS.md §4 rule 1).
+# ``python -m infl_ens.training ...`` continues to work whether or not the
+# package is installed.
 infl-ens-train = "infl_ens.training.__main__:main"
-infl-ens-data = "infl_ens.data.__main__:main"
 
 [project.urls]
 # Fill these in with the actual repo URL once it's public.

@@ -22,7 +22,7 @@ the specific subpackage you need:
 - :mod:`infl_ens.utils`     — cross-cutting helpers
 
 The single training CLI is ``python -m infl_ens.training --config <path>``;
-the single data CLI is ``python -m infl_ens.data {preview, build-...}``
+the single evaluation CLI is ``python -m infl_ens.evaluation --config <path>``
 (see AGENTS.md §4 rule 1).
 
 References

@@ -22,7 +22,7 @@ from infl_ens.data.benchmarks.safety_trait_space import (
     _make_learned_projector,
     build_safety_trait_space_bundle,
 )
-from infl_ens.data.encoders import DEFAULT_ENCODER_MODEL, HuggingFaceEncoder
+from infl_ens.data.encoders import HuggingFaceEncoder, make_encoder
 from infl_ens.data.trait_linear_transform import (
     FrozenLinearTransform,
     load_transform_from_cfg,
@@ -361,37 +361,6 @@ def _trait_space_build_kwargs(cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def make_trait_space_encoder(cfg: dict[str, Any]) -> HuggingFaceEncoder:
-    """Construct the Hugging Face encoder named in ``trait_space`` config.
-
-    :param cfg: Router or training config.
-    :type cfg: dict
-    :returns: Encoder with configuration-local overrides.  ``encoder`` may
-        be either a legacy model-name string or a mapping with
-        ``model_name``, ``batch_size``, ``max_length``, ``pooling``,
-        ``normalize``, ``torch_dtype``, ``device_map``, ``padding_side``,
-        ``attn_implementation``, and ``trust_remote_code`` fields.
-    :rtype: HuggingFaceEncoder
-    :raises TypeError: If ``trait_space.encoder`` is not a string or mapping.
-    """
-    ts_cfg = cfg.get("trait_space", {})
-    raw_encoder = ts_cfg.get("encoder", DEFAULT_ENCODER_MODEL)
-    if isinstance(raw_encoder, str):
-        encoder_cfg: dict[str, Any] = {"model_name": raw_encoder}
-    elif isinstance(raw_encoder, dict):
-        encoder_cfg = dict(raw_encoder)
-    else:
-        raise TypeError(
-            "trait_space.encoder must be a Hugging Face model-name string "
-            f"or mapping, got {type(raw_encoder).__name__}",
-        )
-
-    if "model_name" not in encoder_cfg:
-        encoder_cfg["model_name"] = DEFAULT_ENCODER_MODEL
-    if "batch_size" not in encoder_cfg and "encoder_batch_size" in ts_cfg:
-        encoder_cfg["batch_size"] = int(ts_cfg["encoder_batch_size"])
-    return HuggingFaceEncoder(**encoder_cfg)
-
 
 def build_or_load_safety_trait_space(
     cfg: dict[str, Any],
@@ -411,7 +380,7 @@ def build_or_load_safety_trait_space(
     :rtype: TraitSpace
     """
     ts_cfg = cfg.get("trait_space", {})
-    encoder = make_trait_space_encoder(cfg)
+    encoder = make_encoder(cfg)
     build_kwargs = _trait_space_build_kwargs(cfg)
     use_cache = bool(ts_cfg.get("cache", False))
     if not use_cache:
