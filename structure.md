@@ -130,6 +130,8 @@ infl_ens/
 │   ├── plot_oracle_run_figures.py                full oracle-run suite: NLL, positions, split, support
 │   ├── rebuild_oracle_resource_density.sh        detailed empirical resource density for oracle run
 │   ├── eval_base_model.py                        thin CLI → :mod:`infl_ens.evaluation.base_eval.evaluate_base_model`
+│   ├── run_model_sweep.sh                        run-on-doob 3x3 model scale-family sweep (train + eval + summarize)
+│   ├── summarize_model_sweep.py                  roll per-cell evals into a family x scale NLL table + figure
 │   └── smoke_test.py                             pipeline sanity check
 ├── configs/
 │   ├── model/
@@ -157,6 +159,7 @@ infl_ens/
 │           ├── safety_truth_n4_r10_strategic_long_cum.yaml  cumulative-LoRA variant (10 rounds)
 │           ├── safety_truth_n4_r20_strategic_long_cum.yaml  cumulative-LoRA variant (20 rounds)
 │           ├── safety_truth_n4_r40_strategic_long_cum.yaml  cumulative-LoRA variant (40 rounds)
+│           ├── model_sweep_base.yaml             fixed control for the 3x3 model scale-family sweep
 │           ├── beavertails_only.yaml             1-D harm-axis ablation
 │           ├── halueval_only.yaml                1-D hallucination-axis ablation
 │           ├── safety_truth_toxicchat_n4.yaml    3-D harm + hallucination + jailbreak router training
@@ -247,7 +250,7 @@ infl_ens/
 | `__init__.py` | Eager re-export of router training; lazy proxy for SFT | `RouterTrainingConfig`, `train_router_positions`, (lazy) `SFTTrainingConfig`, `sft_train_agent` |
 | `__main__.py` | Single CLI: `python -m infl_ens.training --config <path>` dispatches on the config's `task` field. Closed-loop task honours `closed_loop.routing_weight` (`G` / `G_times_1mG`), `closed_loop.routing_mode` (`hard` default / `soft` dense with `closed_loop.soft_top_k`: every agent trains each top-k query weighted by renormalised :math:`G_i`, requires `routing_weight=G`, `loss_reweight=null`, `centroid_mode=batch`, no merge groups), `closed_loop.loss_reweight`, `closed_loop.init_noise` (Gaussian symmetry-breaking at clone start), `closed_loop.sft_merge_groups` (optional pair-merge SFT: four routers, two physical LoRAs), and `closed_loop.save_per_round`; always logs `agent_prompts` / `agent_responses` / `agent_sft_logs` / `routing_mode` / `soft_top_k` per round in `history.json` (plus `merge_*` fields when pair-merge is enabled). Baseline replay also writes a centroid-tracking `history.json` for pooled generalist plots. | `main` |
 | `router_training.py` | Gradient-ascent loop on agent positions | `RouterTrainingConfig`, `train_router_positions` |
-| `sft_training.py` | LoRA SFT for a single :class:`RouterAgent`; accepts `out_dir_override` for per-round adapter archiving; accepts `cfg.cumulative_lora=True` to load and continue training the prior adapter rather than starting fresh; when `sample_weights` is supplied, routes through a per-example-weighted `WeightedSFTTrainer` (pre-tokenised, packing off) whose loss is `weighted_causal_lm_loss`; returns `log_history` and `loaded_prior_lora` from the SFT trainer's state | `SFTTrainingConfig`, `sft_train_agent`, `weighted_causal_lm_loss` |
+| `sft_training.py` | LoRA SFT for a single :class:`RouterAgent`; accepts `out_dir_override` for per-round adapter archiving; accepts `cfg.cumulative_lora=True` to load and continue training the prior adapter rather than starting fresh; when `sample_weights` is supplied, routes through a per-example-weighted `WeightedSFTTrainer` (pre-tokenised, packing off) whose loss is `weighted_causal_lm_loss`; training strings are built by `_build_training_texts`, which prefers each base model's own `tokenizer.apply_chat_template` (so a cross-family sweep trains on native chat markers; Qwen2.5 reproduces the prior ChatML) and falls back to `_format_chat`; returns `log_history` and `loaded_prior_lora` from the SFT trainer's state | `SFTTrainingConfig`, `sft_train_agent`, `weighted_causal_lm_loss` |
 | `baseline_replay.py` | Replay pooled baseline/generalist SFT from closed-loop `history.json` routed batches; records pooled batch and cumulative centroids | `load_closed_loop_history`, `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
 | `merge_training.py` | Pair-merge closed loop: fixed or proximity merge groups, routed-batch concat, router-only centroid updates | `resolve_dynamic_merge_groups`, `merge_train_name`, `parse_sft_merge_groups`, `merge_routed_batch`, `closed_loop_weight_args` |
 | `sweep_aggregate.py` | Sweep summaries and seed×σ aggregation (orchestrates :mod:`infl_ens.vis.sweeps`) | `classify_equilibrium_clusters`, `summarise_flat_sweep_run`, `write_flat_sweep_csv`, `aggregate_group_seed_sweep`, `aggregate_final_positions`, `print_final_positions_report`, `summarize_pairs_near_theory_sweep` |
@@ -391,6 +394,8 @@ infl_ens/
 | `run_compare_all_r40_all_seeds.sh` | Per-seed `compare_all_r40_models.py` then aggregate |
 | `aggregate_eval_across_seeds.py` | Averages per-seed `eval_results.json` → `eval_aggregate.json` |
 | `export_eval_matrix.py` | Writes `eval_matrix.{csv,md,tex,json}` from `eval_aggregate.json` |
+| `run_model_sweep.sh` | Run-on-doob (git-pull handoff, no scp/ssh) model scale-family sweep: 9 cells (3 families x 3 scales) over `model_sweep_base.yaml`, overriding `closed_loop.sft.base_model` + per-tier micro-batch per cell; resumable per-cell train + final-round eval, then calls `summarize_model_sweep.py`. Env: `GPU`, `PY`, `SEEDS`, `CELLS`, `SKIP_EVAL`, `SKIP_EXISTING` |
+| `summarize_model_sweep.py` | Roll per-cell `eval_final/eval_results.json` into a family x scale NLL table (`model_sweep_nll.csv` / `.md`) + best-effort grouped bar figure |
 | `smoke_test.py` | End-to-end pipeline sanity check |
 
 ### `configs/`
@@ -453,6 +458,7 @@ infl_ens/
 | `benchmark/router/safety_truth_ai4privacy_n6_theory_only_sigma04.yaml` | 6-agent paired-theory no-SFT AI4Privacy position-only run at `sigma_fraction: 0.4` |
 | `benchmark/router/baseline_replay_r40.yaml` | Pooled baseline 40-round replay from `history.json` (`task: baseline_replay`) |
 | `benchmark/router/ai4privacy_fixed_theory_generalist_replay_r40.yaml` | Pooled generalist replay config for the fixed-theory AI4Privacy specialist sweep |
+| `benchmark/router/model_sweep_base.yaml` | Fixed control for the model scale-family sweep: clone of `safety_truth_n4_r40_strategic_long_cum.yaml`; only `closed_loop.sft.base_model` (+ output dirs / per-device batch) vary per cell (see `scripts/run_model_sweep.sh`) |
 | `benchmark/router/safety_truth_n4_r40_pair_merge_cum.yaml` | 40-round closed loop: four routers + fixed `sft_merge_groups` |
 | `benchmark/router/safety_truth_n4_r40_proximity_merge_cum.yaml` | 40-round: `theory_gradient_paired` + `sft_merge_mode: proximity` |
 | `benchmark/router/safety_truth_n4_r40_proximity_plus_specialists_cum.yaml` | Same init as pairs_near_eq; proximity merge + `sft_also_train_individual` |

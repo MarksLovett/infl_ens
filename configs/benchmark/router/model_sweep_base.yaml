@@ -1,0 +1,65 @@
+# Base config for the model scale-family sweep (see scripts/run_model_sweep.sh).
+#
+# This is the FIXED control: it is a clone of
+# safety_truth_n4_r40_strategic_long_cum.yaml with everything held constant
+# so the only variable across the 9 sweep cells is the agent base model.
+# The driver script overrides, per cell:
+#   closed_loop.sft.base_model
+#   closed_loop.sft.per_device_batch_size   (per-tier, to fit memory)
+#   output_dir  +  closed_loop.sft.output_dir
+#   seed        +  closed_loop.sft.seed
+#
+# Do NOT hardcode a family here; the base_model below is only the default
+# used when the config is run without overrides (Qwen 1.5B smoke).
+
+task: closed_loop
+seed: 0
+output_dir: results/model_sweep/qwen_1b/seed0
+policy: proportional
+
+benchmarks:
+  - kind: beavertails
+    path: data/beavertails/30k_train.jsonl
+    max_records: 5000
+  - kind: halueval
+    path: data/halueval
+    tasks: [qa, dialogue]
+    max_records: 5000
+
+trait_space:
+  encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
+  n_grid: 32
+  kde_bandwidth: 0.08
+  threshold: 0.5
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  n_rounds: 40
+  batch_size: 512
+  blend: 0.5
+  routing_weight: G_times_1mG
+  save_per_round: true
+  sft:
+    base_model: Qwen/Qwen2.5-1.5B-Instruct
+    output_dir: results/model_sweep/qwen_1b/seed0/agents
+    max_seq_length: 1024
+    per_device_batch_size: 16
+    gradient_accumulation_steps: 2
+    num_train_epochs: 3.0
+    learning_rate: 2.0e-4
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bf16: true
+    gradient_checkpointing: true
+    logging_steps: 1
+    cumulative_lora: true
+    seed: 0

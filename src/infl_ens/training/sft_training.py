@@ -292,6 +292,63 @@ def _format_chat(prompt: str, response: Optional[str]) -> str:
     return "<|im_start|>user\n" + prompt + "<|im_end|>"
 
 
+def _build_training_texts(
+    tokenizer: "Any",
+    prompts: Sequence[str],
+    responses: Sequence[Optional[str]],
+    formatting_func: Optional[Callable[[str, Optional[str]], str]],
+) -> list[str]:
+    """Render (prompt, response) pairs into per-model training strings.
+
+    Selection order, chosen so a cross-family model sweep trains each base
+    model on *its own* chat markers rather than a single hardcoded template:
+
+    1. An explicit ``formatting_func`` always wins (caller override).
+    2. Otherwise, if the tokenizer defines a ``chat_template`` (true for the
+       Instruct/-it checkpoints in the Qwen, Llama, and Gemma families), each
+       example is rendered with :meth:`apply_chat_template`. For Qwen2.5 this
+       reproduces the same ChatML that :func:`_format_chat` emits, so existing
+       Qwen runs are unchanged.
+    3. As a last resort (base models with no chat template), fall back to the
+       Qwen-style :func:`_format_chat`.
+
+    Prompt-only examples (``response is None``) are rendered with
+    ``add_generation_prompt=True`` so the string ends at the assistant turn
+    header, matching the "domain priming" behaviour of :func:`_format_chat`.
+
+    :param tokenizer: A loaded HuggingFace tokenizer for ``cfg.base_model``.
+    :type tokenizer: transformers.PreTrainedTokenizerBase
+    :param prompts: User prompts.
+    :type prompts: Sequence[str]
+    :param responses: Optional assistant responses, aligned with ``prompts``;
+        items may be ``None`` for prompt-only training.
+    :type responses: Sequence[str | None]
+    :param formatting_func: Optional ``(prompt, response) -> str`` override.
+    :type formatting_func: Callable[[str, str | None], str] | None
+    :returns: One training string per (prompt, response) pair.
+    :rtype: list[str]
+    """
+    if formatting_func is not None:
+        return [formatting_func(p, r) for p, r in zip(prompts, responses)]
+
+    if getattr(tokenizer, "chat_template", None):
+        texts: list[str] = []
+        for p, r in zip(prompts, responses):
+            messages = [{"role": "user", "content": p}]
+            if r:
+                messages.append({"role": "assistant", "content": r})
+            texts.append(
+                tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=r is None,
+                )
+            )
+        return texts
+
+    return [_format_chat(p, r) for p, r in zip(prompts, responses)]
+
+
 def sft_train_agent(
     agent: RouterAgent,
     prompts: Sequence[str],
@@ -413,13 +470,12 @@ def sft_train_agent(
         np.random.seed(cfg.seed)
         torch.manual_seed(cfg.seed)
 
-    fmt = formatting_func or _format_chat
-    rs = responses if responses is not None else [None] * len(prompts)
-    texts = [fmt(p, r) for p, r in zip(prompts, rs)]
-
     tokenizer = AutoTokenizer.from_pretrained(cfg.base_model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    rs = responses if responses is not None else [None] * len(prompts)
+    texts = _build_training_texts(tokenizer, prompts, rs, formatting_func)
 
     # Per-example loss weighting. When ``sample_weights`` is supplied (soft
     # / dense routing, or ``loss_reweight='one_minus_G'``) we pre-tokenise
