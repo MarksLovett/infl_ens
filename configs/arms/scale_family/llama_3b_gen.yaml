@@ -1,0 +1,9 @@
+# Pooled generalist for the Llama-3.x ~3B cell.
+includes:
+  - _generalist_base.yaml
+
+history_path: results/scale_family/llama_3b/seed0/history.json
+output_dir: results/scale_family/llama_3b_gen/seed0
+
+sft:
+  base_model: meta-llama/Llama-3.2-3B-Instruct

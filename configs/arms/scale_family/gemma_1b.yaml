@@ -1,0 +1,8 @@
+# Scale-family cell: Gemma, ~1B.
+includes:
+  - _specialist_base.yaml
+
+output_dir: results/scale_family/gemma_1b/seed0
+
+sft:
+  base_model: google/gemma-3-1b-it

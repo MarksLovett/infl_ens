@@ -1,0 +1,8 @@
+# Scale-family cell: Gemma, ~8B (gemma-2-9b-it is the closest instruct size).
+includes:
+  - _specialist_base.yaml
+
+output_dir: results/scale_family/gemma_8b/seed0
+
+sft:
+  base_model: google/gemma-2-9b-it

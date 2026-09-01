@@ -1,0 +1,14 @@
+# Shared specialist base for the model scale-family sweep.
+#
+# Every cell of the 3 family x 3 scale grid runs the SAME soft top-k = 3
+# closed loop (identical to `soft_topk3_pairs.yaml`); the individual arm
+# files override ONLY `output_dir` and `sft.base_model`, so all nine cells
+# resolve to byte-identical `benchmarks` + `trait_space` blocks and share the
+# one pinned trait-space cache (fingerprint 3b42c68a8dd334c5).
+includes:
+  - ../_closed_loop_base.yaml
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 3
+  soft_loss: weighted

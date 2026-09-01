@@ -1,0 +1,9 @@
+# Pooled generalist for the Gemma ~8B cell.
+includes:
+  - _generalist_base.yaml
+
+history_path: results/scale_family/gemma_8b/seed0/history.json
+output_dir: results/scale_family/gemma_8b_gen/seed0
+
+sft:
+  base_model: google/gemma-2-9b-it

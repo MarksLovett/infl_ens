@@ -139,15 +139,19 @@ from infl_ens.training.router_training import (
 if TYPE_CHECKING:  # pragma: no cover - import-time only for type checkers / IDEs
     from infl_ens.training.sft_training import (
         SFTTrainingConfig,
+        make_chat_formatter,
         sft_train_agent,
     )
 
 #: Names that are resolved through :func:`__getattr__` on first access.
-_LAZY_SFT_NAMES: frozenset[str] = frozenset({"SFTTrainingConfig", "sft_train_agent"})
+_LAZY_SFT_NAMES: frozenset[str] = frozenset(
+    {"SFTTrainingConfig", "make_chat_formatter", "sft_train_agent"},
+)
 
 __all__ = [
     "RouterTrainingConfig",
     "SFTTrainingConfig",
+    "make_chat_formatter",
     "sft_train_agent",
     "train_router_positions",
 ]

@@ -291,6 +291,39 @@ def _format_chat(prompt: str, response: Optional[str]) -> str:
     return "<|im_start|>user\n" + prompt + "<|im_end|>"
 
 
+def make_chat_formatter(
+    tokenizer: "Any",
+) -> Callable[[str, Optional[str]], str]:
+    """Build a ``(prompt, response) -> str`` formatter from a tokenizer.
+
+    When the tokenizer defines a chat template, each example is rendered
+    with :meth:`tokenizer.apply_chat_template` so cross-family training and
+    evaluation each use the base model's own conversation format (the
+    prerequisite for a fair family x scale comparison). When no template is
+    present the formatter falls back to :func:`_format_chat`, preserving the
+    historical Qwen2.5 ``<|im_start|>`` formatting.
+
+    :param tokenizer: A HuggingFace tokenizer (only its ``chat_template``
+        attribute and :meth:`apply_chat_template` are used).
+    :type tokenizer: transformers.PreTrainedTokenizerBase
+    :returns: A formatter mapping ``(prompt, response)`` to a single string.
+    :rtype: Callable[[str, str | None], str]
+    """
+    if not getattr(tokenizer, "chat_template", None):
+        return _format_chat
+
+    def _fmt(prompt: str, response: Optional[str]) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        if response:
+            messages.append({"role": "assistant", "content": response})
+            return tokenizer.apply_chat_template(messages, tokenize=False)
+        return tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True,
+        )
+
+    return _fmt
+
+
 def sft_train_agent(
     agent: RouterAgent,
     prompts: Sequence[str],
@@ -412,13 +445,15 @@ def sft_train_agent(
         np.random.seed(cfg.seed)
         torch.manual_seed(cfg.seed)
 
-    fmt = formatting_func or _format_chat
-    rs = responses if responses is not None else [None] * len(prompts)
-    texts = [fmt(p, r) for p, r in zip(prompts, rs)]
-
     tokenizer = AutoTokenizer.from_pretrained(cfg.base_model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    # Format each example with the base model's own chat template (falling
+    # back to the Qwen2.5 formatting) so cross-family training is fair.
+    fmt = formatting_func or make_chat_formatter(tokenizer)
+    rs = responses if responses is not None else [None] * len(prompts)
+    texts = [fmt(p, r) for p, r in zip(prompts, rs)]
 
     # Per-example loss weighting. When ``sample_weights`` is supplied (soft
     # / dense routing, or ``loss_reweight='one_minus_G'``) we pre-tokenise

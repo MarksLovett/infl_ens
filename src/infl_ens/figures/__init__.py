@@ -27,6 +27,11 @@ from infl_ens.figures.closed_loop import (
 from infl_ens.figures.pair_positions import plot_final_positions, plot_within_pair
 from infl_ens.figures.pgf_tex import arm_comparison_tex, oracle_routing_tex
 from infl_ens.figures.save import save_figure
+from infl_ens.figures.scale_family import (
+    CellNLL,
+    plot_family_scale_nll,
+    write_family_scale_table,
+)
 from infl_ens.figures.style import BENCHMARK_LABELS, BENCHMARK_ORDER, apply_paper_style
 from infl_ens.figures.trait_representation import (
     plot_dataset_composition,
@@ -37,11 +42,13 @@ from infl_ens.figures.trait_representation import (
 __all__ = [
     "BENCHMARK_LABELS",
     "BENCHMARK_ORDER",
+    "CellNLL",
     "apply_paper_style",
     "arm_comparison_tex",
     "oracle_routing_tex",
     "plot_benchmark_nll_comparison",
     "plot_dataset_composition",
+    "plot_family_scale_nll",
     "plot_final_positions",
     "plot_history",
     "plot_marginals",
@@ -51,4 +58,5 @@ __all__ = [
     "plot_trajectory_overlay",
     "plot_within_pair",
     "save_figure",
+    "write_family_scale_table",
 ]

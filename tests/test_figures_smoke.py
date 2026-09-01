@@ -194,7 +194,7 @@ def test_data_matching_flags_mismatch() -> None:
 
 def _fake_experiment(tmp_path: Path, *, with_reports: bool = True) -> ExperimentConfig:
     arms = []
-    for name, offset in (("soft", 0.0), ("hard", 0.05)):
+    for name, offset, scale in (("soft", 0.0, "s"), ("hard", 0.05, "l")):
         run = tmp_path / "results" / name
         run.mkdir(parents=True)
         (run / "history.json").write_text(json.dumps(_history(12)), encoding="utf-8")
@@ -206,7 +206,7 @@ def _fake_experiment(tmp_path: Path, *, with_reports: bool = True) -> Experiment
         cfg = tmp_path / f"{name}.yaml"
         cfg.write_text(f"task: closed_loop\noutput_dir: {run.as_posix()}\n", encoding="utf-8")
         arms.append(ArmSpec(name=name, label=name, title=name.title(), role="specialist",
-                            config_path=cfg, output_dir=run))
+                            config_path=cfg, output_dir=run, family="toy", scale=scale))
     gen_run = tmp_path / "results" / "generalist"
     gen_run.mkdir()
     gen_cfg = tmp_path / "gen.yaml"

@@ -155,6 +155,10 @@ def evaluate_adapter_on_split(
         base_model_obj, tokenizer, device = load_base_causal_lm(cfg.base_model)
 
     model = load_adapter_model(base_model_obj, adapter_path)
+    if formatting_func is None:
+        from infl_ens.training.sft_training import make_chat_formatter
+
+        formatting_func = make_chat_formatter(tokenizer)
     texts = split_to_texts(eval_split, formatting_func=formatting_func)
     mean_nll, n_tokens, n_examples = mean_token_nll(
         model,
@@ -215,6 +219,10 @@ def evaluate_adapter_on_splits(
     adapter_path = resolve_adapter_dir(adapter_dir)
     base_model_obj, tokenizer, device = load_base_causal_lm(cfg.base_model)
     model = load_adapter_model(base_model_obj, adapter_path)
+    if formatting_func is None:
+        from infl_ens.training.sft_training import make_chat_formatter
+
+        formatting_func = make_chat_formatter(tokenizer)
     results: list[BenchmarkEvalResult] = []
     try:
         for split in splits:

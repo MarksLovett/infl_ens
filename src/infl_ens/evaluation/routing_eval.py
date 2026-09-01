@@ -19,7 +19,7 @@ from infl_ens.data.splits import flatten_partition_prompts, load_split_manifest
 from infl_ens.evaluation.adapters import load_adapter_model, load_base_causal_lm
 from infl_ens.config import load_config
 from infl_ens.data.benchmarks.loading import subsample_split
-from infl_ens.evaluation.metrics import format_chat_example
+from infl_ens.evaluation.metrics import build_chat_formatter
 from infl_ens.inflgame.router.allocation import (
     allocation_weights,
     strategic_routing_weights,
@@ -496,8 +496,9 @@ def run_flat_routing_eval(
         max_eval_records=max_eval_records,
         seed=seed,
     )
+    fmt = build_chat_formatter(base_model)
     texts = [
-        format_chat_example(p, r if r else None)
+        fmt(p, r if r else None)
         for p, r in zip(prompts, responses)
     ]
 

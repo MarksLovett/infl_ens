@@ -35,7 +35,9 @@ ARM_ROLES: frozenset[str] = frozenset({"specialist", "generalist"})
 EXPERIMENT_KEYS: frozenset[str] = frozenset(
     {"name", "results_dir", "figures_dir", "arms", "stages", "eval", "figures", "smoke"},
 )
-ARM_KEYS: frozenset[str] = frozenset({"name", "label", "title", "role", "config"})
+ARM_KEYS: frozenset[str] = frozenset(
+    {"name", "label", "title", "role", "config", "family", "scale"},
+)
 EVAL_SETTING_KEYS: frozenset[str] = frozenset(
     {"perround_rounds", "perround_partition", "routing_partition", "max_eval_records"},
 )
@@ -70,6 +72,12 @@ class ArmSpec:
     :type config_path: pathlib.Path
     :param output_dir: The arm's ``output_dir`` as written in its config.
     :type output_dir: pathlib.Path
+    :param family: Optional model family label (e.g. ``Qwen2.5``) used to
+        group arms into a family x scale grid and to pair each specialist
+        with its same-family/scale generalist.
+    :type family: str | None
+    :param scale: Optional nominal model scale bucket (e.g. ``1b``).
+    :type scale: str | None
     """
 
     name: str
@@ -78,6 +86,13 @@ class ArmSpec:
     role: str
     config_path: Path
     output_dir: Path
+    family: str | None = None
+    scale: str | None = None
+
+    @property
+    def cell(self) -> tuple[str | None, str | None]:
+        """The ``(family, scale)`` grid coordinate of this arm."""
+        return (self.family, self.scale)
 
     def load(self, overrides: Sequence[str] | Mapping[str, Any] = ()) -> dict[str, Any]:
         """Resolve the arm's run config (includes + optional overrides).
@@ -217,10 +232,38 @@ class ExperimentConfig:
         return tuple(a for a in self.arms if a.is_specialist)
 
     @property
+    def generalists(self) -> tuple[ArmSpec, ...]:
+        """Every ``role: generalist`` arm, in order."""
+        return tuple(a for a in self.arms if a.role == "generalist")
+
+    @property
     def generalist(self) -> ArmSpec | None:
-        """The single ``role: generalist`` arm, if any."""
-        gens = [a for a in self.arms if a.role == "generalist"]
-        return gens[0] if gens else None
+        """The single ``role: generalist`` arm, if exactly one is defined."""
+        gens = self.generalists
+        return gens[0] if len(gens) == 1 else (gens[0] if gens else None)
+
+    def generalist_for(self, specialist: ArmSpec) -> ArmSpec | None:
+        """The generalist paired with ``specialist`` for route-then-score.
+
+        When arms carry ``family``/``scale`` metadata (the scale-family
+        sweep) the generalist sharing the specialist's ``(family, scale)``
+        cell is returned. Otherwise, and to preserve single-generalist
+        experiments, the sole generalist is returned.
+
+        :param specialist: A specialist arm.
+        :type specialist: ArmSpec
+        :returns: The matching generalist, or ``None`` if none is defined.
+        :rtype: ArmSpec | None
+        """
+        gens = self.generalists
+        if not gens:
+            return None
+        if specialist.family is not None or specialist.scale is not None:
+            for gen in gens:
+                if gen.cell == specialist.cell:
+                    return gen
+            return None
+        return gens[0] if len(gens) == 1 else None
 
     def arm(self, name: str) -> ArmSpec:
         """Look an arm up by name.
@@ -255,6 +298,8 @@ def _parse_arm(raw: Any, index: int, base_dir: Path, source: str) -> ArmSpec:
     if "output_dir" not in cfg:
         raise ConfigError(f"{label}: {config_path} sets no output_dir ({source})")
     name = str(raw["name"])
+    family = raw.get("family")
+    scale = raw.get("scale")
     return ArmSpec(
         name=name,
         label=str(raw.get("label", name)),
@@ -262,6 +307,8 @@ def _parse_arm(raw: Any, index: int, base_dir: Path, source: str) -> ArmSpec:
         role=role,
         config_path=config_path,
         output_dir=Path(str(cfg["output_dir"])),
+        family=None if family is None else str(family),
+        scale=None if scale is None else str(scale),
     )
 
 
@@ -292,8 +339,23 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
     names = [a.name for a in arms]
     if len(set(names)) != len(names):
         raise ConfigError(f"arms: duplicate arm names {names} ({source})")
-    if sum(1 for a in arms if a.role == "generalist") > 1:
-        raise ConfigError(f"arms: at most one generalist arm is supported ({source})")
+    generalists = [a for a in arms if a.role == "generalist"]
+    if len(generalists) > 1:
+        # Multiple generalists are only meaningful when each is pinned to a
+        # distinct (family, scale) cell so it pairs 1:1 with a specialist.
+        cells: list[tuple[str | None, str | None]] = []
+        for gen in generalists:
+            if gen.family is None or gen.scale is None:
+                raise ConfigError(
+                    f"arms: generalist {gen.name!r} must set family and scale "
+                    f"when more than one generalist is defined ({source})",
+                )
+            cells.append(gen.cell)
+        if len(set(cells)) != len(cells):
+            raise ConfigError(
+                f"arms: generalist (family, scale) cells must be unique, "
+                f"got {cells} ({source})",
+            )
 
     stages = tuple(str(s) for s in (raw.get("stages") or DEFAULT_STAGES))
     unknown_stages = [s for s in stages if s not in ALL_STAGES]
