@@ -16,17 +16,7 @@ build-backend = "hatchling.build"
 name = "infl_ens"
 version = "0.1.0"
 description = "Influencer-game router and learning algorithms for small language models."
-# ``readme`` is intentionally not declared here. Hatchling validates
-# this field at metadata-generation time and aborts the install if the
-# referenced file is missing, which makes the build brittle in CI when
-# a branch hasn't committed a README yet. Once ``README.md`` is a
-# stable repo-root file, re-enable with:
-#
-#     readme = "README.md"
-#
-# or (preferred) the explicit form:
-#
-#     readme = { file = "README.md", content-type = "text/markdown" }
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
@@ -77,25 +67,15 @@ ml = [
     "huggingface-hub>=0.22",
 ]
 
-# Numerical + tabular extras used by the analysis scripts under
-# ``scripts/`` (sweeps, equilibrium classification, capability probes).
-data = [
-    "pandas>=2.0",
-    "scipy>=1.10",
-    "scikit-learn>=1.3",
-]
-
-# Plotting — keep separate from ``data`` so headless CI installs stay slim.
-vis = [
+# Plotting (``python -m infl_ens.figures``) is kept separate so headless
+# CI installs stay slim.
+figures = [
     "matplotlib>=3.7",
 ]
 
-# Config loading + sweep helpers (Hydra/OmegaConf optional; PyYAML covers
-# the minimum needed by ``python -m infl_ens.training --config``).
+# Config loading: every CLI reads YAML through ``infl_ens.config``.
 configs = [
     "pyyaml>=6.0",
-    "hydra-core>=1.3",
-    "omegaconf>=2.3",
     "tqdm>=4.65",
 ]
 
@@ -116,17 +96,19 @@ test = [
 # Convenience "everything" extra — installs the full development
 # environment. Listed last so the cross-extra references above resolve.
 dev = [
-    "infl_ens[ml,data,vis,configs,docs,test]",
+    "infl_ens[ml,figures,configs,docs,test]",
     "ruff>=0.4",
     "mypy>=1.10",
 ]
 
 [project.scripts]
-# Console-script aliases for the two single CLIs (per AGENTS.md §4 rule 1).
-# ``python -m infl_ens.training ...`` and ``python -m infl_ens.data ...``
-# continue to work whether or not the package is installed.
+# Console-script aliases for the package CLIs (per AGENTS.md rule 1).
+# ``python -m infl_ens.<cli> ...`` continues to work whether or not the
+# package is installed.
+infl-ens-pipeline = "infl_ens.pipeline.__main__:main"
 infl-ens-train = "infl_ens.training.__main__:main"
-infl-ens-data = "infl_ens.data.__main__:main"
+infl-ens-eval = "infl_ens.evaluation.__main__:main"
+infl-ens-figures = "infl_ens.figures.__main__:main"
 
 [project.urls]
 # Fill these in with the actual repo URL once it's public.
@@ -143,8 +125,8 @@ infl-ens-data = "infl_ens.data.__main__:main"
 packages = ["src/infl_ens"]
 
 [tool.hatch.build.targets.sdist]
-# Source distributions also include configs, scripts, docs, and the
-# repo-level invariants so downstream users can reproduce a full run.
+# Source distributions also include configs, the doob wrapper, docs, and
+# the repo-level invariants so downstream users can reproduce a full run.
 include = [
     "/src",
     "/configs",
@@ -183,7 +165,7 @@ filterwarnings = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["src", "scripts", "tests"]
+src = ["src", "tests"]
 extend-exclude = ["docs/_build", "data", "results"]
 
 [tool.ruff.lint]

@@ -1,26 +1,32 @@
 """Hugging Face text encoders for trait-space construction.
 
-The trait-space pipeline uses a single embedding backend:
-:class:`HuggingFaceEncoder`.  It loads an encoder-compatible model directly
-with :mod:`transformers`, pools token hidden states, and returns a NumPy
-embedding matrix.  Keeping tokenisation, pooling, normalisation, and model
-selection in one place makes the geometry used to build a trait space the
-same geometry used later to project prompts during routing.
+The trait-space pipeline uses one embedding backend,
+:class:`HuggingFaceEncoder`: it loads any encoder-compatible model through
+:mod:`transformers` ``AutoModel``, pools token hidden states, and returns a
+NumPy embedding matrix.  Keeping tokenisation, pooling, normalisation and
+model selection in one place makes the geometry used to build a trait
+space the same geometry used later to project prompts during routing.
 
-The default model is the project's quantized
-``drawais/Qwen3-Embedding-8B-AWQ-INT4`` encoder.  Its Qwen-recommended
-left-padding and final-token pooling are used by default.  Any Hugging Face
-model supported by ``AutoModel`` can be selected through the
-``trait_space.encoder`` configuration.
+There is no library-level default model.  The encoder is selected by the
+run config: a preset fragment under ``configs/encoders/`` sets
+``trait_space.encoder`` (the model id, hashed into the trait-space cache
+fingerprint) and a top-level ``encoder`` block with the constructor
+keyword arguments (pooling, padding side, dtype, placement; not hashed).
+:func:`make_encoder` turns that config into an instance.  The project
+preset is ``configs/encoders/qwen3_embedding_8b_awq.yaml``
+(``drawais/Qwen3-Embedding-8B-AWQ-INT4``, left padding, final-token
+pooling); ``configs/encoders/bge_large_en_v1_5.yaml`` shows how to swap in
+another Hugging Face model.
 """
 
 from __future__ import annotations
 
-from typing import Literal, Optional, Sequence
+from typing import Any, Literal, Mapping, Optional, Sequence
 
 import numpy as np
 
-DEFAULT_ENCODER_MODEL = "drawais/Qwen3-Embedding-8B-AWQ-INT4"
+from infl_ens.config import ConfigError
+
 PoolingStrategy = Literal["mean", "cls", "last_token"]
 _POOLING_STRATEGIES = frozenset({"mean", "cls", "last_token"})
 _DTYPE_NAMES = frozenset({"auto", "float32", "float16", "bfloat16"})
@@ -30,9 +36,10 @@ class HuggingFaceEncoder:
     """Encode text directly with a Hugging Face ``AutoModel``.
 
     The model must expose ``last_hidden_state`` (as standard encoder models
-    do).  Qwen3-Embedding uses left padding plus ``last_token`` pooling, so
-    those are the defaults.  Embeddings are L2-normalised by default so trait
-    directions are not driven by sentence length or vector norm.
+    do).  The keyword defaults match Qwen3-Embedding (left padding plus
+    ``last_token`` pooling); other models override them through the
+    ``encoder`` config block.  Embeddings are L2-normalised by default so
+    trait directions are not driven by sentence length or vector norm.
 
     :param model_name: Hugging Face model identifier or local model path.
     :type model_name: str
@@ -54,12 +61,12 @@ class HuggingFaceEncoder:
         the checkpoint's declared dtype.
     :type torch_dtype: str
     :param device_map: Transformers device-placement strategy.  ``'auto'``
-        is the default because the AWQ model is large and quantized; it lets
-        Accelerate place it without a subsequent unsupported ``.to(...)``.
-        Set to ``None`` to place an unquantized model on ``device`` directly.
+        lets Accelerate place large or quantized checkpoints without a
+        subsequent unsupported ``.to(...)``.  Set to ``None`` to place an
+        unquantized model on ``device`` directly.
     :type device_map: str | None
-    :param padding_side: Batch-padding side.  Qwen3 embedding models require
-        ``'left'`` with final-token pooling.
+    :param padding_side: Batch-padding side.  ``last_token`` pooling
+        requires ``'left'``.
     :type padding_side: {'left', 'right'}
     :param attn_implementation: Optional Transformers attention backend, for
         example ``'flash_attention_2'`` when it is installed.
@@ -75,7 +82,7 @@ class HuggingFaceEncoder:
 
     def __init__(
         self,
-        model_name: str = DEFAULT_ENCODER_MODEL,
+        model_name: str,
         *,
         device: Optional[str] = None,
         batch_size: int = 2,
@@ -242,3 +249,81 @@ class HuggingFaceEncoder:
 
         mask = attention_mask.unsqueeze(-1).to(dtype=hidden.dtype)
         return (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
+
+
+def encoder_kwargs_from_config(cfg: Mapping[str, Any]) -> dict[str, Any]:
+    """Resolve the :class:`HuggingFaceEncoder` keyword arguments of a config.
+
+    Sources, later ones winning:
+
+    1. the top-level ``encoder`` block (constructor keyword arguments),
+    2. ``trait_space.encoder`` when it is a mapping (legacy inline form),
+    3. ``trait_space.encoder`` when it is a string, which sets
+       ``model_name`` and must agree with any name given in (1)/(2),
+    4. ``trait_space.encoder_batch_size``, used for ``batch_size`` only
+       when nothing above set it.
+
+    :param cfg: Run config (``trait_space`` and ``encoder`` blocks are
+        both optional, but a model name must come from one of them).
+    :type cfg: Mapping
+    :returns: Keyword arguments ready for :class:`HuggingFaceEncoder`.
+    :rtype: dict
+    :raises ConfigError: If no model name resolves, the two names disagree,
+        or ``trait_space.encoder`` is neither a string nor a mapping.
+    """
+    block = cfg.get("encoder") or {}
+    if not isinstance(block, Mapping):
+        raise ConfigError(
+            f"encoder: expected a mapping of HuggingFaceEncoder arguments, "
+            f"got {type(block).__name__}",
+        )
+    kwargs: dict[str, Any] = dict(block)
+
+    ts_cfg = cfg.get("trait_space") or {}
+    raw = ts_cfg.get("encoder")
+    if isinstance(raw, Mapping):
+        kwargs.update(raw)
+    elif isinstance(raw, str):
+        named = kwargs.get("model_name")
+        if named is not None and named != raw:
+            raise ConfigError(
+                f"encoder.model_name ({named!r}) disagrees with "
+                f"trait_space.encoder ({raw!r}); they must name the same model",
+            )
+        kwargs["model_name"] = raw
+    elif raw is not None:
+        raise ConfigError(
+            "trait_space.encoder must be a Hugging Face model-name string "
+            f"or mapping, got {type(raw).__name__}",
+        )
+
+    if not kwargs.get("model_name"):
+        raise ConfigError(
+            "no encoder model selected: set trait_space.encoder (or "
+            "encoder.model_name), e.g. by including a preset from configs/encoders/",
+        )
+    if "batch_size" not in kwargs and "encoder_batch_size" in ts_cfg:
+        kwargs["batch_size"] = int(ts_cfg["encoder_batch_size"])
+    return kwargs
+
+
+def make_encoder(cfg: Mapping[str, Any]) -> HuggingFaceEncoder:
+    """Construct the encoder selected by a run config.
+
+    See :func:`encoder_kwargs_from_config` for the resolution rules.
+
+    :param cfg: Run config.
+    :type cfg: Mapping
+    :returns: Ready-to-use encoder.
+    :rtype: HuggingFaceEncoder
+    :raises ConfigError: If the config does not select a model.
+    """
+    return HuggingFaceEncoder(**encoder_kwargs_from_config(cfg))
+
+
+__all__ = [
+    "HuggingFaceEncoder",
+    "PoolingStrategy",
+    "encoder_kwargs_from_config",
+    "make_encoder",
+]

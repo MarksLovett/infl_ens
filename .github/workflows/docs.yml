@@ -147,20 +147,25 @@ jobs:
           MOCKS = [
               "torch", "torch.nn", "torch.nn.functional",
               "transformers", "datasets", "peft", "trl", "accelerate",
-              "bitsandbytes", "sentence_transformers", "huggingface_hub",
-              "sklearn", "scipy", "matplotlib", "matplotlib.pyplot",
-              "pandas", "yaml", "hydra", "omegaconf", "tqdm",
+              "bitsandbytes", "huggingface_hub",
+              "sklearn", "scipy", "matplotlib", "matplotlib.pyplot", "matplotlib.figure",
+              "pandas", "yaml", "tqdm",
           ]
           for m in MOCKS:
               sys.modules.setdefault(m, MagicMock())
 
           subs = [
               "infl_ens",
+              "infl_ens.config",
+              "infl_ens.experiment",
               "infl_ens.data",
               "infl_ens.data.benchmarks",
               "infl_ens.inflgame",
               "infl_ens.inflgame.router",
               "infl_ens.training",
+              "infl_ens.evaluation",
+              "infl_ens.figures",
+              "infl_ens.pipeline",
               "infl_ens.utils",
           ]
           failed = False

@@ -15,7 +15,7 @@ from infl_ens.data.splits import (
     flatten_partition_prompts,
     load_split_manifest,
     save_split_manifest,
-    build_split_manifest,
+    build_manifest_from_config,
 )
 
 
@@ -52,20 +52,17 @@ def resolve_closed_loop_data_split(
         )
 
     manifest_path = ds.get("manifest")
-    if manifest_path:
+    if manifest_path and (repo_root / manifest_path).is_file():
         manifest = load_split_manifest(repo_root / manifest_path)
     else:
-        manifest = build_split_manifest(
-            splits,
-            train_frac=float(ds.get("train_frac", 0.7)),
-            val_frac=float(ds.get("val_frac", 0.1)),
-            test_frac=float(ds.get("test_frac", 0.2)),
-            seed=int(ds.get("seed", cfg.get("seed", 0))),
+        # Build the manifest the config describes and persist it where the
+        # config says it lives, so the next arm (and the eval stages) reuse
+        # the identical partitions.
+        seed = int(ds.get("seed", cfg.get("seed", 0)))
+        out_path = manifest_path or ds.get(
+            "write_manifest", f"data/splits/split_seed{seed}.json",
         )
-        out_path = ds.get(
-            "write_manifest",
-            "data/splits/six_axis_seed0.json",
-        )
+        manifest = build_manifest_from_config(cfg, splits)
         save_split_manifest(manifest, repo_root / out_path)
         manifest = load_split_manifest(repo_root / out_path)
 
@@ -119,7 +116,7 @@ def shuffled_train_batch_indices(
 
     When ``batch_size * n_rounds != train_n``, the first
     ``train_n % n_rounds`` rounds receive one extra example each so every
-  row is used exactly once.
+    row is used exactly once.
 
     :param train_n: Number of training rows.
     :type train_n: int

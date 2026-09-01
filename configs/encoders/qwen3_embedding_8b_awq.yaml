@@ -1,0 +1,22 @@
+# Default trait-space encoder: Qwen3-Embedding-8B, AWQ INT4 quantized.
+#
+# `trait_space.encoder` is the cache IDENTITY. It is hashed into the
+# trait-space cache fingerprint, so changing it forces a full re-encode of
+# the prompt corpus. `trait_space.encoder_batch_size` is throughput only and
+# is excluded from the fingerprint (tune it per host freely).
+#
+# The top-level `encoder:` block carries the HuggingFaceEncoder keyword
+# arguments (pooling, padding, dtype, placement). It is NOT hashed;
+# `model_name` must agree with `trait_space.encoder`.
+trait_space:
+  encoder: drawais/Qwen3-Embedding-8B-AWQ-INT4
+  encoder_batch_size: 32
+
+encoder:
+  model_name: drawais/Qwen3-Embedding-8B-AWQ-INT4
+  pooling: last_token      # Qwen3-Embedding: final non-padding token
+  padding_side: left       # required for last_token pooling
+  max_length: 512
+  normalize: true
+  torch_dtype: auto
+  device_map: auto         # AWQ weights are placed by Accelerate; no .to()

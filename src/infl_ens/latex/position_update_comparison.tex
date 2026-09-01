@@ -1,0 +1,720 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\ind}[1]{\mathbf{1}\{#1\}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\Sig}{\Sigma}
+\newcommand{\Tk}{\mathcal{T}_k}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\cfg}[1]{\texttt{#1}}
+
+\title{Position-update mechanisms in the closed loop:\\
+a side-by-side derivation of every implemented method}
+\author{Notes accompanying \texttt{closed\_loop.position\_update},
+\texttt{closed\_loop.soft\_loss} and\\
+\texttt{infl\_ens.inflgame.router.verification}}
+\date{August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The closed loop alternates \emph{routing} (assigning prompts to agents),
+\emph{learning} (LoRA SFT on the assigned prompts) and a
+\emph{trait-space position update} (a blended step toward a weighted centroid
+of prompts). The influencer-game theory is only ``intact'' when the expected
+position drift points along the strategic gradient $\nabla_{x_i}u_i$. This
+note writes out, in full, the expected drift of every routing / weighting
+combination the code implements --- hard routing (canonical, strategic, with
+and without the $(1-G)$ re-weight, expected-pool) and soft top-$k$ routing
+(the ``distributed learning'' signal and the ``top-$k$ winners at unit loss''
+ablation) --- and shows algebraically which of them are gradient-matched and
+why the others are not. A single lemma decides every case: the centroid mass
+must be proportional to $B(b)\,G_i(b)\,(1-G_i(b))$ with a proportionality
+constant that does not depend on the prompt $b$. Under soft routing that
+mass is applied to the \emph{whole} batch, which makes the rule exact for
+every $k$ and, by Rao--Blackwell, strictly lower-variance than the
+hard-routing update with the same expectation. Every agent --- including a
+member of a co-located pair --- steps independently along its own gradient;
+merge groups affect only which adapter trains on which prompt, and pairs
+persist because identical positions receive identical steps, a prediction
+the run measures rather than enforces. The last section reproduces the
+numerical cosine and Monte-Carlo checks.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Setting and notation}
+%======================================================================
+
+\paragraph{Trait space and resource.}
+Prompts are embedded into the trait box $[0,1]^L$. A prompt is a point
+$b\in[0,1]^L$; the prompt distribution is the resource density $B(b)$,
+normalised so that $\sum_b B(b)=1$ over a grid (or $\int B\dd b=1$). A training
+round draws a minibatch $b_1,\dots,b_M \stackrel{\text{iid}}{\sim} B$.
+
+\paragraph{Agents and kernel.}
+There are $N$ agents with positions $x_1,\dots,x_N\in[0,1]^L$, collected in
+$\bx$. Each agent carries a Gaussian kernel with a shared covariance $\Sig$
+(isotropic, $\Sig=\sigma^2 I$, unless stated otherwise):
+\begin{equation}
+  f_i(b) \;=\; \exp\!\Big(-\tfrac12\,(x_i-b)^{\!\top}\Sig^{-1}(x_i-b)\Big).
+  \label{eq:kernel}
+\end{equation}
+
+\paragraph{Allocation share.}
+The (canonical, proportional) allocation of prompt $b$ to agent $i$ is the
+softmax over agents,
+\begin{equation}
+  G_i(\bx,b) \;=\; \frac{f_i(b)}{\sum_{j=1}^N f_j(b)},
+  \qquad \sum_{i=1}^N G_i(\bx,b)=1 .
+  \label{eq:G}
+\end{equation}
+In code this is \texttt{allocation\_weights}; every object below is derived
+from it.
+
+\paragraph{Utility and its gradient.}
+Agent $i$'s utility is the resource it captures,
+\begin{equation}
+  u_i(\bx) \;=\; \sum_b B(b)\,G_i(\bx,b).
+  \label{eq:u}
+\end{equation}
+Differentiating \eqref{eq:G} with respect to $x_i$ only (the other positions
+are held fixed --- this is the \emph{own} gradient that best-response /
+gradient-ascent dynamics consume):
+\begin{align}
+  \nabla_{x_i} f_i(b) &= f_i(b)\,\Sig^{-1}(b-x_i),\\
+  \nabla_{x_i} G_i(\bx,b)
+    &= \frac{\nabla_{x_i} f_i \cdot \sum_j f_j - f_i\cdot \nabla_{x_i} f_i}{(\sum_j f_j)^2}
+     = G_i\,(1-G_i)\;\Sig^{-1}(b-x_i),
+  \label{eq:gradG}\\
+  \nabla_{x_i} u_i(\bx)
+    &= \sum_b B(b)\,G_i(\bx,b)\,\big(1-G_i(\bx,b)\big)\;\Sig^{-1}(b-x_i).
+  \label{eq:gradu}
+\end{align}
+Equation \eqref{eq:gradu} is \texttt{utility\_gradient}. The scalar
+coefficient $G_i(1-G_i)$ is the whole story: it is \emph{not} $G_i$, and it is
+\emph{not} a per-prompt renormalised version of $G_i$.
+
+\paragraph{Kernel-agnostic form.}
+Nothing above uses the Gaussian shape except the last factor. For any
+positive differentiable kernel $k(x_i,b)$ with score
+$s_i(b):=\nabla_{x_i}\log k(x_i,b)$ the same algebra gives
+$\nabla_{x_i}G_i = G_i(1-G_i)\,s_i(b)$ and
+$\nabla_{x_i}u_i=\sum_b B(b)G_i(1-G_i)\,s_i(b)$
+(\texttt{kernel\_agnostic\_gradient\_step.tex}); for the Gaussian kernel
+$s_i(b)=\Sig^{-1}(b-x_i)$, which is what turns a ``score average'' into a
+``centroid minus position''. Every statement below is made for the Gaussian
+case and holds verbatim with $(b-x_i)\to\Sig\,s_i(b)$ otherwise.
+
+\paragraph{Top-$k$ training support.}
+For a prompt $b$ let $\Tk(b)$ be the set of the $k$ agents with the largest
+$G_j(\bx,b)$ (ties broken by \texttt{argpartition}). The \emph{renormalised
+top-$k$ share} of the update memo is
+\begin{equation}
+  w_i(b) \;=\; \frac{G_i(b)}{Z_k(b)}\,\ind{i\in\Tk(b)},
+  \qquad Z_k(b) := \sum_{j\in\Tk(b)} G_j(b),
+  \qquad \sum_i w_i(b)=1 ,
+  \label{eq:wtopk}
+\end{equation}
+(\texttt{top\_k\_allocation\_weights}). In the kept design the top-$k$ set
+decides \emph{who trains on what}; it plays no role in the theory-matched
+position step (Section~\ref{sec:soft}).
+
+%======================================================================
+\section{The common template and the one lemma that decides everything}
+\label{sec:template}
+%======================================================================
+
+Every method in the code moves agent $i$ by the same rule: pick a
+\emph{working set} $S_i$ of prompts and a non-negative \emph{centroid mass}
+$m_i(b)$ on it, form the mass-weighted centroid, and blend:
+\begin{equation}
+  \hat x_i \;=\; \frac{\sum_{b\in S_i} m_i(b)\,b}{\sum_{b\in S_i} m_i(b)},
+  \qquad
+  x_i \;\leftarrow\; (1-\beta)\,x_i + \beta\,\hat x_i,
+  \qquad
+  x_i \;\leftarrow\; \operatorname{clip}(x_i,0,1).
+  \label{eq:template}
+\end{equation}
+(\texttt{position\_from\_corpus} / \texttt{soft\_pair\_position\_target} with
+\texttt{scores}$=m_i$, then \texttt{apply\_position\_update}; the clip is the
+\texttt{clip\_to\_box} option.) The displacement is therefore
+\begin{equation}
+  \Delta x_i \;=\; \beta\,(\hat x_i - x_i)
+  \;=\; \frac{\beta}{\sum_{b\in S_i} m_i(b)}\;
+        \underbrace{\sum_{b\in S_i} m_i(b)\,(b-x_i)}_{=:\;d_i} .
+  \label{eq:drift}
+\end{equation}
+The prefactor is a positive scalar, so the \emph{direction} of the step is
+the direction of $d_i$. Methods differ only in (i) how $S_i$ is chosen
+(sampled or deterministic) and (ii) what $m_i(b)$ is. When $S_i$ is random,
+what we can control is the expected mass at each prompt location,
+\begin{equation}
+  \bar m_i(b) \;:=\; \E\big[m_i(b)\,\ind{b\in S_i}\big]
+  \;=\; B(b)\;\Pr[\,b\in S_i\,]\;\cdot\;\text{(weight applied to $b$ once it is in $S_i$)},
+  \label{eq:mbar}
+\end{equation}
+and the expected direction $\bar d_i=\sum_b \bar m_i(b)(b-x_i)$.\footnote{As
+in \texttt{kernel\_agnostic\_gradient\_step.tex}, $\hat x_i$ is a ratio of two
+Monte-Carlo sums; the law of large numbers in $M$ gives
+$d_i/\sum m_i \to \bar d_i/\sum\bar m_i$, and the numerator alone is an
+unbiased estimator of $\bar d_i$. ``Matched in expectation'' below always
+refers to $\bar d_i$.}
+
+\begin{lemma}[direction matching]
+\label{lem:match}
+Suppose $\bar m_i(b) = c_i\,B(b)\,G_i(b)\,(1-G_i(b))$ for some constant
+$c_i>0$ that does not depend on $b$. Then
+\[
+  \bar d_i \;=\; c_i\,\Sig\,\nabla_{x_i}u_i(\bx),
+\]
+so for isotropic $\Sig=\sigma^2 I$ the expected step is \emph{exactly
+parallel} to $\nabla_{x_i}u_i$, and for general $\Sig$ it is the
+$\Sig$-preconditioned gradient (still an ascent direction, since
+$\Sig\succ0$).
+\end{lemma}
+\begin{proof}
+Substitute into $\bar d_i=\sum_b \bar m_i(b)(b-x_i)$ and compare with
+\eqref{eq:gradu}: $\sum_b c_i B G_i(1-G_i)(b-x_i)
+= c_i\,\Sig\sum_b B G_i(1-G_i)\Sig^{-1}(b-x_i)= c_i\Sig\nabla_{x_i}u_i$.
+\end{proof}
+
+\begin{remark}[what breaks it]
+\label{rem:break}
+Write $\bar m_i(b) = B(b)G_i(1-G_i)\,\rho_i(b)$. The lemma needs
+$\rho_i(b)\equiv c_i$. Two distinct ways to violate it appear in the
+implemented methods:
+\begin{enumerate}
+\item \textbf{Missing factor.} $\rho_i(b) = 1/(1-G_i(b))$, i.e.\ the mass is
+  $B\,G_i$ instead of $B\,G_i(1-G_i)$. The difference
+  $\sum_b B\,G_i^{\,2}\,(b-x_i)$ is dominated by the agent's own stronghold
+  (where $G_i\approx1$), so the step is pulled toward the centre of mass of
+  what the agent already owns rather than toward the contested boundary where
+  the gradient lives.
+\item \textbf{Per-prompt normaliser.} $\rho_i(b) = 1/Z(b)$ for some
+  $Z(b)$ that varies with $b$ (a softmax over agents evaluated at $b$, or a
+  top-$k$ renormaliser). Prompts where the normaliser is small are
+  over-weighted relative to the gradient. Renormalising \emph{per agent}
+  (dividing the whole sum by $\sum_b m_i(b)$, as \eqref{eq:template} does) is
+  harmless because that constant does not depend on $b$.
+\end{enumerate}
+A third potential defect --- restricting $S_i$ to a subset of prompts on
+which $G_i(1-G_i)$ is not identically zero --- is a truncation bias. It
+never appears in the kept design, because the position step always uses
+either the whole batch or the whole pool (Section~\ref{sec:soft}).
+\end{remark}
+
+Everything that follows is an application of Lemma~\ref{lem:match} and
+Remark~\ref{rem:break} to each method's $\bar m_i$.
+
+%======================================================================
+\section{Hard routing: one prompt per (sampled) winning agent}
+\label{sec:hard}
+%======================================================================
+
+Under \cfg{routing\_mode: hard} each prompt $b_m$ is assigned to exactly one
+agent $a_m$ drawn from a categorical distribution $p_\cdot(b_m)$ over agents
+(\cfg{policy: proportional}; \cfg{argmax} replaces the draw by
+$\arg\max_i p_i$). The working set is $S_i=\{m:\,a_m=i\}$ and a per-prompt
+centroid weight $\omega_i(b)$ is applied inside it. Hence
+\begin{equation}
+  \Pr[b\in S_i]=p_i(b),\qquad
+  \bar m_i(b) \;=\; B(b)\,p_i(b)\,\omega_i(b).
+  \label{eq:hardmass}
+\end{equation}
+The sampling step contributes the factor $p_i(b)$ ``for free''; the centroid
+weight $\omega_i$ must supply whatever is missing.
+
+\subsection{H1: canonical routing, uniform centroid (\cfg{position\_update: naive})}
+$p_i=G_i$, $\omega_i\equiv1$:
+\begin{equation}
+  \bar m_i(b) = B(b)\,G_i(b),\qquad
+  \bar d_i = \sum_b B\,G_i\,(b-x_i)\quad\text{(\emph{not} matched: missing factor).}
+\end{equation}
+This is the historical default (uniform mean of routed embeddings). It is the
+``canonical naive'' column of the verification report. Configs recorded with
+it are now pinned to \cfg{position\_update: naive}.
+
+\subsection{H2: canonical routing, $(1-G)$ centroid (\cfg{position\_update: theory\_matched}, the default)}
+$p_i=G_i$, $\omega_i(b)=1-G_i(b)$:
+\begin{equation}
+  \bar m_i(b) = B(b)\,G_i(b)\,(1-G_i(b)),\qquad
+  \bar d_i = \Sig\,\nabla_{x_i}u_i\quad\text{(matched exactly, $c_i=1$).}
+\end{equation}
+The SFT loss runs at unit weight; only the centroid is re-weighted. This is
+what the deprecated \cfg{loss\_reweight: position\_only} used to select and
+is also precisely what the no-SFT simulator
+\texttt{simulate\_position\_only\_loop} realises
+(\texttt{weights\_i = 1 - G\_batch[i, mine\_idx]}). ``Position-only'' and
+``theory-matched hard routing'' are therefore the same expected dynamics; the
+former simply skips the LoRA.
+
+\subsection{H3: full re-weight (\cfg{loss\_reweight: one\_minus\_G})}
+Same $\bar m_i$ as H2 (matched), but the per-example SFT loss weight is also
+$s_i(b)=1-G_i(b)$. The learning signal then has effective sample size
+\[
+  \mathrm{ESS}_i=\frac{\big(\sum_{m\in S_i}(1-G_i(b_m))\big)^2}{\sum_{m\in S_i}(1-G_i(b_m))^2}
+  \;\le\; |S_i|,
+\]
+which is small once the agent owns a stronghold ($1-G_i\approx0$ on most of
+its prompts). H2 keeps the full ESS; that is the reason the loss side and the
+centroid side are decoupled knobs.
+
+\subsection{H4: strategic routing (\cfg{routing\_weight: G\_times\_1mG})}
+$p_i(b)=\dfrac{G_i(1-G_i)}{S(b)}$ with $S(b):=\sum_j G_j(b)(1-G_j(b))$,
+$\omega_i\equiv1$:
+\begin{equation}
+  \bar m_i(b) = B(b)\,\frac{G_i(1-G_i)}{S(b)},\qquad
+  \rho_i(b)=\frac{1}{S(b)}\quad\text{(approximately matched: per-prompt normaliser).}
+\end{equation}
+The normaliser $S(b)$ is a genuine function of $b$ (it is large in contested
+regions and tiny inside strongholds), so by Remark~\ref{rem:break}(2) the
+direction is only approximately the gradient --- the ``strategic'' column of
+the report reads $0.98$--$0.999$ rather than $1.000$. Under
+\cfg{theory\_matched} the centroid stays \emph{uniform} here: routing already
+carries the whole coefficient, and applying $(1-G_i)$ a second time would
+give $\bar m_i\propto B\,G_i(1-G_i)^2/S(b)$, which is why the validator
+rejects \cfg{G\_times\_1mG} together with any $(1-G)$ re-weight.
+
+\subsection{H5: expected-pool centroid (\cfg{centroid\_mode: expected\_pool})}
+Instead of the sampled working set, use the whole pool deterministically with
+mass $m_i(b_m)=G_i(1-G_i)$:
+\begin{equation}
+  \hat x_i=\frac{\sum_m G_i(b_m)(1-G_i(b_m))\,b_m}{\sum_m G_i(b_m)(1-G_i(b_m))},
+  \label{eq:pool}
+\end{equation}
+which is the $M\to\infty$ limit of H2 (\texttt{expected\_pool\_centroid}).
+Matched by construction; it has no meaningful ``naive'' variant, so the
+validator rejects \cfg{expected\_pool} with \cfg{position\_update: naive}.
+It is available under both routing modes.
+
+%======================================================================
+\section{Soft (dense, top-$k$) routing}
+\label{sec:soft}
+%======================================================================
+
+Under \cfg{routing\_mode: soft} nothing is sampled. Each prompt is assigned
+\emph{deterministically} to all agents in $\Tk(b)$ for \emph{training}:
+\begin{equation}
+  S_i^{\mathrm{train}}=\{m:\,i\in\Tk(b_m)\} .
+  \label{eq:softS}
+\end{equation}
+The crucial difference from Section~\ref{sec:hard}: \textbf{there is no
+sampling factor $p_i(b)$.} Whatever coefficient the gradient needs must be
+put into the centroid weight $\omega_i$ explicitly. The second crucial
+observation is that the position step need not use $S_i^{\mathrm{train}}$
+at all: it is a weighted mean of coordinates that are already projected
+for the whole batch, so using every prompt costs nothing.
+
+\subsection{S1: renormalised-share centroid (\cfg{position\_update: naive}) --- the memo's rule}
+The update memo (steps 1--4) uses the renormalised top-$k$ share
+\eqref{eq:wtopk} as the centroid weight on the training set,
+$\omega_i(b)=w_i(b)$, $S_i=S_i^{\mathrm{train}}$:
+\begin{equation}
+  \bar m_i(b)=B(b)\,\frac{G_i(b)}{Z_k(b)}\,\ind{i\in\Tk(b)},
+  \qquad
+  \rho_i(b)=\frac{\ind{i\in\Tk(b)}}{(1-G_i(b))\,Z_k(b)} .
+  \label{eq:S1}
+\end{equation}
+Every defect of Remark~\ref{rem:break} occurs at once:
+\begin{itemize}
+\item the $(1-G_i)$ factor is missing --- even in the fully dense case
+  $k=N$ (where $Z_N\equiv1$) the mass is $B\,G_i$, i.e.\ \emph{exactly the
+  canonical-naive direction H1};
+\item for $k<N$ the top-$k$ renormaliser $Z_k(b)$ additionally rescales each
+  prompt by a $b$-dependent amount, and the indicator truncates the sum.
+\end{itemize}
+Writing the dense case out,
+\[
+  \bar d_i^{\,\mathrm{S1}} = \sum_b B\,G_i\,(b-x_i)
+  = \underbrace{\sum_b B\,G_i(1-G_i)(b-x_i)}_{\Sig\nabla_{x_i}u_i}
+   + \underbrace{\sum_b B\,G_i^{\,2}\,(b-x_i)}_{\text{stronghold pull}} ,
+\]
+and the second term can dominate and even reverse the direction: in the
+verification configuration with one agent per resource mode, the naive
+cosine is $-1.000$ while the matched one is $+1.000$ (Section~\ref{sec:num}).
+This is the ``distributed learning'' arm as originally implemented, and it is
+why the answer to ``do the position-only and the distributed-learning steps
+match in gradient direction?'' is \emph{no}. It is kept only as the
+explicit ablation arm.
+
+\subsection{S2: dense $G(1-G)$ mass over the whole batch (\cfg{position\_update: theory\_matched}, the default)}
+\label{sec:S2}
+Put the full gradient coefficient into the centroid weight, apply it to
+\emph{every} prompt of the batch, and do \emph{not} renormalise per prompt:
+\begin{equation}
+  S_i=\{1,\dots,M\},\qquad
+  m_i(b_m) = G_i(b_m)\,(1-G_i(b_m)),\qquad
+  \bar m_i(b) = B(b)\,G_i(b)\,(1-G_i(b)) .
+  \label{eq:S2}
+\end{equation}
+This is \texttt{matched\_centroid\_mass} applied to the batch allocation
+matrix. Lemma~\ref{lem:match} applies with $c_i=1$ for \emph{any}
+\cfg{soft\_top\_k}:
+\begin{proposition}
+\label{prop:S2}
+Under S2 the expected drift is $\bar d_i^{\,\mathrm{S2}}=\Sig\,\nabla_{x_i}u_i$
+exactly, independently of $k$. It coincides with the position-only /
+theory-matched hard dynamics H2 in expectation, and with the expected-pool
+centroid \eqref{eq:pool} in the limit $M\to\infty$.
+\end{proposition}
+\begin{proof}
+The indicator of \eqref{eq:S1} is gone and $\rho_i\equiv1$. Since
+$\Pr[b\in S_i]=1$, \eqref{eq:mbar} gives $\bar m_i(b)=B(b)G_i(1-G_i)$.
+\end{proof}
+
+\begin{proposition}[Rao--Blackwell: S2 has lower variance than H2]
+\label{prop:RB}
+Fix the batch $b_1,\dots,b_M$. Let $d_i^{\mathrm{H2}}=\sum_m \ind{a_m=i}\,(1-G_i(b_m))\,(b_m-x_i)$
+be the numerator of the hard rule (with the categorical draw $a_m\sim G_\cdot(b_m)$)
+and $d_i^{\mathrm{S2}}=\sum_m G_i(b_m)(1-G_i(b_m))\,(b_m-x_i)$ that of the dense rule. Then
+\[
+  \E\big[d_i^{\mathrm{H2}}\,\big|\,b_{1:M}\big]=d_i^{\mathrm{S2}},
+  \qquad
+  \Var\big(d_i^{\mathrm{S2}}\big)\le\Var\big(d_i^{\mathrm{H2}}\big),
+\]
+with strict inequality whenever some $G_i(b_m)\in(0,1)$.
+\end{proposition}
+\begin{proof}
+$\E[\ind{a_m=i}\mid b_m]=G_i(b_m)$, so conditioning the hard numerator on
+the batch gives the dense one term by term. The variance statement is the
+law of total variance,
+\[
+  \Var\big(d_i^{\mathrm{H2}}\big)
+  =\Var\big(\E[d_i^{\mathrm{H2}}\mid b_{1:M}]\big)+\E\big[\Var(d_i^{\mathrm{H2}}\mid b_{1:M})\big]
+  =\Var\big(d_i^{\mathrm{S2}}\big)+\E\Big[\sum_m G_i(1-G_i)\,(1-G_i)^2\,\|b_m-x_i\|^2\Big],
+\]
+and the second term is positive unless every $G_i(b_m)\in\{0,1\}$.
+\end{proof}
+So ``just use the hard routing's update'' would be correct but wasteful:
+the dense rule uses all $M$ prompts for every agent instead of the
+$\approx G_i M$ it happened to win, at the same expectation. The
+Monte-Carlo table in Section~\ref{sec:num} shows the spread roughly halved.
+
+\begin{remark}[why the mass must not be renormalised per prompt]
+Replacing \eqref{eq:S2} by $B\,G_i(1-G_i)/Z'(b)$ with
+$Z'(b)=\sum_{j}G_j(1-G_j)$ (or any other $b$-dependent normaliser) would
+give $\rho_i(b)=1/Z'(b)$ and reintroduce Remark~\ref{rem:break}(2). The
+per-\emph{agent} normalisation $\sum_{m}m_i(b_m)$ in \eqref{eq:template} is a
+single positive number and is harmless.
+\end{remark}
+\begin{remark}[the training gate is irrelevant to the position step]
+Because $S_i=\{1,\dots,M\}$, an agent that trained on no prompt this round
+(possible for small $k$) still takes its gradient step; and an agent that
+trained on every prompt ($k\ge N$) takes exactly the same step it would with
+$k=1$. The top-$k$ gate bounds SFT cost; it does not enter the theory.
+\end{remark}
+
+\subsection{S3: co-located merge groups (pairs) --- training only}
+\label{sec:S3}
+With \cfg{sft\_merge\_groups} a group $p$ of clones shares one LoRA. Define
+the group share
+\begin{equation}
+  G_p(\bx,b) := \sum_{i\in p} G_i(\bx,b)
+  \qquad(\texttt{group\_allocation\_weights}).
+\end{equation}
+If every group has the same size $s$ and its members are co-located at
+$x_p$, then $f_i=f_p$ for $i\in p$ and
+\[
+  G_p(\bx,b)=\frac{s\,f_p(b)}{\sum_q s\,f_q(b)}=\frac{f_p(b)}{\sum_q f_q(b)},
+\]
+i.e.\ exactly the allocation of one agent at $x_p$ in the $P$-player game.
+That identity is what justifies taking the top-$k$ \emph{training} gate over
+groups rather than clones.
+
+\paragraph{Positions are not grouped.}
+The group share is used for \emph{nothing else}. Every clone takes its own
+S2 step in the full $N$-player game, with its own $G_i$ --- its twin
+appearing as one competitor among the others:
+\begin{equation}
+  m_i(b_m)=G_i(b_m)\big(1-G_i(b_m)\big)\ \text{ over the whole batch,
+  independently for each } i .
+  \label{eq:S3}
+\end{equation}
+No shared step is ever written; the trainer's routing position merely tracks
+the mean of its members. The reason this is the right design is that the
+theory already predicts co-location:
+
+\begin{proposition}[co-located clones stay co-located, unforced]
+\label{prop:pairs}
+If $x_i=x_j$ then $G_i(\bx,b)=G_j(\bx,b)$ for every $b$, hence
+$m_i\equiv m_j$, hence $\hat x_i=\hat x_j$ and the two clones receive
+\emph{identical} updates in \eqref{eq:template}. Co-location is therefore
+invariant under the independent dynamics: it is a fixed point of the pair's
+relative coordinate, not a constraint imposed by the update.
+\end{proposition}
+\begin{proof}
+$G_i$ depends on $i$ only through $f_i$, which depends only on $x_i$; equal
+positions give equal kernels, hence equal shares, masses, targets and blends.
+\end{proof}
+
+\noindent The practical consequence is that co-location becomes a
+\emph{measurement} rather than an assumption. Each round logs the within-pair
+distance $\|x_i-x_j\|$ in \texttt{agent\_geometry}; if the theory's stability
+claim were to fail (a partner drifting off under numerical noise, an
+asymmetric blend cap, a $\sigma$ above the threshold), the run would show it
+instead of hiding it behind a shared write. The verification report confirms
+the mechanism numerically: the twin drifts differ by exactly $0$
+(Section~\ref{sec:num}, configuration D).
+
+The historical pair rule survives only as the ablation arm
+(\cfg{position\_update: naive}): one step per group, computed from the
+renormalised group share on the pair's top-$k$ prompts and written to both
+members. It inherits every defect of S1.
+
+%======================================================================
+\section{The loss side: what the agents actually train on}
+\label{sec:loss}
+%======================================================================
+
+The learning signal is independent of the centroid mass. With per-example
+weights $s_i(b)$ the SFT objective is the weight-normalised mean of the
+response-token cross-entropy,
+\begin{equation}
+  \mathcal{L}_i(\theta_i)=\frac{1}{|S_i^{\mathrm{train}}|}\sum_{m\in S_i^{\mathrm{train}}} s_i(b_m)\,\ell(\theta_i;b_m),
+  \qquad \ell=\text{mean token NLL of the formatted (prompt, response)} ,
+\end{equation}
+so $s_i$ acts as a per-example learning-rate multiplier
+(\texttt{weighted\_causal\_lm\_loss}); $s_i\equiv1$ takes the stock unweighted
+trainer path. The implemented choices are:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+routing & config & $s_i(b)$ on the training set \\
+\midrule
+hard & \cfg{loss\_reweight: null} (default) & $1$ \\
+hard & \cfg{loss\_reweight: one\_minus\_G} & $1-G_i(b)$ \\
+soft & \cfg{soft\_loss: weighted} (default) & $w_i(b)=G_i(b)/Z_k(b)$ \quad(``distributed'' signal) \\
+soft & \cfg{soft\_loss: unit} & $1$ \quad(``top-$k$ winners'' ablation) \\
+\bottomrule
+\end{tabular}
+\end{center}
+With \cfg{sft\_merge\_groups} the group replaces the clone as the unit of
+this table ($G_p$, $w_p$, one adapter per group); the position step is
+unaffected (Section~\ref{sec:S3}).
+
+\paragraph{The top-$k$ winners ablation.}
+Hard routing gives each prompt to \emph{one} winner at unit weight. The
+ablation \cfg{routing\_mode: soft}, \cfg{soft\_loss: unit} gives each prompt
+to its $k$ highest-share agents, \emph{each at unit weight} --- the natural
+top-$k$ generalisation of one-prompt-per-winning-agent, with $k=1$ recovering
+a deterministic (argmax rather than sampled) winner. Compared with the
+weighted soft signal it removes the share weighting from the learning signal
+while leaving the assignment untouched; compared with hard routing it
+replaces one sampled winner by $k$ deterministic ones. Because the centroid
+mass is chosen separately (and, under \cfg{theory\_matched}, is the same
+whole-batch mass for every $k$), the ablation grid is
+\[
+  \{\text{weighted},\ \text{unit}\}\times\{\text{theory\_matched},\ \text{naive}\}
+  \ (\times\ k),
+\]
+and every arm logs \texttt{soft\_loss}, \texttt{position\_update},
+\texttt{soft\_top\_k}, the batch, and the applied centroid weights
+(\texttt{agent\_position\_weights}, aligned with \texttt{batch\_prompts}) per
+round.
+
+\paragraph{Data volume.}
+Under unit-weight top-$k$ each specialist sees up to $k\times$ the tokens
+that the de-duplicated pooled replay sees (the replay keeps one copy of each
+source prompt per round). The comparator is data-matched at the level of
+source prompts, not of gradient steps; capability comparisons should be read
+with that asymmetry in mind.
+
+%======================================================================
+\section{Summary table}
+%======================================================================
+
+$\bar m_i(b)$ is the expected centroid mass at prompt $b$
+(Section~\ref{sec:template}); ``matched'' means Lemma~\ref{lem:match} holds
+with a $b$-independent constant.
+
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{3.3cm}@{}}
+\toprule
+method & config keys & $\bar m_i(b)/B(b)$ & loss weight $s_i$ & matched? \\
+\midrule
+H1 canonical naive & \cfg{routing\_mode: hard}, \cfg{routing\_weight: G}, \cfg{position\_update: naive} & $G_i$ on routed prompts & $1$ & no (missing $1-G_i$) \\[3pt]
+H2 theory-matched (default) & \cfg{hard}, \cfg{G}, \cfg{position\_update: theory\_matched} & $G_i(1-G_i)$ on routed prompts & $1$ & \textbf{exact} \\[3pt]
+H3 full re-weight & \cfg{hard}, \cfg{G}, \cfg{loss\_reweight: one\_minus\_G} & $G_i(1-G_i)$ on routed prompts & $1-G_i$ & \textbf{exact} (low ESS) \\[3pt]
+H4 strategic & \cfg{hard}, \cfg{routing\_weight: G\_times\_1mG} & $G_i(1-G_i)/S(b)$ & $1$ & $\approx$ (per-prompt normaliser) \\[3pt]
+H5 expected pool & \cfg{centroid\_mode: expected\_pool} (either routing mode) & $G_i(1-G_i)$ over the pool & any & \textbf{exact} \\[3pt]
+S1 soft naive & \cfg{routing\_mode: soft}, \cfg{position\_update: naive} & $G_i\,\ind{i\in\Tk}/Z_k(b)$ & $w_i$ or $1$ & no (all defects) \\[3pt]
+S2 soft matched (default) & \cfg{soft}, \cfg{position\_update: theory\_matched} & $G_i(1-G_i)$ over the whole batch & $w_i$ or $1$ & \textbf{exact}, any $k$; lower variance than H2 \\[3pt]
+S3 soft pairs & \cfg{soft} $+$ \cfg{sft\_merge\_groups} & S2 per clone; $G_p$ used only for the training gate & $w_p$ or $1$ & \textbf{exact} per clone; pairs persist unforced (Prop.~\ref{prop:pairs}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The position-only simulator is H2 without SFT. Hence: \emph{the position-only
+update and the soft ``distributed learning'' update agree in expected
+direction if and only if the soft arm uses S2; the original soft arm (S1)
+does not, and S2 is additionally the lower-variance estimator of the two.}
+
+%======================================================================
+\section{Numerical verification}
+\label{sec:num}
+%======================================================================
+
+\texttt{run\_reweighted\_drift\_report} evaluates \eqref{eq:gradu} and each
+$\bar d_i$ on a $25\times25$ grid over a bimodal resource landscape (modes at
+$(0.25,0.25)$ and $(0.75,0.75)$, width $0.18$; kernel $\sigma=0.20$) and
+prints the cosine similarity $\cos(\bar d_i,\nabla_{x_i}u_i)$. \emph{dense
+match} is S2 (it does not depend on $k$); \emph{top$k$ naive} is S1 at the
+given $k$. Configuration D is the co-located-pairs check of
+Section~\ref{sec:S3}. The values below are from the run recorded on
+2026-08-26.
+
+\begin{center}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+configuration & agent & strategic (H4) & canon+$(1{-}G)$ (H2) & canon naive (H1) & dense match (S2) & top3 naive (S1) & top2 naive (S1) \\
+\midrule
+A: near-symmetric Nash & 0 & 0.9994 & 1.0000 & 0.4947 & \textbf{1.0000} & 0.4947 & 0.0887 \\
+\quad $x=(.5,.4),(.5,.55),(.45,.5)$ & 1 & 0.9935 & 1.0000 & 0.9090 & \textbf{1.0000} & 0.9090 & 0.8718 \\
+ & 2 & 0.9821 & 1.0000 & 0.5587 & \textbf{1.0000} & 0.5587 & $-0.6336$ \\
+\midrule
+B: one agent per mode & 0 & 1.0000 & 1.0000 & $-1.0000$ & \textbf{1.0000} & $-1.0000$ & $-1.0000$ \\
+\quad $+$ contested centre & 1 & 1.0000 & 1.0000 & $-1.0000$ & \textbf{1.0000} & $-1.0000$ & $-1.0000$ \\
+\quad $x=(.28,.28),(.72,.72),(.5,.5)$ & 2$^{\dagger}$ & 0.0025 & $-0.0051$ & 0.0023 & $-0.0072$ & 0.0022 & 0.0046 \\
+\midrule
+C: two on one mode, one alone & 0--2 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+\bottomrule
+\end{tabular}}
+
+\medskip
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+\multicolumn{5}{@{}l}{D: two co-located clone pairs, four clones, cosines against each
+  \emph{clone's own} $\nabla_{x_i}u_i$ in the 4-player game} \\
+\midrule
+pair & clone & naive pair rule ($k=2$) & S3 per-clone match & $\|d_{\text{twin}}-d_i\|$ \\
+\midrule
+0 at $(0.30,0.35)$ & 0 & 0.9535 & \textbf{1.0000} & $0.00\mathrm{e}{+}00$ \\
+                   & 1 & 0.9535 & \textbf{1.0000} & $0.00\mathrm{e}{+}00$ \\
+1 at $(0.70,0.60)$ & 2 & 0.9749 & \textbf{1.0000} & $0.00\mathrm{e}{+}00$ \\
+                   & 3 & 0.9749 & \textbf{1.0000} & $0.00\mathrm{e}{+}00$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Reading the table:
+\begin{itemize}
+\item \textbf{top3 naive $=$ canon naive}, column for column. This is the
+  identity $Z_N\equiv1$ in \eqref{eq:S1}: fully dense soft routing with the
+  share centroid is the canonical-naive rule.
+\item \textbf{dense match $=1.0000$ everywhere the gradient is non-zero},
+  as Proposition~\ref{prop:S2} states; it equals the canon$+(1-G)$ column,
+  i.e.\ the position-only dynamics, and does so for every $k$.
+\item In B the naive direction is \emph{anti}-parallel to the gradient for
+  the two mode-holders: their stronghold pull \eqref{eq:S1} points back
+  into the mode while the gradient points toward the contested centre.
+\item $^{\dagger}$Agent 2 in B sits at a stationary point
+  ($\|\nabla u_2\|\approx10^{-16}$); its cosines are numerical noise, not
+  evidence for or against any rule.
+\item In C all drifts are collinear (every rule pushes along the diagonal
+  joining the modes), so the direction test is uninformative there.
+\item In D the last column is the whole point of Proposition~\ref{prop:pairs}:
+  the two members of a pair compute their steps completely independently
+  and the results differ by \emph{exactly} zero, so the pair holds together
+  with nothing enforcing it. Each clone's own drift is parallel to its own
+  gradient; the naive pair rule (one shared step from the renormalised
+  group share) is close but not parallel here --- and it is the arm that
+  cannot detect a pair coming apart, since it writes one position to both
+  members by construction.
+\end{itemize}
+
+\paragraph{Finite-batch variance (Proposition~\ref{prop:RB}).}
+The same report draws 200 batches of 4096 prompts, realises each rule on the
+sampled batch (hard rules with an actual categorical routing draw), and
+reports the cosine of the \emph{mean} drift with the gradient together with
+the standard deviation of the drift norm across batches:
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+configuration & rule & cos(mean drift, $\nabla u_i$) & $\|$mean drift$\|$ & std of $\|$drift$\|$ \\
+\midrule
+A, agent 0 & H2 canonical$+(1{-}G)$ & 0.9998 & 0.0507 & 0.0052 \\
+           & S2 dense matched        & 1.0000 & 0.0508 & \textbf{0.0026} \\
+A, agent 1 & H2 & 0.9999 & 0.0491 & 0.0050 \\
+           & S2 & 1.0000 & 0.0494 & \textbf{0.0024} \\
+A, agent 2 & H2 & 0.9999 & 0.0281 & 0.0048 \\
+           & S2 & 1.0000 & 0.0282 & \textbf{0.0025} \\
+\midrule
+B, agent 0 & H2 & 1.0000 & 0.0916 & 0.0042 \\
+           & S2 & 1.0000 & 0.0919 & \textbf{0.0023} \\
+B, agent 1 & H2 & 1.0000 & 0.0920 & 0.0043 \\
+           & S2 & 1.0000 & 0.0919 & \textbf{0.0023} \\
+\midrule
+C, agent 2 & H2 & 1.0000 & 0.2812 & 0.0062 \\
+           & S2 & 1.0000 & 0.2814 & \textbf{0.0034} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The means agree to three decimals (same expectation) and the
+spread of the dense rule is roughly half that of the hard rule, exactly as
+the law-of-total-variance decomposition predicts. The naive rules are
+omitted here; their mean drifts point elsewhere entirely (the cosine table
+above).
+
+The same facts are asserted by \texttt{tests/test\_topk\_matched.py}
+(dense matched cosine $>0.9999$; naive strictly lower at $k=N$ and $k=2$;
+co-located clones take bitwise identical independent steps; dense spread
+$<$ hard spread) and end-to-end in stubbed closed-loop rounds (hard default
+applies $(1-G)$; soft default applies the whole-batch $G(1-G)$ mass
+\emph{per clone} and skips SFT's own position update; \cfg{soft\_loss: unit}
+passes no loss weights; partners end each round at the same position with a
+logged within-pair distance of $0$; \cfg{expected\_pool} works under soft
+routing).
+
+%======================================================================
+\section{Configuration cheat-sheet}
+%======================================================================
+
+\begin{verbatim}
+closed_loop:
+  routing_mode: hard | soft          # sampled single winner | deterministic top-k
+  routing_weight: G | G_times_1mG    # canonical | strategic   (hard only)
+  soft_top_k: 2                      # soft only; who trains on what
+  soft_loss: weighted | unit         # soft only; share-weighted | top-k winners
+  loss_reweight: null | one_minus_G  # hard only, loss side; 'position_only'
+                                     #   is a deprecated alias for the default
+  position_update: theory_matched | naive   # centroid mass (default: matched)
+  centroid_mode: batch | expected_pool      # whole batch | whole pool
+\end{verbatim}
+
+\noindent\textbf{theory\_matched} applies, per mode, the mass that makes
+Lemma~\ref{lem:match} hold: $(1-G_i)$ on the routed prompts under hard
+canonical routing, uniform under strategic routing (the sampling already
+carries $G_i(1-G_i)$), and the dense $G_i(1-G_i)$ over the whole batch under
+soft routing, independent of \cfg{soft\_top\_k} and of
+\cfg{sft\_merge\_groups} --- every agent steps on its own.
+\textbf{naive} restores the historical centroid (uniform mean under hard
+routing, renormalised top-$k$ share under soft routing, one shared step per
+merge group) as an explicit ablation arm.
+
+\end{document}

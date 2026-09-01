@@ -1,0 +1,19 @@
+# ARM 1c: top-3 soft routing at UNIT loss weight.
+# Identical to soft_topk3_pairs.yaml except `soft_loss: unit`: each prompt
+# still goes to its 3 highest-share pairs, but each trains on it at unit
+# weight rather than in proportion to its share. Against soft_topk3_pairs
+# this isolates the loss WEIGHTING at fixed k = 3; against
+# hard_pairs_matched it isolates k at fixed unit weighting.
+#
+# The loss weighting does not touch the position update: under
+# `position_update: theory_matched` every clone steps toward the
+# G_i(1-G_i)-weighted centroid of the whole batch regardless of soft_loss.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_topk3_unit_pairs/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 3
+  soft_loss: unit                   # the only difference from soft_topk3_pairs

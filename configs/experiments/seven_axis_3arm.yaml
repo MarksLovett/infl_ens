@@ -1,0 +1,99 @@
+# Seven-axis top-k sweep: the canonical experiment.
+#
+# Five specialist arms sweep routing from fully distributed to a single
+# sampled winner, plus one pooled generalist replayed from the top-3 arm's
+# batches. All arms share manifest, seed and theory initialization, so they
+# draw identical round batches and ONE generalist is data-matched to all.
+#
+#   arm          selection            k   loss weight
+#   soft_full    deterministic (all)  7   proportional share
+#   soft         deterministic top-3  3   proportional share
+#   soft_unit    deterministic top-3  3   unit
+#   hard_topk    sampled w/o repl.    3   unit
+#   hard         sampled              1   unit
+#   generalist   pooled replay of the `soft` arm
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_3arm.yaml
+#   python -m infl_ens.pipeline --config ... --stages routing,figures   # re-run analysis
+#   python -m infl_ens.pipeline --config ... --smoke                    # cheap gate
+#   python -m infl_ens.pipeline --config ... --dry-run                  # validate only
+#
+# Arm configs are relative to this file. Every arm resolves to the same
+# `benchmarks` + `trait_space` blocks, so one trait-space cache serves all.
+name: seven_axis_3arm
+results_dir: results/seven_axis_3arm       # pipeline.log + stage_status.json
+figures_dir: figures/seven_axis_3arm
+
+arms:
+  - name: soft_full
+    label: "Soft k=7 wtd"
+    title: "Soft fully distributed (k=7)"
+    role: specialist
+    config: ../arms/soft_full_pairs.yaml
+  - name: soft
+    label: "Soft k=3 wtd"
+    title: "Soft top-3 pairs"
+    role: specialist
+    config: ../arms/soft_topk3_pairs.yaml
+  - name: soft_unit
+    label: "Soft k=3 unit"
+    title: "Soft top-3, unit weight"
+    role: specialist
+    config: ../arms/topk3_unit_pairs.yaml
+  - name: hard_topk
+    label: "Sampled k=3 unit"
+    title: "Sampled top-3 pairs, unit weight"
+    role: specialist
+    config: ../arms/hard_topk3_pairs.yaml
+  - name: hard
+    label: "Hard (SFT)"
+    title: "Hard (SFT) pairs"
+    role: specialist
+    config: ../arms/hard_pairs_matched.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+# Stages run in this order. `download` and `prune` are opt-in
+# (--stages download,manifest,... or --stages prune).
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  # Validation NLL is scored at exactly these rounds (`final` = last trained
+  # round, read from the history), giving an early-vs-late comparison table.
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000         # per benchmark, for both stages
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto              # latexmk when available; `never` / `always`
+  include:
+    - oracle_routing             # one oracle-vs-generalist-vs-specialists .tex per arm
+    - arm_comparison             # cross-arm overlay .tex
+    - pair_positions             # final pair positions per arm
+    - within_pair                # within-pair separation over rounds per arm
+    - cross_arm_report           # data-matching check + headline table
+    - closed_loop_history        # trajectories + utility tracking per arm
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+    - tests/test_topk_matched.py
+    - tests/test_sampled_topk.py
+    - tests/test_unified_eval.py
+    - tests/test_merge_training.py
+    - tests/test_weighted_sft_loss.py
+    - tests/test_routing_eval.py
+  arms: [soft_full, soft, soft_unit, hard_topk, hard]
+  output_root: results/_smoke
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

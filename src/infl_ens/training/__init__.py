@@ -27,9 +27,8 @@ Lazy:
 - :class:`SFTTrainingConfig`, :func:`sft_train_agent` from
   :mod:`infl_ens.training.sft_training`.
 
-Theory-vs-SFT comparison helpers live in
-:mod:`infl_ens.training.theory_vs_sft` (not re-exported at package import
-time; import by submodule to avoid pulling trait-space builders eagerly).
+The closed loop itself lives in :mod:`infl_ens.training.closed_loop`
+and the task registry in :mod:`infl_ens.training.tasks`.
 
 Both trainers are reachable through the single CLI; see
 :mod:`infl_ens.training.__main__` for the dispatch table.
@@ -52,9 +51,8 @@ Per-example loss + centroid weighting
 
 The two are **independent**: you can weight the loss but not the
 centroid, or weight the centroid but not the loss. The closed-loop
-dispatcher uses this independence to expose the ``'position_only'``
-mode that gives gradient-matched position drift without paying the LoRA
-ESS cost.
+dispatcher uses this independence to give gradient-matched position drift
+by default without paying the LoRA ESS cost.
 
 The unweighted path (``sample_weights=None``) is preserved
 byte-for-byte: no behaviour change for existing callers. Implementation
@@ -65,51 +63,68 @@ Closed-loop dispatcher knobs
 ----------------------------
 
 The ``closed_loop`` task in :mod:`infl_ens.training.__main__` exposes
-three orthogonal "rule" knobs in the YAML config:
+four orthogonal "rule" knobs in the YAML config:
 
 - ``closed_loop.routing_weight``: ``'G'`` (canonical, Lovett & Fu 2024)
   or ``'G_times_1mG'`` (strategic).
-- ``closed_loop.loss_reweight``: where to apply the per-query weight
-  :math:`w_m = 1 - G_i(\\mathbf{x}, b_m)`:
-
-  - ``null``: nowhere (uniform loss + uniform centroid).
-  - ``'one_minus_G'``: both the SFT loss AND the centroid update.
-  - ``'position_only'``: centroid update ONLY; SFT loss is unit-weight.
-
-- ``closed_loop.save_per_round``: per-round adapter archiving for
-  :mod:`infl_ens.evaluation.capability_probe`.
+- ``closed_loop.routing_mode``: ``'hard'`` (sample one agent per query)
+  or ``'soft'`` (assign each query to its top-``soft_top_k`` agents;
+  ``closed_loop.soft_loss`` = ``'weighted'`` share-weighted loss or
+  ``'unit'`` unit-weight "top-k winners").
+- ``closed_loop.position_update``: centroid mass of the position step.
+  ``'theory_matched'`` (**default**) makes the expected trait-space drift
+  proportional to the strategic gradient coefficient :math:`G_i(1-G_i)`
+  in every routing mode — ``(1 - G_i)`` under hard canonical routing,
+  uniform under strategic routing, and the dense :math:`G_i(1-G_i)` mass
+  over the whole batch under soft routing
+  (:func:`infl_ens.inflgame.router.allocation.matched_centroid_mass`),
+  independent of ``soft_top_k``. ``'naive'`` keeps the historical
+  uninstrumented centroid as an ablation arm.
+- ``closed_loop.loss_reweight``: loss-side weighting under hard routing —
+  ``null`` (unit) or ``'one_minus_G'`` (:math:`w_m = 1 - G_i(\\mathbf{x},
+  b_m)` on the SFT loss). ``'position_only'`` is a deprecated alias for
+  ``null`` + ``position_update: theory_matched``.
+- ``closed_loop.save_per_round``: per-round adapter archiving, which the
+  per-round evaluation stage of the pipeline scores.
 - ``closed_loop.position_step``: adaptive EMA blend for trait-space
-  position updates (:mod:`infl_ens.utils.position_step`).
+  position updates (:mod:`infl_ens.training.position_step`).
 
-The matrix of gradient-aligned modes is:
+The matrix of gradient-aligned modes (``position_update: theory_matched``
+unless stated) is:
 
-+------------------+----------------------+--------------------------------+
-| routing_weight   | loss_reweight        | meaning                        |
-+==================+======================+================================+
-| ``G``            | ``null``             | canonical naive (no            |
-|                  |                      | gradient correction)           |
-+------------------+----------------------+--------------------------------+
-| ``G_times_1mG``  | ``null``             | strategic routing              |
-|                  |                      | (:math:`\\approx \\nabla u_i`)  |
-+------------------+----------------------+--------------------------------+
-| ``G``            | ``one_minus_G``      | full reweight                  |
-|                  |                      | (:math:`= \\nabla u_i`         |
-|                  |                      | exactly; reduced LoRA ESS)     |
-+------------------+----------------------+--------------------------------+
-| ``G``            | ``position_only``    | decoupled reweight             |
-|                  |                      | (:math:`= \\nabla u_i`         |
-|                  |                      | in position; full LoRA ESS;    |
-|                  |                      | LoRA sees canonical corpus     |
-|                  |                      | including strongholds)         |
-+------------------+----------------------+--------------------------------+
-| ``G_times_1mG``  | ``one_minus_G`` /    | rejected (double-counts the    |
-|                  | ``position_only``    | (1-G) factor)                  |
-+------------------+----------------------+--------------------------------+
++--------------+------------------+----------------------+--------------------------------+
+| routing_mode | routing_weight   | loss_reweight        | meaning                        |
++==============+==================+======================+================================+
+| ``hard``     | ``G``            | ``null``             | unit loss, ``(1-G)`` centroid  |
+|              |                  |                      | (:math:`= \\nabla u_i` in      |
+|              |                  |                      | position; full LoRA ESS)       |
++--------------+------------------+----------------------+--------------------------------+
+| ``hard``     | ``G_times_1mG``  | ``null``             | strategic routing              |
+|              |                  |                      | (:math:`\\approx \\nabla u_i`)  |
++--------------+------------------+----------------------+--------------------------------+
+| ``hard``     | ``G``            | ``one_minus_G``      | full reweight                  |
+|              |                  |                      | (:math:`= \\nabla u_i`         |
+|              |                  |                      | exactly; reduced LoRA ESS)     |
++--------------+------------------+----------------------+--------------------------------+
+| ``soft``     | ``G``            | ``null``             | dense ``G(1-G)`` centroid over |
+|              |                  |                      | the whole batch                |
+|              |                  |                      | (:math:`= \\nabla u_i` exactly, |
+|              |                  |                      | any ``soft_top_k``)            |
++--------------+------------------+----------------------+--------------------------------+
+| ``hard``     | ``G``            | ``null`` + ``naive`` | canonical naive (uniform       |
+|              |                  |                      | centroid; no correction)       |
++--------------+------------------+----------------------+--------------------------------+
+| ``soft``     | ``G``            | ``null`` + ``naive`` | renormalised-share centroid    |
+|              |                  |                      | (NOT gradient matched)         |
++--------------+------------------+----------------------+--------------------------------+
+| ``hard``     | ``G_times_1mG``  | ``one_minus_G``      | rejected (double-counts the    |
+|              |                  |                      | (1-G) factor)                  |
++--------------+------------------+----------------------+--------------------------------+
 
 See :mod:`infl_ens.inflgame.router.verification` for the numerical alignment
-check that distinguishes the "≈" and "=" cases, and
-:mod:`scripts.compare_routing_ess` for the per-round ESS gap diagnostic
-that motivates the ``position_only`` mode.
+check that distinguishes the "≈" and "=" cases (including the soft
+top-``k`` columns), and :mod:`scripts.compare_routing_ess` for the per-round
+ESS gap diagnostic that motivates decoupling the loss from the centroid.
 """
 
 from __future__ import annotations

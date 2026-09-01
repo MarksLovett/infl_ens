@@ -1,0 +1,11 @@
+# ARM 2: HARD (SFT) routing over the same pairs -- the matched control.
+# Every prompt is sampled once from the clone-level allocation G, so each
+# prompt trains exactly one pair adapter. Identical seed + manifest + init
+# to ARM 1 means both arms draw the same round batches.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_hard_pairs_matched/seed0
+
+closed_loop:
+  routing_mode: hard

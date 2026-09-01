@@ -214,24 +214,195 @@ def top_k_allocation_weights(
     :rtype: numpy.ndarray
     :raises ValueError: If ``top_k < 1`` or ``G`` is not 2-D.
     """
+    keep = _top_k_keep_mask(G, top_k)
+    w = np.where(keep, G, 0.0)
+    col_sum = w.sum(axis=0, keepdims=True)
+    safe = col_sum > 0.0
+    return np.where(safe, w / np.where(safe, col_sum, 1.0), 0.0)
+
+
+def _top_k_keep_mask(G: np.ndarray, top_k: int) -> np.ndarray:
+    """Boolean support of the ``top_k`` largest entries per query column.
+
+    Factored out of :func:`top_k_allocation_weights` so any other top-``k``
+    consumer sees a bitwise identical support, ties included.
+
+    :param G: Allocation matrix, shape ``(N, K)``.
+    :type G: numpy.ndarray
+    :param top_k: Agents to retain per query; ``top_k >= N`` keeps all.
+    :type top_k: int
+    :returns: Boolean mask with the same shape as ``G``.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``top_k < 1`` or ``G`` is not 2-D.
+    """
     if G.ndim != 2:
         raise ValueError(f"G must be 2-D (N, K), got shape {G.shape}")
     if top_k < 1:
         raise ValueError(f"top_k must be >= 1, got {top_k}")
     n_agents = G.shape[0]
     if top_k >= n_agents:
-        col_sum = G.sum(axis=0, keepdims=True)
-        safe = col_sum > 0.0
-        return np.where(safe, G / np.where(safe, col_sum, 1.0), 0.0)
-
-    # Keep the top_k largest entries per column, zero the rest.
+        return np.ones_like(G, dtype=bool)
     keep = np.zeros_like(G, dtype=bool)
     top_idx = np.argpartition(-G, top_k - 1, axis=0)[:top_k]     # (top_k, K)
     np.put_along_axis(keep, top_idx, True, axis=0)
-    w = np.where(keep, G, 0.0)
-    col_sum = w.sum(axis=0, keepdims=True)
-    safe = col_sum > 0.0
-    return np.where(safe, w / np.where(safe, col_sum, 1.0), 0.0)
+    return keep
+
+
+def sampled_top_k_mask(
+    G: np.ndarray,
+    top_k: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Sample ``top_k`` distinct agents per query, without replacement, from :math:`G`.
+
+    The stochastic counterpart of :func:`_top_k_keep_mask`: instead of the
+    ``top_k`` largest shares, draw ``top_k`` agents by successive sampling
+    from the categorical distribution :math:`G_\\cdot(b)` — i.e. draw one
+    agent with probability :math:`G_i`, remove it, renormalise, draw again,
+    ``top_k`` times.
+
+    Implemented with the Gumbel-top-``k`` trick, which is exactly equivalent
+    to that sequential procedure (Plackett--Luce): perturb the log-weights
+    with iid Gumbel(0,1) noise and take the ``top_k`` largest,
+
+    .. math::
+
+        \\mathcal{S}_k(b) \\;=\\; \\operatorname*{arg\\,top-}k_i\\;
+        \\bigl[\\log G_i(b) + g_{ib}\\bigr], \\qquad
+        g_{ib} \\sim \\mathrm{Gumbel}(0,1),
+
+    which costs one pass instead of ``top_k`` renormalisations.
+
+    Two limits make this the natural bridge between the routing modes:
+    ``top_k == 1`` reduces to a single categorical draw — exactly the hard
+    routing of :meth:`infl_ens.inflgame.router.InfluencerRouter.route_batch`
+    under ``policy='proportional'`` — while suppressing the noise recovers
+    the deterministic top-``k`` gate. A run using this mask therefore
+    isolates *sampled* versus *argmax* selection at fixed ``k``.
+
+    Agents with zero share are never selected unless fewer than ``top_k``
+    agents have positive share, in which case the remainder is filled
+    arbitrarily to keep exactly ``top_k`` per column.
+
+    :param G: Allocation matrix :math:`G_i(\\mathbf{x}, b_k)`, shape
+        ``(N, K)``, columns summing to one across agents.
+    :type G: numpy.ndarray
+    :param top_k: Number of agents to draw per query; ``top_k >= N``
+        selects every agent.
+    :type top_k: int
+    :param rng: NumPy generator supplying the Gumbel noise.
+    :type rng: numpy.random.Generator
+    :returns: Boolean mask, shape ``(N, K)``, with exactly ``min(top_k, N)``
+        true entries per column.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``top_k < 1`` or ``G`` is not 2-D.
+    """
+    if G.ndim != 2:
+        raise ValueError(f"G must be 2-D (N, K), got shape {G.shape}")
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1, got {top_k}")
+    if top_k >= G.shape[0]:
+        return np.ones_like(G, dtype=bool)
+    tiny = np.finfo(float).tiny
+    keys = np.log(np.maximum(G, tiny)) + rng.gumbel(size=G.shape)
+    return _top_k_keep_mask(keys, top_k)
+
+
+def matched_centroid_mass(G: np.ndarray) -> np.ndarray:
+    """Gradient-matched centroid mass :math:`G_i(1 - G_i)`, dense over every query.
+
+    .. math::
+
+        m_i(b) \\;=\\; G_i(\\mathbf{x}, b)\\,\\bigl(1 - G_i(\\mathbf{x}, b)\\bigr)
+
+    This is the un-normalised coefficient of the strategic gradient
+    :func:`utility_gradient`. Under hard routing the sampling step already
+    contributes one factor :math:`G_i` to the expected centroid drift, so
+    the ``(1 - G_i)`` re-weight completes the coefficient on the routed
+    subset. Under soft routing nothing is sampled, so the centroid must
+    carry the full :math:`G_i(1 - G_i)` — and it may do so over the
+    **entire** batch, not merely the top-``k`` queries an agent trains on:
+    the position step is a weighted mean of already-projected coordinates,
+    so using every query costs nothing, removes any truncation bias, and
+    is the Rao–Blackwellised (lower-variance) form of the hard-routing
+    estimator with the same expectation
+    :math:`\\sum_b B(b)\\,G_i(1-G_i)\\,(b - x_i) \\propto \\Sigma\\,\\nabla_{x_i} u_i`.
+
+    The mass is deliberately **not** renormalised per query: the per-agent
+    sum normalisation applied by the weighted centroid is a positive
+    scalar, so the drift direction stays exactly parallel to the utility
+    gradient (isotropic :math:`\\Sigma`); a per-query renormaliser would
+    tilt it.
+
+    Always pass the clone-level allocation: every agent steps along its
+    own gradient, twins included as competitors. Co-located clones have
+    identical rows and therefore identical steps, which is how the
+    theory's stable pairs persist without being enforced.
+
+    :param G: Allocation matrix :math:`G_i(\\mathbf{x}, b_k)`, shape
+        ``(N, K)``, columns summing to one across agents.
+    :type G: numpy.ndarray
+    :returns: Centroid mass matrix, shape ``(N, K)``.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``G`` is not 2-D.
+    """
+    if G.ndim != 2:
+        raise ValueError(f"G must be 2-D (N, K), got shape {G.shape}")
+    return G * (1.0 - G)
+
+
+def group_allocation_weights(
+    G: np.ndarray,
+    group_index: np.ndarray,
+    n_groups: int,
+) -> np.ndarray:
+    """Sum per-agent allocation rows into per-group rows.
+
+    .. math::
+
+        G_p(\\mathbf{x}, b) \\;=\\; \\sum_{i \\in p} G_i(\\mathbf{x}, b)
+
+    Used by **soft routing over merge groups**: when a group's members are
+    co-located at one shared position and *every* group has the same size,
+    the summed share equals the allocation :math:`G_p` of a single agent
+    placed at that shared position in the ``n_groups``-agent game (the common
+    member count cancels in the numerator and denominator of eqn. 1). With
+    unequal group sizes the sum is still the group's total share of the
+    query, but it is no longer the allocation of an equivalent single agent.
+
+    Columns of the result sum to one whenever the columns of ``G`` do.
+
+    :param G: Allocation matrix :math:`G_i(\\mathbf{x}, b_k)`, shape
+        ``(N, K)``, as returned by :func:`allocation_weights`.
+    :type G: numpy.ndarray
+    :param group_index: Group id per agent row, shape ``(N,)``, with values
+        in ``[0, n_groups)``.
+    :type group_index: numpy.ndarray
+    :param n_groups: Number of groups :math:`P`.
+    :type n_groups: int
+    :returns: Group allocation matrix, shape ``(P, K)``.
+    :rtype: numpy.ndarray
+    :raises ValueError: If ``G`` is not 2-D, ``group_index`` does not have
+        one entry per agent row, ``n_groups < 1``, or any group id lies
+        outside ``[0, n_groups)``.
+    """
+    if G.ndim != 2:
+        raise ValueError(f"G must be 2-D (N, K), got shape {G.shape}")
+    if n_groups < 1:
+        raise ValueError(f"n_groups must be >= 1, got {n_groups}")
+    idx = np.asarray(group_index, dtype=int)
+    if idx.shape != (G.shape[0],):
+        raise ValueError(
+            f"group_index must have shape ({G.shape[0]},), got {idx.shape}"
+        )
+    if idx.size and (idx.min() < 0 or idx.max() >= n_groups):
+        raise ValueError(
+            f"group_index values must lie in [0, {n_groups}), got "
+            f"[{int(idx.min())}, {int(idx.max())}]"
+        )
+    out = np.zeros((n_groups, G.shape[1]), dtype=float)
+    np.add.at(out, idx, G)
+    return out
 
 
 def empirical_utility(

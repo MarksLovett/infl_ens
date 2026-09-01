@@ -1,0 +1,28 @@
+# ARM 1d: "HARD TOP-3": sample 3 winning pairs per prompt WITHOUT
+# replacement from the pair shares G_p, then train each at unit weight.
+#
+# Hard routing generalised past a single winner: draw one pair with
+# probability G_p, remove it, renormalise, draw again, three times
+# (Gumbel-top-k; see infl_ens.inflgame.router.allocation.sampled_top_k_mask).
+# At soft_top_k: 1 it reduces exactly to hard_pairs_matched.
+#
+#   arm                  selection            k   loss weight
+#   soft_full_pairs      deterministic (all)  7   proportional
+#   soft_topk3_pairs     deterministic top-3  3   proportional
+#   topk3_unit_pairs     deterministic top-3  3   unit
+#   THIS FILE            sampled w/o repl.    3   unit
+#   hard_pairs_matched   sampled              1   unit
+#
+# Against topk3_unit_pairs this isolates argmax-vs-sampled selection at
+# fixed k = 3 and unit weight; against hard_pairs_matched it isolates k
+# at fixed sampling and unit weight.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_hard_topk3_pairs/seed0
+
+closed_loop:
+  routing_mode: soft                # soft machinery as plumbing only
+  soft_top_k: 3
+  soft_select: sample               # draw 3 distinct pairs w/o replacement
+  soft_loss: unit

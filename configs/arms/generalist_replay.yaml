@@ -1,0 +1,21 @@
+# ARM 3: pooled GENERALIST replayed from the logged batches of ARM 1.
+# One cumulative LoRA trained on the union of the routed batches (soft rounds
+# are de-duplicated back to the round batch): the data-matched comparator.
+# Runs AFTER ARM 1, since it reads that run's history.json.
+#
+# The agent name must stay `pooled-baseline`: the route-then-score evaluator
+# loads the generalist from <baseline_run_dir>/agents/pooled-baseline/round-NN.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: baseline_replay
+seed: 0
+history_path: results/seven_axis_soft_topk3_pairs/seed0/history.json
+output_dir: results/seven_axis_3arm_generalist/seed0
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null                      # replay every logged round

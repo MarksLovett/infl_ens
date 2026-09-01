@@ -10,8 +10,8 @@ the proportional-allocation rule
 
    G_i(\mathbf{x}, b) = \frac{f_i(x_i, b)}{\sum_{j=1}^{N} f_j(x_j, b)}
 
-with a multivariate-Gaussian influence kernel on a trait space
-constructed automatically from a calibration corpus.
+with a multivariate-Gaussian influence kernel on a trait space learned
+from labelled safety benchmarks.
 
 This site is built from the package source on every push to ``main`` by
 ``.github/workflows/docs.yml`` and published to GitHub Pages.
@@ -21,35 +21,37 @@ This site is built from the package source on every push to ``main`` by
    :caption: User guide
 
    getting_started
+   pipeline
+   configs
    structure
 
 .. toctree::
    :maxdepth: 2
    :caption: API reference
 
+   api/config
    api/data
    api/inflgame
    api/training
    api/evaluation
+   api/figures
+   api/pipeline
    api/utils
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tooling
-
-   scripts
-   configs
 
 Where to start
 --------------
 
-- New to the package? Read :doc:`getting_started` — it includes the
-  installation notes, the quick-start example, and the design rules
-  (positions reflect *observed* capability, fixed :math:`\sigma`,
-  picking :math:`\sigma` relative to :math:`\sigma_0^*`).
+- New to the package? Read :doc:`getting_started` — installation, the
+  one-command pipeline, and the design rules (positions reflect
+  *observed* capability, fixed :math:`\sigma`, picking :math:`\sigma`
+  relative to :math:`\sigma_0^*`).
+- Want to change an experiment? :doc:`configs` explains the layered YAML
+  fragments (encoder, data, model, arms, experiment) and the trait-space
+  cache contract.
+- Running on the GPU host? :doc:`pipeline` documents every stage and the
+  ``scripts/run_on_doob.sh`` wrapper.
 - Looking for a specific symbol? Jump to the API reference and use the
-  search box (top-left). The autosummary index lists every public
-  symbol re-exported from each subpackage's ``__init__.py``.
+  search box (top-left).
 - Want a file-by-file map of the repository? See :doc:`structure`.
 
 Indices and tables

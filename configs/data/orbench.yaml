@@ -1,7 +1,0 @@
-# configs/data/orbench.yaml
-# Static loader settings for the OR-Bench over-refusal axis.
-
-kind: orbench
-path: data/orbench
-configs: [or-bench-80k, or-bench-toxic]   # positives + negatives
-max_records: null

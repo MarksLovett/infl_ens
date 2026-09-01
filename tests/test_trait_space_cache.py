@@ -15,7 +15,6 @@ from infl_ens.data.benchmarks.safety_trait_space import (
     build_safety_trait_space_bundle,
     project_pre_normalizer_coordinates,
 )
-from infl_ens.data.trait_linear_transform import fit_whiten
 from infl_ens.data.trait_space_cache import (
     _trait_space_build_kwargs,
     coordinate_chain_from_cache,
@@ -136,16 +135,10 @@ def _unique_splits() -> list[BenchmarkSplit]:
 
 
 def test_full_chain_cache_roundtrip(tmp_path: Path) -> None:
-    """Residualize + whiten + stretch survive a cache roundtrip bit-exactly."""
+    """Residualize + stretch survive a cache roundtrip bit-exactly."""
     splits = _unique_splits()
     corpus = [p for s in splits for p in s.prompts]
     encoder = _CountingEncoder()
-
-    pre_bundle = build_safety_trait_space_bundle(splits, encoder, n_grid=4)
-    pre = project_pre_normalizer_coordinates(
-        encoder, list(pre_bundle.axes), corpus,
-    )
-    transform = fit_whiten(pre, fit_source="test corpus, label-blind")
 
     bundle = build_safety_trait_space_bundle(
         splits,
@@ -153,7 +146,6 @@ def test_full_chain_cache_roundtrip(tmp_path: Path) -> None:
         n_grid=4,
         coordinate_residualize=True,
         coordinate_stretch_gamma=2.0,
-        linear_transform=transform,
         quantile_knots=101,
     )
     cache_path = tmp_path / "full_chain"
@@ -164,7 +156,7 @@ def test_full_chain_cache_roundtrip(tmp_path: Path) -> None:
     manifest = json.loads((cache_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["version"] == 3
     assert manifest["quantile_knots"] == 101
-    assert manifest["linear_transform"] is not None
+    assert "linear_transform" not in manifest
     with np.load(cache_path / "arrays.npz") as arrays:
         assert "qnorm_axis_0_knots" in arrays
         assert "qnorm_axis_1_cdf" in arrays
@@ -235,31 +227,25 @@ def test_fingerprint_ignores_throughput_and_location_keys() -> None:
 
 
 def test_build_kwargs_defaults() -> None:
-    """Config extraction includes the new normalizer/transform keys."""
+    """Config extraction includes the normalizer keys."""
     kwargs = _trait_space_build_kwargs({"trait_space": {}})
     assert kwargs["quantile_knots"] == 1001
-    assert kwargs["linear_transform"] is None
+    assert "linear_transform" not in kwargs
     kwargs = _trait_space_build_kwargs({"trait_space": {"quantile_knots": 51}})
     assert kwargs["quantile_knots"] == 51
 
 
 def test_coordinate_chain_matches_projector(tmp_path: Path) -> None:
-    """The cached chain equals transform∘CDF∘stretch on pre-normalizer coords."""
+    """The cached chain equals CDF∘stretch on pre-normalizer coords."""
     splits = _unique_splits()
     corpus = [p for s in splits for p in s.prompts]
     encoder = _CountingEncoder()
 
-    pre_bundle = build_safety_trait_space_bundle(splits, encoder, n_grid=4)
-    pre = project_pre_normalizer_coordinates(
-        encoder, list(pre_bundle.axes), corpus,
-    )
-    transform = fit_whiten(pre, fit_source="test corpus, label-blind")
     bundle = build_safety_trait_space_bundle(
         splits,
         encoder,
         n_grid=4,
         coordinate_stretch_gamma=1.5,
-        linear_transform=transform,
         quantile_knots=101,
     )
     cache_path = tmp_path / "chain"

@@ -44,22 +44,88 @@ def load_closed_loop_history(path: PathLike) -> list[dict[str, Any]]:
     return records
 
 
-def pooled_batch_from_round(record: dict[str, Any]) -> tuple[list[str], list[str | None]]:
+def pooled_batch_from_round(
+    record: dict[str, Any],
+    *,
+    dedupe: Optional[bool] = None,
+) -> tuple[list[str], list[str | None]]:
     """Reconstruct the full routed minibatch for one round.
 
-    Each prompt is routed to exactly one specialist, so concatenating all
-    ``agent_prompts`` lists recovers the routed batch (up to ordering).
+    Under hard routing each prompt is routed to exactly one specialist, so
+    concatenating all ``agent_prompts`` lists recovers the routed batch (up
+    to ordering). Under soft routing with ``soft_top_k > 1`` a prompt appears
+    in several agents' lists, and a naive concatenation would train the
+    pooled baseline on that prompt several times per round — inflating its
+    data volume relative to the specialists it is meant to match. Such
+    rounds are therefore de-duplicated back to the underlying batch. The
+    decision keys only on ``routing_mode`` / ``soft_top_k``: the soft
+    ``soft_loss`` and ``position_update`` arms all log the same batch
+    structure, so they replay identically.
 
     :param record: One round dict from ``history.json``.
     :type record: dict
+    :param dedupe: Force de-duplication on or off. ``None`` (default)
+        de-duplicates exactly when the round logged soft routing with
+        ``soft_top_k > 1``.
+    :type dedupe: bool | None
     :returns: ``(prompts, responses)`` with aligned lengths.
     :rtype: tuple[list[str], list[str | None]]
     """
     agent_prompts: dict[str, list[str]] = record["agent_prompts"]
     agent_responses: dict[str, list[str]] = record.get("agent_responses", {})
 
-    prompts: list[str] = []
-    responses: list[str | None] = []
+    if dedupe is None:
+        dedupe = (
+            str(record.get("routing_mode", "hard")) == "soft"
+            and int(record.get("soft_top_k") or 1) > 1
+        )
+
+    if dedupe:
+        # The round batch verbatim is the most faithful source; fall back to
+        # per-agent batch indices, then to first-occurrence by prompt text.
+        batch_prompts = record.get("batch_prompts")
+        if batch_prompts:
+            batch_responses = list(
+                record.get("batch_responses") or [None] * len(batch_prompts)
+            )
+            return (
+                [str(p) for p in batch_prompts],
+                [r if r else None for r in batch_responses],
+            )
+        agent_indices = record.get("agent_batch_indices") or {}
+        aligned = bool(agent_indices) and all(
+            len(agent_indices.get(name, [])) == len(agent_prompts[name])
+            for name in agent_prompts
+        )
+        if aligned:
+            by_index: dict[int, tuple[str, str | None]] = {}
+            for name in sorted(agent_prompts.keys()):
+                p_list = list(agent_prompts[name])
+                r_list = list(agent_responses.get(name, []))
+                for i, p in enumerate(p_list):
+                    r = r_list[i] if i < len(r_list) and r_list[i] else None
+                    by_index.setdefault(int(agent_indices[name][i]), (p, r))
+            ordered = [by_index[k] for k in sorted(by_index)]
+            return [p for p, _ in ordered], [r for _, r in ordered]
+
+        seen: set[str] = set()
+        prompts: list[str] = []
+        responses: list[str | None] = []
+        for name in sorted(agent_prompts.keys()):
+            p_list = list(agent_prompts[name])
+            r_list = list(agent_responses.get(name, []))
+            for i, p in enumerate(p_list):
+                if p in seen:
+                    continue
+                seen.add(p)
+                prompts.append(p)
+                responses.append(
+                    r_list[i] if i < len(r_list) and r_list[i] else None
+                )
+        return prompts, responses
+
+    prompts = []
+    responses = []
     for name in sorted(agent_prompts.keys()):
         p_list = list(agent_prompts[name])
         r_list = list(agent_responses.get(name, []))

@@ -22,11 +22,7 @@ from infl_ens.data.benchmarks.safety_trait_space import (
     _make_learned_projector,
     build_safety_trait_space_bundle,
 )
-from infl_ens.data.encoders import DEFAULT_ENCODER_MODEL, HuggingFaceEncoder
-from infl_ens.data.trait_linear_transform import (
-    FrozenLinearTransform,
-    load_transform_from_cfg,
-)
+from infl_ens.data.encoders import HuggingFaceEncoder, make_encoder
 from infl_ens.data.trait_normalize import AxisQuantileMap, QuantileNormalizer
 from infl_ens.data.trait_space import TraitSpace
 
@@ -83,10 +79,6 @@ def trait_space_fingerprint(cfg: dict[str, Any]) -> str:
     entries. Tuning throughput therefore reuses an existing cache instead
     of forcing a fresh encode.
 
-    When ``trait_space.linear_transform`` names a transform file, the
-    file *content* is hashed too, so editing the transform JSON in place
-    invalidates the cache rather than silently reusing stale geometry.
-
     :param cfg: Full router or training config.
     :type cfg: dict
     :returns: Hex digest prefix used as a cache directory name.
@@ -96,15 +88,6 @@ def trait_space_fingerprint(cfg: dict[str, Any]) -> str:
         "benchmarks": cfg.get("benchmarks", []),
         "trait_space": _fingerprint_trait_space_block(cfg.get("trait_space") or {}),
     }
-    rel = (cfg.get("trait_space") or {}).get("linear_transform")
-    if rel:
-        path = Path(str(rel))
-        if not path.is_absolute():
-            path = Path(__file__).resolve().parents[3] / path
-        try:
-            payload["linear_transform_content"] = path.read_text(encoding="utf-8")
-        except OSError:
-            payload["linear_transform_content"] = None
     raw = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:16]
 
@@ -205,6 +188,26 @@ def _normalizer_from_cache(
     )
 
 
+def _reject_linear_transform(manifest: dict[str, Any], path: Path) -> None:
+    """Refuse caches built with the removed frozen linear transform.
+
+    Older manifests carry ``"linear_transform": null``, which is fine;
+    a non-null payload means the cached geometry depends on a transform
+    this version no longer applies.
+
+    :param manifest: Parsed cache manifest.
+    :type manifest: dict
+    :param path: Cache directory (for the error message).
+    :type path: pathlib.Path
+    :raises ValueError: If the manifest names a linear transform.
+    """
+    if manifest.get("linear_transform"):
+        raise ValueError(
+            f"trait-space cache at {path} was built with a frozen linear "
+            "transform, which is no longer supported; rebuild the cache"
+        )
+
+
 def save_safety_trait_space_cache(
     path: Path,
     bundle: SafetyTraitSpaceBundle,
@@ -236,11 +239,6 @@ def save_safety_trait_space_cache(
         "axes": [_axis_to_manifest(ax) for ax in bundle.axes],
         "quantile_knots": int(bundle.normalizer.n_knots),
         "normalizer_fit_n": int(bundle.normalizer.fit_n),
-        "linear_transform": (
-            bundle.linear_transform.to_dict()
-            if bundle.linear_transform is not None
-            else None
-        ),
     }
     array_payload: dict[str, np.ndarray] = {
         "grid": np.asarray(bundle.space.grid, dtype=float),
@@ -315,17 +313,11 @@ def load_safety_trait_space_cache(
         weights = np.asarray(arrays["weights"], dtype=float)
         normalizer = _normalizer_from_cache(manifest, arrays, len(axes))
 
-    transform_payload = manifest.get("linear_transform")
-    linear_transform = (
-        FrozenLinearTransform.from_dict(transform_payload)
-        if transform_payload
-        else None
-    )
+    _reject_linear_transform(manifest, path)
     project = _make_learned_projector(
         encoder,
         list(axes),
         normalizer=normalizer,
-        linear_transform=linear_transform,
         coordinate_stretch_gamma=float(manifest["coordinate_stretch_gamma"]),
         coordinate_stretch_gammas=manifest.get("coordinate_stretch_gammas"),
     )
@@ -356,41 +348,9 @@ def _trait_space_build_kwargs(cfg: dict[str, Any]) -> dict[str, Any]:
         "mode_alignment_weights": ts_cfg.get("mode_alignment_weights"),
         "coordinate_stretch_gamma": float(ts_cfg.get("coordinate_stretch_gamma", 1.0)),
         "coordinate_stretch_gammas": ts_cfg.get("coordinate_stretch_gammas"),
-        "linear_transform": load_transform_from_cfg(cfg),
         "quantile_knots": int(ts_cfg.get("quantile_knots", 1001)),
     }
 
-
-def make_trait_space_encoder(cfg: dict[str, Any]) -> HuggingFaceEncoder:
-    """Construct the Hugging Face encoder named in ``trait_space`` config.
-
-    :param cfg: Router or training config.
-    :type cfg: dict
-    :returns: Encoder with configuration-local overrides.  ``encoder`` may
-        be either a legacy model-name string or a mapping with
-        ``model_name``, ``batch_size``, ``max_length``, ``pooling``,
-        ``normalize``, ``torch_dtype``, ``device_map``, ``padding_side``,
-        ``attn_implementation``, and ``trust_remote_code`` fields.
-    :rtype: HuggingFaceEncoder
-    :raises TypeError: If ``trait_space.encoder`` is not a string or mapping.
-    """
-    ts_cfg = cfg.get("trait_space", {})
-    raw_encoder = ts_cfg.get("encoder", DEFAULT_ENCODER_MODEL)
-    if isinstance(raw_encoder, str):
-        encoder_cfg: dict[str, Any] = {"model_name": raw_encoder}
-    elif isinstance(raw_encoder, dict):
-        encoder_cfg = dict(raw_encoder)
-    else:
-        raise TypeError(
-            "trait_space.encoder must be a Hugging Face model-name string "
-            f"or mapping, got {type(raw_encoder).__name__}",
-        )
-
-    if "model_name" not in encoder_cfg:
-        encoder_cfg["model_name"] = DEFAULT_ENCODER_MODEL
-    if "batch_size" not in encoder_cfg and "encoder_batch_size" in ts_cfg:
-        encoder_cfg["batch_size"] = int(ts_cfg["encoder_batch_size"])
-    return HuggingFaceEncoder(**encoder_cfg)
 
 
 def build_or_load_safety_trait_space(
@@ -411,7 +371,7 @@ def build_or_load_safety_trait_space(
     :rtype: TraitSpace
     """
     ts_cfg = cfg.get("trait_space", {})
-    encoder = make_trait_space_encoder(cfg)
+    encoder = make_encoder(cfg)
     build_kwargs = _trait_space_build_kwargs(cfg)
     use_cache = bool(ts_cfg.get("cache", False))
     if not use_cache:
@@ -450,8 +410,6 @@ class CachedTraitArtifacts:
     :type axes: tuple[LearnedAxis, ...]
     :param normalizer: Fitted per-axis quantile normalizer.
     :type normalizer: QuantileNormalizer
-    :param linear_transform: Optional frozen standardize/whiten transform.
-    :type linear_transform: FrozenLinearTransform | None
     :param gammas: Per-axis post-normalization stretch exponents.
     :type gammas: numpy.ndarray
     :param axis_labels: Axis names in config order.
@@ -460,7 +418,6 @@ class CachedTraitArtifacts:
 
     axes: tuple[LearnedAxis, ...]
     normalizer: QuantileNormalizer
-    linear_transform: Optional[FrozenLinearTransform]
     gammas: np.ndarray
     axis_labels: tuple[str, ...]
 
@@ -486,7 +443,6 @@ def artifacts_from_bundle(bundle: SafetyTraitSpaceBundle) -> CachedTraitArtifact
     return CachedTraitArtifacts(
         axes=tuple(bundle.axes),
         normalizer=bundle.normalizer,
-        linear_transform=bundle.linear_transform,
         gammas=gammas,
         axis_labels=tuple(
             bundle.space.axis_labels or tuple(a.name for a in bundle.axes)
@@ -495,7 +451,7 @@ def artifacts_from_bundle(bundle: SafetyTraitSpaceBundle) -> CachedTraitArtifact
 
 
 def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
-    """Reload learned axes, normalizer, transform, and stretch from cache.
+    """Reload learned axes, normalizer, and stretch from cache.
 
     Lets analysis tools reconstruct any stage of the projection pipeline
     without re-encoding text or rebuilding the trait space.
@@ -530,12 +486,7 @@ def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
             for idx, entry in enumerate(manifest["axes"])
         )
         normalizer = _normalizer_from_cache(manifest, arrays, len(axes))
-    transform_payload = manifest.get("linear_transform")
-    transform = (
-        FrozenLinearTransform.from_dict(transform_payload)
-        if transform_payload
-        else None
-    )
+    _reject_linear_transform(manifest, path)
     names = [str(entry["name"]) for entry in manifest["axes"]]
     default_gamma = float(manifest["coordinate_stretch_gamma"])
     overrides = manifest.get("coordinate_stretch_gammas") or {}
@@ -546,7 +497,6 @@ def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
     return CachedTraitArtifacts(
         axes=axes,
         normalizer=normalizer,
-        linear_transform=transform,
         gammas=gammas,
         axis_labels=tuple(manifest.get("axis_labels") or names),
     )
@@ -555,7 +505,7 @@ def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
 def coordinate_chain_from_cache(
     cfg: dict[str, Any],
 ) -> Callable[[np.ndarray], np.ndarray]:
-    """Build the transform → CDF → stretch chain from a built cache.
+    """Build the CDF → stretch chain from a built cache.
 
     Used to migrate legacy pre-normalization coordinates (e.g. stored
     ``fixed_positions`` files) into the final normalized geometry without
@@ -572,14 +522,11 @@ def coordinate_chain_from_cache(
     :raises ValueError: If the cache version is unsupported.
     """
     artifacts = load_cache_artifacts(cfg)
-    transform = artifacts.linear_transform
     normalizer = artifacts.normalizer
     gammas = artifacts.gammas
 
     def chain(coords: np.ndarray) -> np.ndarray:
         x = np.asarray(coords, dtype=float)
-        if transform is not None:
-            x = transform.apply(x)
         x = normalizer.transform(x)
         if not np.all(gammas == 1.0):
             x = 1.0 - np.power(1.0 - np.clip(x, 0.0, 1.0), gammas)

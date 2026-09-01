@@ -1,0 +1,22 @@
+# Template for a different Hugging Face encoder (BAAI/bge-large-en-v1.5).
+#
+# Any AutoModel that returns `last_hidden_state` works; pick the pooling the
+# model card recommends (`mean`, `cls` or `last_token`). To use it, swap this
+# file into the `includes:` list of configs/trait_space/<name>.yaml.
+#
+# A different `trait_space.encoder` changes the cache fingerprint, so the
+# first run re-encodes the corpus. Changing only pooling / max_length for
+# the SAME model name does NOT change the fingerprint: point
+# `trait_space.cache_dir` somewhere new in that case.
+trait_space:
+  encoder: BAAI/bge-large-en-v1.5
+  encoder_batch_size: 128
+
+encoder:
+  model_name: BAAI/bge-large-en-v1.5
+  pooling: cls
+  padding_side: right
+  max_length: 512
+  normalize: true
+  torch_dtype: float16
+  device_map: null         # unquantized: place on `device` directly

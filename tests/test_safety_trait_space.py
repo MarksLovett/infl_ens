@@ -13,11 +13,6 @@ from infl_ens.data.benchmarks import (
     BenchmarkSplit,
     build_safety_trait_space,
 )
-from infl_ens.data.benchmarks.safety_trait_space import (
-    build_safety_trait_space_bundle,
-    project_pre_normalizer_coordinates,
-)
-from infl_ens.data.trait_linear_transform import fit_whiten
 
 
 def _toy_encoder(texts: Sequence[str]) -> np.ndarray:
@@ -120,23 +115,6 @@ def test_project_bounded_and_uniform_bare_bones() -> None:
     space = build_safety_trait_space(splits, _toy_encoder, n_grid=6)
     coords = space.project(corpus)
     assert coords.shape == (len(corpus), 2)
-    assert coords.min() >= 0.0
-    assert coords.max() <= 1.0
-    assert _max_ks_vs_uniform(coords) < 0.1
-
-
-def test_project_bounded_and_uniform_with_whiten() -> None:
-    """The [0,1]^L guarantee holds with an unbounded whiten transform active."""
-    splits, corpus = _unique_splits()
-    bundle = build_safety_trait_space_bundle(splits, _toy_encoder, n_grid=6)
-    pre = project_pre_normalizer_coordinates(
-        _toy_encoder, list(bundle.axes), corpus,
-    )
-    transform = fit_whiten(pre, fit_source="test corpus, label-blind")
-    space = build_safety_trait_space(
-        splits, _toy_encoder, n_grid=6, linear_transform=transform,
-    )
-    coords = space.project(corpus)
     assert coords.min() >= 0.0
     assert coords.max() <= 1.0
     assert _max_ks_vs_uniform(coords) < 0.1

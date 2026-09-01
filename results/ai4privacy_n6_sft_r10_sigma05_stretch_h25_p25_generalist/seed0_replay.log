@@ -1,203 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 9075.34it/s]
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8219.07it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 55629.97 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5420.84 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:03<00:22,  3.24s/it]                                              12%|█▎        | 1/8 [00:03<00:22,  3.24s/it] 25%|██▌       | 2/8 [00:05<00:17,  2.94s/it]                                              25%|██▌       | 2/8 [00:05<00:17,  2.94s/it] 38%|███▊      | 3/8 [00:08<00:13,  2.80s/it]                                              38%|███▊      | 3/8 [00:08<00:13,  2.80s/it] 50%|█████     | 4/8 [00:10<00:10,  2.62s/it]                                              50%|█████     | 4/8 [00:10<00:10,  2.62s/it] 62%|██████▎   | 5/8 [00:13<00:07,  2.54s/it]                                              62%|██████▎   | 5/8 [00:13<00:07,  2.54s/it] 75%|███████▌  | 6/8 [00:16<00:05,  2.60s/it]                                              75%|███████▌  | 6/8 [00:16<00:05,  2.60s/it] 88%|████████▊ | 7/8 [00:18<00:02,  2.53s/it]                                              88%|████████▊ | 7/8 [00:18<00:02,  2.53s/it]100%|██████████| 8/8 [00:21<00:00,  2.61s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.61s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.61s/it]100%|██████████| 8/8 [00:21<00:00,  2.65s/it]
-{'loss': '2.878', 'grad_norm': '3.142', 'learning_rate': '0.0002', 'entropy': '2.109', 'num_tokens': '5550', 'mean_token_accuracy': '0.4956', 'epoch': '0.125'}
-{'loss': '2.786', 'grad_norm': '3.377', 'learning_rate': '0.000175', 'entropy': '2.312', 'num_tokens': '1.04e+04', 'mean_token_accuracy': '0.4726', 'epoch': '0.25'}
-{'loss': '2.702', 'grad_norm': '5.141', 'learning_rate': '0.00015', 'entropy': '2.258', 'num_tokens': '1.5e+04', 'mean_token_accuracy': '0.4826', 'epoch': '0.375'}
-{'loss': '2.35', 'grad_norm': '2.327', 'learning_rate': '0.000125', 'entropy': '2.25', 'num_tokens': '1.973e+04', 'mean_token_accuracy': '0.5276', 'epoch': '0.5'}
-{'loss': '2.322', 'grad_norm': '1.191', 'learning_rate': '0.0001', 'entropy': '2.18', 'num_tokens': '2.468e+04', 'mean_token_accuracy': '0.5308', 'epoch': '0.625'}
-{'loss': '2.298', 'grad_norm': '0.6096', 'learning_rate': '7.5e-05', 'entropy': '2.211', 'num_tokens': '3.024e+04', 'mean_token_accuracy': '0.5303', 'epoch': '0.75'}
-{'loss': '2.222', 'grad_norm': '0.6086', 'learning_rate': '5e-05', 'entropy': '2.125', 'num_tokens': '3.569e+04', 'mean_token_accuracy': '0.5427', 'epoch': '0.875'}
-{'loss': '2.252', 'grad_norm': '0.7571', 'learning_rate': '2.5e-05', 'entropy': '2.141', 'num_tokens': '4.075e+04', 'mean_token_accuracy': '0.5442', 'epoch': '1'}
-{'train_runtime': '21.22', 'train_samples_per_second': '24.13', 'train_steps_per_second': '0.377', 'train_loss': '2.476', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 7963.12it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 68548.38 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5720.90 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:18,  2.67s/it]                                              12%|█▎        | 1/8 [00:02<00:18,  2.67s/it] 25%|██▌       | 2/8 [00:05<00:16,  2.72s/it]                                              25%|██▌       | 2/8 [00:05<00:16,  2.72s/it] 38%|███▊      | 3/8 [00:08<00:13,  2.75s/it]                                              38%|███▊      | 3/8 [00:08<00:13,  2.75s/it] 50%|█████     | 4/8 [00:10<00:10,  2.54s/it]                                              50%|█████     | 4/8 [00:10<00:10,  2.54s/it] 62%|██████▎   | 5/8 [00:12<00:07,  2.51s/it]                                              62%|██████▎   | 5/8 [00:12<00:07,  2.51s/it] 75%|███████▌  | 6/8 [00:15<00:05,  2.55s/it]                                              75%|███████▌  | 6/8 [00:15<00:05,  2.55s/it] 88%|████████▊ | 7/8 [00:17<00:02,  2.46s/it]                                              88%|████████▊ | 7/8 [00:17<00:02,  2.46s/it]100%|██████████| 8/8 [00:20<00:00,  2.45s/it]                                             100%|██████████| 8/8 [00:20<00:00,  2.45s/it]                                             100%|██████████| 8/8 [00:20<00:00,  2.45s/it]100%|██████████| 8/8 [00:20<00:00,  2.53s/it]
-{'loss': '2.28', 'grad_norm': '0.6896', 'learning_rate': '0.0002', 'entropy': '2.109', 'num_tokens': '5228', 'mean_token_accuracy': '0.5363', 'epoch': '0.125'}
-{'loss': '2.197', 'grad_norm': '1.698', 'learning_rate': '0.000175', 'entropy': '2.32', 'num_tokens': '1.042e+04', 'mean_token_accuracy': '0.5479', 'epoch': '0.25'}
-{'loss': '2.131', 'grad_norm': '0.8608', 'learning_rate': '0.00015', 'entropy': '2.18', 'num_tokens': '1.532e+04', 'mean_token_accuracy': '0.5646', 'epoch': '0.375'}
-{'loss': '2.197', 'grad_norm': '0.4782', 'learning_rate': '0.000125', 'entropy': '2.227', 'num_tokens': '1.993e+04', 'mean_token_accuracy': '0.5394', 'epoch': '0.5'}
-{'loss': '2.073', 'grad_norm': '0.4471', 'learning_rate': '0.0001', 'entropy': '2.039', 'num_tokens': '2.486e+04', 'mean_token_accuracy': '0.5723', 'epoch': '0.625'}
-{'loss': '2.125', 'grad_norm': '0.5421', 'learning_rate': '7.5e-05', 'entropy': '2.078', 'num_tokens': '2.956e+04', 'mean_token_accuracy': '0.551', 'epoch': '0.75'}
-{'loss': '2.062', 'grad_norm': '0.5297', 'learning_rate': '5e-05', 'entropy': '2.055', 'num_tokens': '3.442e+04', 'mean_token_accuracy': '0.5617', 'epoch': '0.875'}
-{'loss': '2.085', 'grad_norm': '0.4972', 'learning_rate': '2.5e-05', 'entropy': '1.996', 'num_tokens': '3.929e+04', 'mean_token_accuracy': '0.5621', 'epoch': '1'}
-{'train_runtime': '20.2', 'train_samples_per_second': '25.34', 'train_steps_per_second': '0.396', 'train_loss': '2.144', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8894.49it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 69068.69 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5615.61 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:20,  2.94s/it]                                              12%|█▎        | 1/8 [00:02<00:20,  2.94s/it] 25%|██▌       | 2/8 [00:05<00:17,  2.94s/it]                                              25%|██▌       | 2/8 [00:05<00:17,  2.94s/it] 38%|███▊      | 3/8 [00:08<00:15,  3.01s/it]                                              38%|███▊      | 3/8 [00:08<00:15,  3.01s/it] 50%|█████     | 4/8 [00:11<00:11,  2.82s/it]                                              50%|█████     | 4/8 [00:11<00:11,  2.82s/it] 62%|██████▎   | 5/8 [00:14<00:08,  2.89s/it]                                              62%|██████▎   | 5/8 [00:14<00:08,  2.89s/it] 75%|███████▌  | 6/8 [00:17<00:05,  2.82s/it]                                              75%|███████▌  | 6/8 [00:17<00:05,  2.82s/it] 88%|████████▊ | 7/8 [00:19<00:02,  2.79s/it]                                              88%|████████▊ | 7/8 [00:19<00:02,  2.79s/it]100%|██████████| 8/8 [00:22<00:00,  2.79s/it]                                             100%|██████████| 8/8 [00:22<00:00,  2.79s/it]                                             100%|██████████| 8/8 [00:22<00:00,  2.79s/it]100%|██████████| 8/8 [00:22<00:00,  2.84s/it]
-{'loss': '2.202', 'grad_norm': '0.4703', 'learning_rate': '0.0002', 'entropy': '2.074', 'num_tokens': '5255', 'mean_token_accuracy': '0.5499', 'epoch': '0.125'}
-{'loss': '2.057', 'grad_norm': '0.5675', 'learning_rate': '0.000175', 'entropy': '2.117', 'num_tokens': '1.089e+04', 'mean_token_accuracy': '0.5483', 'epoch': '0.25'}
-{'loss': '2.062', 'grad_norm': '0.4317', 'learning_rate': '0.00015', 'entropy': '2.078', 'num_tokens': '1.591e+04', 'mean_token_accuracy': '0.5514', 'epoch': '0.375'}
-{'loss': '2.023', 'grad_norm': '0.4019', 'learning_rate': '0.000125', 'entropy': '2.062', 'num_tokens': '2.013e+04', 'mean_token_accuracy': '0.5674', 'epoch': '0.5'}
-{'loss': '2.074', 'grad_norm': '0.4016', 'learning_rate': '0.0001', 'entropy': '2.094', 'num_tokens': '2.535e+04', 'mean_token_accuracy': '0.5601', 'epoch': '0.625'}
-{'loss': '1.976', 'grad_norm': '0.3933', 'learning_rate': '7.5e-05', 'entropy': '1.98', 'num_tokens': '3.057e+04', 'mean_token_accuracy': '0.5809', 'epoch': '0.75'}
-{'loss': '2.066', 'grad_norm': '0.442', 'learning_rate': '5e-05', 'entropy': '2.094', 'num_tokens': '3.518e+04', 'mean_token_accuracy': '0.5716', 'epoch': '0.875'}
-{'loss': '1.966', 'grad_norm': '0.3426', 'learning_rate': '2.5e-05', 'entropy': '1.992', 'num_tokens': '4.067e+04', 'mean_token_accuracy': '0.582', 'epoch': '1'}
-{'train_runtime': '22.72', 'train_samples_per_second': '22.54', 'train_steps_per_second': '0.352', 'train_loss': '2.053', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8888.41it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 71511.28 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5737.27 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:17,  2.54s/it]                                              12%|█▎        | 1/8 [00:02<00:17,  2.54s/it] 25%|██▌       | 2/8 [00:05<00:15,  2.50s/it]                                              25%|██▌       | 2/8 [00:05<00:15,  2.50s/it] 38%|███▊      | 3/8 [00:07<00:12,  2.58s/it]                                              38%|███▊      | 3/8 [00:07<00:12,  2.58s/it] 50%|█████     | 4/8 [00:10<00:10,  2.62s/it]                                              50%|█████     | 4/8 [00:10<00:10,  2.62s/it] 62%|██████▎   | 5/8 [00:13<00:07,  2.64s/it]                                              62%|██████▎   | 5/8 [00:13<00:07,  2.64s/it] 75%|███████▌  | 6/8 [00:15<00:05,  2.73s/it]                                              75%|███████▌  | 6/8 [00:15<00:05,  2.73s/it] 88%|████████▊ | 7/8 [00:18<00:02,  2.74s/it]                                              88%|████████▊ | 7/8 [00:18<00:02,  2.74s/it]100%|██████████| 8/8 [00:21<00:00,  2.87s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.87s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.87s/it]100%|██████████| 8/8 [00:21<00:00,  2.73s/it]
-{'loss': '1.921', 'grad_norm': '0.3473', 'learning_rate': '0.0002', 'entropy': '2.043', 'num_tokens': '4730', 'mean_token_accuracy': '0.5802', 'epoch': '0.125'}
-{'loss': '2.038', 'grad_norm': '0.4906', 'learning_rate': '0.000175', 'entropy': '1.984', 'num_tokens': '9558', 'mean_token_accuracy': '0.5507', 'epoch': '0.25'}
-{'loss': '2.037', 'grad_norm': '0.4731', 'learning_rate': '0.00015', 'entropy': '2.086', 'num_tokens': '1.437e+04', 'mean_token_accuracy': '0.5662', 'epoch': '0.375'}
-{'loss': '1.997', 'grad_norm': '0.4281', 'learning_rate': '0.000125', 'entropy': '2.043', 'num_tokens': '1.928e+04', 'mean_token_accuracy': '0.5671', 'epoch': '0.5'}
-{'loss': '2.009', 'grad_norm': '0.421', 'learning_rate': '0.0001', 'entropy': '1.996', 'num_tokens': '2.444e+04', 'mean_token_accuracy': '0.5842', 'epoch': '0.625'}
-{'loss': '2.026', 'grad_norm': '0.3976', 'learning_rate': '7.5e-05', 'entropy': '2.012', 'num_tokens': '2.94e+04', 'mean_token_accuracy': '0.5616', 'epoch': '0.75'}
-{'loss': '2.036', 'grad_norm': '0.3968', 'learning_rate': '5e-05', 'entropy': '2.031', 'num_tokens': '3.408e+04', 'mean_token_accuracy': '0.5666', 'epoch': '0.875'}
-{'loss': '1.965', 'grad_norm': '0.34', 'learning_rate': '2.5e-05', 'entropy': '1.992', 'num_tokens': '3.965e+04', 'mean_token_accuracy': '0.5777', 'epoch': '1'}
-{'train_runtime': '21.87', 'train_samples_per_second': '23.41', 'train_steps_per_second': '0.366', 'train_loss': '2.004', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10090.86it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 70142.53 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5798.43 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:19,  2.75s/it]                                              12%|█▎        | 1/8 [00:02<00:19,  2.75s/it] 25%|██▌       | 2/8 [00:05<00:15,  2.64s/it]                                              25%|██▌       | 2/8 [00:05<00:15,  2.64s/it] 38%|███▊      | 3/8 [00:07<00:12,  2.47s/it]                                              38%|███▊      | 3/8 [00:07<00:12,  2.47s/it] 50%|█████     | 4/8 [00:09<00:09,  2.41s/it]                                              50%|█████     | 4/8 [00:09<00:09,  2.41s/it] 62%|██████▎   | 5/8 [00:12<00:07,  2.51s/it]                                              62%|██████▎   | 5/8 [00:12<00:07,  2.51s/it] 75%|███████▌  | 6/8 [00:14<00:04,  2.47s/it]                                              75%|███████▌  | 6/8 [00:14<00:04,  2.47s/it] 88%|████████▊ | 7/8 [00:17<00:02,  2.46s/it]                                              88%|████████▊ | 7/8 [00:17<00:02,  2.46s/it]100%|██████████| 8/8 [00:19<00:00,  2.49s/it]                                             100%|██████████| 8/8 [00:19<00:00,  2.49s/it]                                             100%|██████████| 8/8 [00:19<00:00,  2.49s/it]100%|██████████| 8/8 [00:19<00:00,  2.50s/it]
-{'loss': '1.837', 'grad_norm': '0.3505', 'learning_rate': '0.0002', 'entropy': '1.93', 'num_tokens': '4714', 'mean_token_accuracy': '0.5969', 'epoch': '0.125'}
-{'loss': '1.989', 'grad_norm': '0.5318', 'learning_rate': '0.000175', 'entropy': '1.918', 'num_tokens': '9639', 'mean_token_accuracy': '0.583', 'epoch': '0.25'}
-{'loss': '2.031', 'grad_norm': '0.47', 'learning_rate': '0.00015', 'entropy': '2.02', 'num_tokens': '1.396e+04', 'mean_token_accuracy': '0.5802', 'epoch': '0.375'}
-{'loss': '1.944', 'grad_norm': '0.4149', 'learning_rate': '0.000125', 'entropy': '1.98', 'num_tokens': '1.86e+04', 'mean_token_accuracy': '0.578', 'epoch': '0.5'}
-{'loss': '1.957', 'grad_norm': '0.3876', 'learning_rate': '0.0001', 'entropy': '1.973', 'num_tokens': '2.372e+04', 'mean_token_accuracy': '0.5777', 'epoch': '0.625'}
-{'loss': '1.924', 'grad_norm': '0.3728', 'learning_rate': '7.5e-05', 'entropy': '1.996', 'num_tokens': '2.858e+04', 'mean_token_accuracy': '0.568', 'epoch': '0.75'}
-{'loss': '1.879', 'grad_norm': '0.3621', 'learning_rate': '5e-05', 'entropy': '1.93', 'num_tokens': '3.372e+04', 'mean_token_accuracy': '0.5734', 'epoch': '0.875'}
-{'loss': '1.871', 'grad_norm': '0.3742', 'learning_rate': '2.5e-05', 'entropy': '1.926', 'num_tokens': '3.861e+04', 'mean_token_accuracy': '0.5799', 'epoch': '1'}
-{'train_runtime': '19.98', 'train_samples_per_second': '25.62', 'train_steps_per_second': '0.4', 'train_loss': '1.929', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 9063.72it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 70817.95 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5465.48 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:03<00:21,  3.06s/it]                                              12%|█▎        | 1/8 [00:03<00:21,  3.06s/it] 25%|██▌       | 2/8 [00:06<00:18,  3.07s/it]                                              25%|██▌       | 2/8 [00:06<00:18,  3.07s/it] 38%|███▊      | 3/8 [00:08<00:13,  2.80s/it]                                              38%|███▊      | 3/8 [00:08<00:13,  2.80s/it] 50%|█████     | 4/8 [00:11<00:10,  2.65s/it]                                              50%|█████     | 4/8 [00:11<00:10,  2.65s/it] 62%|██████▎   | 5/8 [00:13<00:07,  2.61s/it]                                              62%|██████▎   | 5/8 [00:13<00:07,  2.61s/it] 75%|███████▌  | 6/8 [00:16<00:05,  2.64s/it]                                              75%|███████▌  | 6/8 [00:16<00:05,  2.64s/it] 88%|████████▊ | 7/8 [00:19<00:02,  2.75s/it]                                              88%|████████▊ | 7/8 [00:19<00:02,  2.75s/it]100%|██████████| 8/8 [00:22<00:00,  3.03s/it]                                             100%|██████████| 8/8 [00:22<00:00,  3.03s/it]                                             100%|██████████| 8/8 [00:22<00:00,  3.03s/it]100%|██████████| 8/8 [00:22<00:00,  2.86s/it]
-{'loss': '1.822', 'grad_norm': '0.367', 'learning_rate': '0.0002', 'entropy': '1.918', 'num_tokens': '4945', 'mean_token_accuracy': '0.5816', 'epoch': '0.125'}
-{'loss': '1.893', 'grad_norm': '0.4259', 'learning_rate': '0.000175', 'entropy': '1.875', 'num_tokens': '1.024e+04', 'mean_token_accuracy': '0.5638', 'epoch': '0.25'}
-{'loss': '2.005', 'grad_norm': '0.4551', 'learning_rate': '0.00015', 'entropy': '1.949', 'num_tokens': '1.509e+04', 'mean_token_accuracy': '0.5769', 'epoch': '0.375'}
-{'loss': '1.87', 'grad_norm': '0.4687', 'learning_rate': '0.000125', 'entropy': '1.852', 'num_tokens': '2.012e+04', 'mean_token_accuracy': '0.5965', 'epoch': '0.5'}
-{'loss': '1.858', 'grad_norm': '0.3906', 'learning_rate': '0.0001', 'entropy': '1.859', 'num_tokens': '2.535e+04', 'mean_token_accuracy': '0.5861', 'epoch': '0.625'}
-{'loss': '1.846', 'grad_norm': '0.3886', 'learning_rate': '7.5e-05', 'entropy': '1.875', 'num_tokens': '3.035e+04', 'mean_token_accuracy': '0.6004', 'epoch': '0.75'}
-{'loss': '1.909', 'grad_norm': '0.3557', 'learning_rate': '5e-05', 'entropy': '1.93', 'num_tokens': '3.587e+04', 'mean_token_accuracy': '0.5658', 'epoch': '0.875'}
-{'loss': '1.898', 'grad_norm': '0.4099', 'learning_rate': '2.5e-05', 'entropy': '1.941', 'num_tokens': '4.127e+04', 'mean_token_accuracy': '0.5787', 'epoch': '1'}
-{'train_runtime': '22.87', 'train_samples_per_second': '22.39', 'train_steps_per_second': '0.35', 'train_loss': '1.888', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8514.97it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 66202.71 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5629.38 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:20,  2.93s/it]                                              12%|█▎        | 1/8 [00:02<00:20,  2.93s/it] 25%|██▌       | 2/8 [00:05<00:14,  2.48s/it]                                              25%|██▌       | 2/8 [00:05<00:14,  2.48s/it] 38%|███▊      | 3/8 [00:08<00:14,  2.83s/it]                                              38%|███▊      | 3/8 [00:08<00:14,  2.83s/it] 50%|█████     | 4/8 [00:11<00:11,  2.83s/it]                                              50%|█████     | 4/8 [00:11<00:11,  2.83s/it] 62%|██████▎   | 5/8 [00:14<00:08,  2.93s/it]                                              62%|██████▎   | 5/8 [00:14<00:08,  2.93s/it] 75%|███████▌  | 6/8 [00:16<00:05,  2.81s/it]                                              75%|███████▌  | 6/8 [00:16<00:05,  2.81s/it] 88%|████████▊ | 7/8 [00:19<00:02,  2.74s/it]                                              88%|████████▊ | 7/8 [00:19<00:02,  2.74s/it]100%|██████████| 8/8 [00:22<00:00,  2.76s/it]                                             100%|██████████| 8/8 [00:22<00:00,  2.76s/it]                                             100%|██████████| 8/8 [00:22<00:00,  2.76s/it]100%|██████████| 8/8 [00:22<00:00,  2.78s/it]
-{'loss': '1.859', 'grad_norm': '0.4239', 'learning_rate': '0.0002', 'entropy': '1.922', 'num_tokens': '4934', 'mean_token_accuracy': '0.5822', 'epoch': '0.125'}
-{'loss': '1.945', 'grad_norm': '0.5339', 'learning_rate': '0.000175', 'entropy': '1.945', 'num_tokens': '9347', 'mean_token_accuracy': '0.5794', 'epoch': '0.25'}
-{'loss': '1.804', 'grad_norm': '0.4482', 'learning_rate': '0.00015', 'entropy': '1.832', 'num_tokens': '1.435e+04', 'mean_token_accuracy': '0.589', 'epoch': '0.375'}
-{'loss': '1.876', 'grad_norm': '0.399', 'learning_rate': '0.000125', 'entropy': '1.91', 'num_tokens': '1.942e+04', 'mean_token_accuracy': '0.5732', 'epoch': '0.5'}
-{'loss': '1.863', 'grad_norm': '0.3865', 'learning_rate': '0.0001', 'entropy': '1.879', 'num_tokens': '2.485e+04', 'mean_token_accuracy': '0.5819', 'epoch': '0.625'}
-{'loss': '1.935', 'grad_norm': '0.4311', 'learning_rate': '7.5e-05', 'entropy': '1.926', 'num_tokens': '2.971e+04', 'mean_token_accuracy': '0.5714', 'epoch': '0.75'}
-{'loss': '1.941', 'grad_norm': '0.4409', 'learning_rate': '5e-05', 'entropy': '1.934', 'num_tokens': '3.49e+04', 'mean_token_accuracy': '0.5813', 'epoch': '0.875'}
-{'loss': '1.871', 'grad_norm': '0.3638', 'learning_rate': '2.5e-05', 'entropy': '1.887', 'num_tokens': '4.03e+04', 'mean_token_accuracy': '0.5799', 'epoch': '1'}
-{'train_runtime': '22.28', 'train_samples_per_second': '22.98', 'train_steps_per_second': '0.359', 'train_loss': '1.887', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 10497.33it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 68684.31 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5455.81 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:19,  2.83s/it]                                              12%|█▎        | 1/8 [00:02<00:19,  2.83s/it] 25%|██▌       | 2/8 [00:05<00:16,  2.68s/it]                                              25%|██▌       | 2/8 [00:05<00:16,  2.68s/it] 38%|███▊      | 3/8 [00:08<00:13,  2.70s/it]                                              38%|███▊      | 3/8 [00:08<00:13,  2.70s/it] 50%|█████     | 4/8 [00:10<00:10,  2.70s/it]                                              50%|█████     | 4/8 [00:10<00:10,  2.70s/it] 62%|██████▎   | 5/8 [00:14<00:08,  2.93s/it]                                              62%|██████▎   | 5/8 [00:14<00:08,  2.93s/it] 75%|███████▌  | 6/8 [00:16<00:05,  2.88s/it]                                              75%|███████▌  | 6/8 [00:16<00:05,  2.88s/it] 88%|████████▊ | 7/8 [00:19<00:02,  2.67s/it]                                              88%|████████▊ | 7/8 [00:19<00:02,  2.67s/it]100%|██████████| 8/8 [00:22<00:00,  2.74s/it]                                             100%|██████████| 8/8 [00:22<00:00,  2.74s/it]                                             100%|██████████| 8/8 [00:22<00:00,  2.74s/it]100%|██████████| 8/8 [00:22<00:00,  2.76s/it]
-{'loss': '1.854', 'grad_norm': '0.3584', 'learning_rate': '0.0002', 'entropy': '1.91', 'num_tokens': '5551', 'mean_token_accuracy': '0.5777', 'epoch': '0.125'}
-{'loss': '1.816', 'grad_norm': '0.4386', 'learning_rate': '0.000175', 'entropy': '1.832', 'num_tokens': '1.057e+04', 'mean_token_accuracy': '0.586', 'epoch': '0.25'}
-{'loss': '2.017', 'grad_norm': '0.405', 'learning_rate': '0.00015', 'entropy': '1.984', 'num_tokens': '1.563e+04', 'mean_token_accuracy': '0.5622', 'epoch': '0.375'}
-{'loss': '1.811', 'grad_norm': '0.4316', 'learning_rate': '0.000125', 'entropy': '1.805', 'num_tokens': '2.086e+04', 'mean_token_accuracy': '0.5874', 'epoch': '0.5'}
-{'loss': '1.924', 'grad_norm': '0.434', 'learning_rate': '0.0001', 'entropy': '1.91', 'num_tokens': '2.652e+04', 'mean_token_accuracy': '0.5645', 'epoch': '0.625'}
-{'loss': '1.746', 'grad_norm': '0.389', 'learning_rate': '7.5e-05', 'entropy': '1.793', 'num_tokens': '3.143e+04', 'mean_token_accuracy': '0.6015', 'epoch': '0.75'}
-{'loss': '1.819', 'grad_norm': '0.4133', 'learning_rate': '5e-05', 'entropy': '1.832', 'num_tokens': '3.629e+04', 'mean_token_accuracy': '0.5878', 'epoch': '0.875'}
-{'loss': '1.877', 'grad_norm': '0.3804', 'learning_rate': '2.5e-05', 'entropy': '1.914', 'num_tokens': '4.184e+04', 'mean_token_accuracy': '0.5782', 'epoch': '1'}
-{'train_runtime': '22.08', 'train_samples_per_second': '23.19', 'train_steps_per_second': '0.362', 'train_loss': '1.858', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 8935.92it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 67979.86 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5444.48 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:19,  2.77s/it]                                              12%|█▎        | 1/8 [00:02<00:19,  2.77s/it] 25%|██▌       | 2/8 [00:05<00:16,  2.71s/it]                                              25%|██▌       | 2/8 [00:05<00:16,  2.71s/it] 38%|███▊      | 3/8 [00:08<00:13,  2.74s/it]                                              38%|███▊      | 3/8 [00:08<00:13,  2.74s/it] 50%|█████     | 4/8 [00:10<00:10,  2.65s/it]                                              50%|█████     | 4/8 [00:10<00:10,  2.65s/it] 62%|██████▎   | 5/8 [00:13<00:07,  2.65s/it]                                              62%|██████▎   | 5/8 [00:13<00:07,  2.65s/it] 75%|███████▌  | 6/8 [00:16<00:05,  2.66s/it]                                              75%|███████▌  | 6/8 [00:16<00:05,  2.66s/it] 88%|████████▊ | 7/8 [00:18<00:02,  2.56s/it]                                              88%|████████▊ | 7/8 [00:18<00:02,  2.56s/it]100%|██████████| 8/8 [00:21<00:00,  2.78s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.78s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.78s/it]100%|██████████| 8/8 [00:21<00:00,  2.71s/it]
-{'loss': '1.862', 'grad_norm': '0.3872', 'learning_rate': '0.0002', 'entropy': '1.871', 'num_tokens': '5172', 'mean_token_accuracy': '0.5902', 'epoch': '0.125'}
-{'loss': '1.868', 'grad_norm': '0.4422', 'learning_rate': '0.000175', 'entropy': '1.844', 'num_tokens': '1.074e+04', 'mean_token_accuracy': '0.5693', 'epoch': '0.25'}
-{'loss': '1.92', 'grad_norm': '0.4797', 'learning_rate': '0.00015', 'entropy': '1.922', 'num_tokens': '1.595e+04', 'mean_token_accuracy': '0.5739', 'epoch': '0.375'}
-{'loss': '1.816', 'grad_norm': '0.4617', 'learning_rate': '0.000125', 'entropy': '1.914', 'num_tokens': '2.114e+04', 'mean_token_accuracy': '0.5815', 'epoch': '0.5'}
-{'loss': '1.807', 'grad_norm': '0.4213', 'learning_rate': '0.0001', 'entropy': '1.895', 'num_tokens': '2.634e+04', 'mean_token_accuracy': '0.5864', 'epoch': '0.625'}
-{'loss': '1.842', 'grad_norm': '0.396', 'learning_rate': '7.5e-05', 'entropy': '1.871', 'num_tokens': '3.172e+04', 'mean_token_accuracy': '0.589', 'epoch': '0.75'}
-{'loss': '1.911', 'grad_norm': '0.4192', 'learning_rate': '5e-05', 'entropy': '1.973', 'num_tokens': '3.662e+04', 'mean_token_accuracy': '0.5772', 'epoch': '0.875'}
-{'loss': '1.834', 'grad_norm': '0.3891', 'learning_rate': '2.5e-05', 'entropy': '1.848', 'num_tokens': '4.228e+04', 'mean_token_accuracy': '0.598', 'epoch': '1'}
-{'train_runtime': '21.67', 'train_samples_per_second': '23.63', 'train_steps_per_second': '0.369', 'train_loss': '1.857', 'epoch': '1'}
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 14035.83it/s]
-Adding EOS to train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Adding EOS to train dataset: 100%|██████████| 512/512 [00:00<00:00, 69044.26 examples/s]
-Tokenizing train dataset:   0%|          | 0/512 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 512/512 [00:00<00:00, 5544.67 examples/s]
-[transformers] The tokenizer has new PAD/BOS/EOS tokens that differ from the model config and generation config. The model config and generation config were aligned accordingly, being updated with the tokenizer's values. Updated tokens: {'bos_token_id': None, 'pad_token_id': 151643}.
-/home/mlovett/infl_ens/.venv/lib/python3.12/site-packages/torch/nn/parallel/data_parallel.py:45: UserWarning: 
-    There is an imbalance between your GPUs. You may want to exclude GPU 1 which
-    has less than 75% of the memory or cores of GPU 0. You can do so by setting
-    the device_ids argument to DataParallel, or by setting the CUDA_VISIBLE_DEVICES
-    environment variable.
-  if warn_imbalance(lambda props: props.total_memory):
-  0%|          | 0/8 [00:00<?, ?it/s] 12%|█▎        | 1/8 [00:02<00:19,  2.79s/it]                                              12%|█▎        | 1/8 [00:02<00:19,  2.79s/it] 25%|██▌       | 2/8 [00:05<00:16,  2.67s/it]                                              25%|██▌       | 2/8 [00:05<00:16,  2.67s/it] 38%|███▊      | 3/8 [00:08<00:13,  2.72s/it]                                              38%|███▊      | 3/8 [00:08<00:13,  2.72s/it] 50%|█████     | 4/8 [00:10<00:10,  2.58s/it]                                              50%|█████     | 4/8 [00:10<00:10,  2.58s/it] 62%|██████▎   | 5/8 [00:13<00:08,  2.85s/it]                                              62%|██████▎   | 5/8 [00:13<00:08,  2.85s/it] 75%|███████▌  | 6/8 [00:16<00:05,  2.84s/it]                                              75%|███████▌  | 6/8 [00:16<00:05,  2.84s/it] 88%|████████▊ | 7/8 [00:19<00:02,  2.70s/it]                                              88%|████████▊ | 7/8 [00:19<00:02,  2.70s/it]100%|██████████| 8/8 [00:21<00:00,  2.68s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.68s/it]                                             100%|██████████| 8/8 [00:21<00:00,  2.68s/it]100%|██████████| 8/8 [00:21<00:00,  2.72s/it]
-{'loss': '1.829', 'grad_norm': '0.4133', 'learning_rate': '0.0002', 'entropy': '1.844', 'num_tokens': '5025', 'mean_token_accuracy': '0.6008', 'epoch': '0.125'}
-{'loss': '1.842', 'grad_norm': '0.5186', 'learning_rate': '0.000175', 'entropy': '1.949', 'num_tokens': '9947', 'mean_token_accuracy': '0.5879', 'epoch': '0.25'}
-{'loss': '1.886', 'grad_norm': '0.4295', 'learning_rate': '0.00015', 'entropy': '1.844', 'num_tokens': '1.509e+04', 'mean_token_accuracy': '0.5828', 'epoch': '0.375'}
-{'loss': '1.882', 'grad_norm': '0.4974', 'learning_rate': '0.000125', 'entropy': '1.867', 'num_tokens': '2e+04', 'mean_token_accuracy': '0.5874', 'epoch': '0.5'}
-{'loss': '1.839', 'grad_norm': '0.3979', 'learning_rate': '0.0001', 'entropy': '1.805', 'num_tokens': '2.562e+04', 'mean_token_accuracy': '0.5855', 'epoch': '0.625'}
-{'loss': '1.775', 'grad_norm': '0.4111', 'learning_rate': '7.5e-05', 'entropy': '1.777', 'num_tokens': '3.094e+04', 'mean_token_accuracy': '0.5965', 'epoch': '0.75'}
-{'loss': '1.806', 'grad_norm': '0.399', 'learning_rate': '5e-05', 'entropy': '1.832', 'num_tokens': '3.617e+04', 'mean_token_accuracy': '0.5982', 'epoch': '0.875'}
-{'loss': '1.795', 'grad_norm': '0.3909', 'learning_rate': '2.5e-05', 'entropy': '1.812', 'num_tokens': '4.152e+04', 'mean_token_accuracy': '0.5834', 'epoch': '1'}
-{'train_runtime': '21.73', 'train_samples_per_second': '23.56', 'train_steps_per_second': '0.368', 'train_loss': '1.832', 'epoch': '1'}
-baseline replay done: 10 rounds, wrote results/ai4privacy_n6_sft_r10_sigma05_stretch_h25_p25_generalist/seed0/replay_summary.json and results/ai4privacy_n6_sft_r10_sigma05_stretch_h25_p25_generalist/seed0/history.json

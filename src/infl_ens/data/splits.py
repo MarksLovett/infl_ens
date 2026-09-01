@@ -465,3 +465,73 @@ def choose_exact_train_coverage(
         f"and {min_rounds} <= n_rounds <= {max_rounds}; "
         f"try adjusting max_records or preferred_batch_sizes"
     )
+
+
+def build_manifest_from_config(
+    cfg: dict[str, Any],
+    splits: Sequence[BenchmarkSplit],
+    *,
+    config_label: str | None = None,
+) -> DataSplitManifest:
+    """Build the stratified split manifest a run config asks for.
+
+    Reads the ``data_split`` block (fractions, seed and the exact-coverage
+    batch plan) and records the resulting ``batch_size`` / ``n_rounds`` and
+    per-benchmark counts in the manifest ``meta``, so the trainer and the
+    pipeline manifest stage derive the same plan from the same file.
+
+    :param cfg: Resolved run config with ``data_split`` (and ``seed``).
+    :type cfg: dict
+    :param splits: Loaded benchmark splits in config order.
+    :type splits: Sequence[BenchmarkSplit]
+    :param config_label: Optional provenance string stored in ``meta``.
+    :type config_label: str | None
+    :returns: Manifest with a populated ``meta`` block.
+    :rtype: DataSplitManifest
+    """
+    ds = dict(cfg.get("data_split") or {})
+    seed = int(ds.get("seed", cfg.get("seed", 0)))
+    fractions = {
+        "train_frac": float(ds.get("train_frac", 0.7)),
+        "val_frac": float(ds.get("val_frac", 0.1)),
+        "test_frac": float(ds.get("test_frac", 0.2)),
+    }
+    draft = build_split_manifest(splits, seed=seed, **fractions)
+    if bool(ds.get("cover_train_exactly", True)):
+        target_n_rounds = ds.get("target_n_rounds")
+        batch_size, n_rounds = choose_exact_train_coverage(
+            draft.n_train,
+            preferred_batch_sizes=tuple(
+                int(x) for x in ds.get(
+                    "preferred_batch_sizes", (4900, 2450, 1225, 980, 700, 350),
+                )
+            ),
+            target_n_rounds=(
+                int(target_n_rounds) if target_n_rounds is not None else None
+            ),
+            min_rounds=int(ds.get("min_rounds", 5)),
+            max_rounds=int(ds.get("max_rounds", 50)),
+        )
+    else:
+        cl = cfg.get("closed_loop") or {}
+        batch_size = int(cl.get("batch_size", 256))
+        n_rounds = int(cl.get("n_rounds", 5))
+    meta: dict[str, Any] = {
+        "n_train": draft.n_train,
+        "n_val": draft.n_val,
+        "n_test": draft.n_test,
+        "batch_size": batch_size,
+        "n_rounds": n_rounds,
+        "per_benchmark": {
+            b.name: {
+                "n_train": len(b.train),
+                "n_val": len(b.val),
+                "n_test": len(b.test),
+                "n_total": len(b.train) + len(b.val) + len(b.test),
+            }
+            for b in draft.benchmarks
+        },
+    }
+    if config_label is not None:
+        meta["config"] = config_label
+    return build_split_manifest(splits, seed=seed, meta=meta, **fractions)

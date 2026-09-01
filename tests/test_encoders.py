@@ -11,8 +11,7 @@ import pytest
 torch = pytest.importorskip("torch")
 pytest.importorskip("transformers")
 
-from infl_ens.data.encoders import DEFAULT_ENCODER_MODEL, HuggingFaceEncoder
-from infl_ens.data.trait_space_cache import make_trait_space_encoder
+from infl_ens.data.encoders import HuggingFaceEncoder
 
 
 class _FakeTokenizer:
@@ -78,9 +77,12 @@ class _FakeModel:
         )
 
 
-def test_qwen_default_is_the_requested_awq_model() -> None:
-    """The project default is the requested Qwen3 AWQ embedding checkpoint."""
-    assert DEFAULT_ENCODER_MODEL == "drawais/Qwen3-Embedding-8B-AWQ-INT4"
+def test_model_name_is_required() -> None:
+    """There is no library default: the config must name the model."""
+    with pytest.raises(TypeError):
+        HuggingFaceEncoder()  # type: ignore[call-arg]
+    with pytest.raises(ValueError, match="non-empty"):
+        HuggingFaceEncoder("")
 
 
 def test_encoder_uses_left_padded_final_token_pooling() -> None:
@@ -105,7 +107,7 @@ def test_encoder_uses_left_padded_final_token_pooling() -> None:
 
 
 def test_encoder_leaves_device_mapped_model_in_place() -> None:
-    """AWQ model loading delegates placement to Transformers' device map."""
+    """Quantized checkpoints delegate placement to the Transformers device map."""
     tokenizer = _FakeTokenizer()
     model = _FakeModel()
     with (
@@ -118,21 +120,24 @@ def test_encoder_leaves_device_mapped_model_in_place() -> None:
     assert not hasattr(model, "to_device")
 
 
-def test_encoder_factory_accepts_full_hugging_face_configuration() -> None:
-    """The trait-space factory forwards model-specific encoder settings."""
-    cfg = {
-        "trait_space": {
-            "encoder": {
-                "model_name": "drawais/Qwen3-Embedding-8B-AWQ-INT4",
-                "batch_size": 4,
-                "max_length": 1024,
-                "pooling": "last_token",
-                "device_map": "auto",
-                "padding_side": "left",
-            },
-        },
-    }
-    with patch("infl_ens.data.trait_space_cache.HuggingFaceEncoder") as encoder_cls:
-        make_trait_space_encoder(cfg)
+def test_encoder_mean_pooling_with_right_padding() -> None:
+    """Non-Qwen models can use mask-weighted mean pooling."""
+    tokenizer = _FakeTokenizer()
+    model = _FakeModel()
+    with (
+        patch("transformers.AutoTokenizer.from_pretrained", return_value=tokenizer) as load_tok,
+        patch("transformers.AutoModel.from_pretrained", return_value=model),
+    ):
+        encoder = HuggingFaceEncoder(
+            "example/bge",
+            pooling="mean",
+            padding_side="right",
+            normalize=False,
+            device_map=None,
+        )
+        embeddings = encoder(["short", "long"])
 
-    encoder_cls.assert_called_once_with(**cfg["trait_space"]["encoder"])
+    assert load_tok.call_args.kwargs["padding_side"] == "right"
+    # Row 0 masks out its first token; row 1 averages all three.
+    expected = np.asarray([[2.0, 3.0], [7.0, 26.0 / 3.0]], dtype=np.float32)
+    assert np.allclose(embeddings, expected)

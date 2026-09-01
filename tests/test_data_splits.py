@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from infl_ens.data.benchmarks import BenchmarkSplit
 from infl_ens.data.splits import (

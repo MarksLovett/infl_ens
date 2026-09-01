@@ -46,7 +46,6 @@ from typing import Callable, Optional, Sequence
 import numpy as np
 
 from infl_ens.data.benchmarks.base import BenchmarkSplit
-from infl_ens.data.trait_linear_transform import FrozenLinearTransform
 from infl_ens.data.trait_normalize import QuantileNormalizer, fit_quantile_normalizer
 from infl_ens.data.trait_space import TraitSpace, _kde_on_grid
 
@@ -67,9 +66,6 @@ class SafetyTraitSpaceBundle:
     :type coordinate_stretch_gamma: float
     :param coordinate_stretch_gammas: Optional per-axis stretch overrides.
     :type coordinate_stretch_gammas: dict[str, float] | None
-    :param linear_transform: Optional frozen standardize/whiten transform
-        applied between residualization and quantile normalization.
-    :type linear_transform: FrozenLinearTransform | None
     """
 
     space: TraitSpace
@@ -77,7 +73,6 @@ class SafetyTraitSpaceBundle:
     normalizer: QuantileNormalizer
     coordinate_stretch_gamma: float
     coordinate_stretch_gammas: Optional[dict[str, float]] = None
-    linear_transform: Optional[FrozenLinearTransform] = None
 
 
 class _TextEmbeddingCache:
@@ -542,15 +537,14 @@ def _make_learned_projector(
     axes: list[LearnedAxis],
     *,
     normalizer: QuantileNormalizer,
-    linear_transform: Optional[FrozenLinearTransform] = None,
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
 ) -> Callable[[Sequence[str]], np.ndarray]:
     """Closure used as the trait-space ``project`` callable.
 
     The chain is: unclipped affine axis scores → optional coordinate
-    residualization → optional frozen linear transform → quantile
-    normalization (always) → optional per-axis stretch → clip guard.
+    residualization → quantile normalization (always) → optional
+    per-axis stretch → clip guard.
 
     :param encoder: Sentence encoder.
     :type encoder: Callable[[Sequence[str]], numpy.ndarray]
@@ -558,9 +552,6 @@ def _make_learned_projector(
     :type axes: list[LearnedAxis]
     :param normalizer: Fitted per-axis quantile normalizer (final stage).
     :type normalizer: QuantileNormalizer
-    :param linear_transform: Optional frozen standardize/whiten transform
-        applied before quantile normalization.
-    :type linear_transform: FrozenLinearTransform | None
     :param coordinate_stretch_gamma: Optional post-normalization stretch
         applied independently to each coordinate. Values greater than ``1``
         move resource mass farther along each axis.
@@ -580,7 +571,7 @@ def _make_learned_projector(
 
     def project(queries: Sequence[str]) -> np.ndarray:
         emb = np.asarray(encoder(list(queries)), dtype=float)
-        pre = _pre_normalizer_coordinates(emb, axes, linear_transform)
+        pre = _pre_normalizer_coordinates(emb, axes)
         return _finalize_coordinates(pre, normalizer, gammas)
 
     return project
@@ -633,21 +624,17 @@ def _apply_axis_residual(
 def _pre_normalizer_coordinates(
     embeddings: np.ndarray,
     axes: Sequence[LearnedAxis],
-    linear_transform: Optional[FrozenLinearTransform] = None,
 ) -> np.ndarray:
     """Map precomputed embeddings to unclipped pre-normalizer coordinates.
 
     This is the single code path for everything upstream of the quantile
     normalizer: unclipped affine axis scores → residualization (active
-    only for axes carrying ``residual_coef``) → optional frozen linear
-    transform.
+    only for axes carrying ``residual_coef``).
 
     :param embeddings: Sentence embeddings, shape ``(N, D)``.
     :type embeddings: numpy.ndarray
     :param axes: Learned axes including optional residualization metadata.
     :type axes: Sequence[LearnedAxis]
-    :param linear_transform: Optional frozen standardize/whiten transform.
-    :type linear_transform: FrozenLinearTransform | None
     :returns: Unclipped coordinates, shape ``(N, L)``.
     :rtype: numpy.ndarray
     """
@@ -657,8 +644,6 @@ def _pre_normalizer_coordinates(
         if axis.residual_coef is None or j == 0:
             continue
         coords[:, j] = _apply_axis_residual(raw[:, j], coords[:, :j], axis)
-    if linear_transform is not None:
-        coords = linear_transform.apply(coords)
     return coords
 
 
@@ -666,14 +651,11 @@ def project_pre_normalizer_coordinates(
     encoder: Callable[[Sequence[str]], np.ndarray],
     axes: Sequence[LearnedAxis],
     texts: Sequence[str],
-    *,
-    linear_transform: Optional[FrozenLinearTransform] = None,
 ) -> np.ndarray:
     """Project texts to unclipped pre-normalizer coordinates.
 
-    Public entry point for fitting unsupervised transforms (e.g.
-    ``scripts/fit_whitening_transform.py``) on the same coordinates the
-    quantile normalizer sees, rather than on the normalized output.
+    Public entry point for inspecting the coordinates the quantile
+    normalizer sees, rather than the normalized output.
 
     :param encoder: Sentence encoder.
     :type encoder: Callable[[Sequence[str]], numpy.ndarray]
@@ -681,13 +663,11 @@ def project_pre_normalizer_coordinates(
     :type axes: Sequence[LearnedAxis]
     :param texts: Prompts to project.
     :type texts: Sequence[str]
-    :param linear_transform: Optional frozen transform to include.
-    :type linear_transform: FrozenLinearTransform | None
     :returns: Unclipped coordinates, shape ``(len(texts), L)``.
     :rtype: numpy.ndarray
     """
     emb = np.asarray(encoder(list(texts)), dtype=float)
-    return _pre_normalizer_coordinates(emb, axes, linear_transform)
+    return _pre_normalizer_coordinates(emb, axes)
 
 
 def _fit_coordinate_residualizers(
@@ -784,7 +764,6 @@ def build_safety_trait_space_bundle(
     mode_alignment_weights: Optional[dict[str, float]] = None,
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
-    linear_transform: Optional[FrozenLinearTransform] = None,
     quantile_knots: int = 1001,
 ) -> SafetyTraitSpaceBundle:
     """Construct a multi-axis :class:`TraitSpace` from labelled benchmarks.
@@ -840,10 +819,6 @@ def build_safety_trait_space_bundle(
         keyed by axis name. Values override ``coordinate_stretch_gamma`` for
         matching axes.
     :type coordinate_stretch_gammas: dict[str, float] | None
-    :param linear_transform: Optional frozen standardize/whiten transform
-        applied between residualization and quantile normalization. Its
-        unbounded output is renormalized by the quantile stage.
-    :type linear_transform: FrozenLinearTransform | None
     :param quantile_knots: Quantile-grid size for the always-on per-axis
         empirical-CDF normalizer.
     :type quantile_knots: int
@@ -922,13 +897,12 @@ def build_safety_trait_space_bundle(
         )
 
     stretch_gamma = float(coordinate_stretch_gamma)
-    pre = _pre_normalizer_coordinates(cal_emb, axes, linear_transform)
+    pre = _pre_normalizer_coordinates(cal_emb, axes)
     normalizer = fit_quantile_normalizer(pre, n_knots=int(quantile_knots))
     project = _make_learned_projector(
         encoder,
         axes,
         normalizer=normalizer,
-        linear_transform=linear_transform,
         coordinate_stretch_gamma=stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
     )
@@ -963,7 +937,6 @@ def build_safety_trait_space_bundle(
         normalizer=normalizer,
         coordinate_stretch_gamma=stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
-        linear_transform=linear_transform,
     )
 
 
@@ -980,7 +953,6 @@ def build_safety_trait_space(
     mode_alignment_weights: Optional[dict[str, float]] = None,
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
-    linear_transform: Optional[FrozenLinearTransform] = None,
     quantile_knots: int = 1001,
 ) -> TraitSpace:
     """Construct a multi-axis :class:`TraitSpace` from labelled benchmarks.
@@ -1010,8 +982,6 @@ def build_safety_trait_space(
     :type coordinate_stretch_gamma: float
     :param coordinate_stretch_gammas: Per-axis stretch overrides.
     :type coordinate_stretch_gammas: dict[str, float] | None
-    :param linear_transform: Optional frozen standardize/whiten transform.
-    :type linear_transform: FrozenLinearTransform | None
     :param quantile_knots: Quantile-grid size for the final normalizer.
     :type quantile_knots: int
     :returns: A :class:`TraitSpace` of dimension ``L = len(splits)``.
@@ -1030,6 +1000,5 @@ def build_safety_trait_space(
         mode_alignment_weights=mode_alignment_weights,
         coordinate_stretch_gamma=coordinate_stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
-        linear_transform=linear_transform,
         quantile_knots=quantile_knots,
     ).space

@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from infl_ens.data import benchmarks
 from infl_ens.data.encoders import HuggingFaceEncoder
-from infl_ens.data.trait_linear_transform import FrozenLinearTransform
 from infl_ens.data.trait_normalize import QuantileNormalizer
 from infl_ens.data.trait_space import (
     TraitSpace,
@@ -31,7 +30,6 @@ from infl_ens.data.trait_space import (
 )
 
 __all__ = [
-    "FrozenLinearTransform",
     "HuggingFaceEncoder",
     "QuantileNormalizer",
     "TraitSpace",

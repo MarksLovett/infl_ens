@@ -28,7 +28,7 @@ launched via ``python -m inflai.training`` with a config under
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -75,7 +75,7 @@ def train_router_positions(
     """Train agent positions to a (local) Nash equilibrium via gradient ascent.
 
     Agent positions are updated in place. The function additionally returns
-    a trajectory dictionary suitable for plotting in :mod:`infl_ens.vis`.
+    a trajectory dictionary suitable for plotting in :mod:`infl_ens.figures`.
 
     :param trait_space: Discretised trait space and resource distribution.
     :type trait_space: TraitSpace

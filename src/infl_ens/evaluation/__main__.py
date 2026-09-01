@@ -2,93 +2,56 @@
 
 Run with::
 
-    python -m infl_ens.evaluation --config configs/evaluation/adapter_on_benchmarks.yaml
+    python -m infl_ens.evaluation --config configs/arms/soft_topk3_pairs.yaml
+    python -m infl_ens.evaluation --config <run>/resolved_config.yaml -- \\
+        eval.partitions='["val"]' eval.rounds='[4,5,6]'
 
-Supported tasks (``task`` field in the YAML):
+A closed-loop **training** YAML that carries a top-level ``eval`` block is
+accepted as-is: the run directory, base model, benchmarks and split
+manifest are read from the training blocks and each ``eval.partitions``
+entry is scored into ``<output_dir>/eval_<partition>/``.  See
+:func:`infl_ens.evaluation.evaluate.run_unified_eval`.
 
-- ``adapter_eval``: score one LoRA adapter on every benchmark listed
-  under ``benchmarks``.
-- ``run_eval``: discover adapters under ``run_dir/agents/`` and score
-  each on every benchmark.
+A standalone job (``task: adapter_eval`` or ``task: run_eval``) is still
+accepted for ad-hoc scoring of one adapter directory; see
+:class:`infl_ens.evaluation.evaluate.EvalJobConfig`.
 
-Optional ``KEY=VAL`` overrides after ``--`` mirror
-:mod:`infl_ens.training.__main__`.
+Config loading (``includes:`` composition and ``KEY=VAL`` overrides after
+``--``) is shared with every other CLI through :mod:`infl_ens.config`.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from pathlib import Path
-from typing import Any, Sequence
+from typing import Sequence
 
-from infl_ens.evaluation.evaluate import EvalJobConfig, run_eval_job
+from infl_ens.config import ConfigError, load_config
+from infl_ens.evaluation.evaluate import (
+    EvalJobConfig,
+    is_unified_config,
+    run_eval_job,
+    run_unified_eval,
+)
 
 _TASKS = frozenset({"adapter_eval", "run_eval"})
 
 
-def _load_yaml(path: Path) -> dict[str, Any]:
-    """Load a YAML file using PyYAML if available, else a tiny fallback.
-
-    :param path: Path to the YAML file.
-    :type path: pathlib.Path
-    :returns: Parsed mapping.
-    :rtype: dict
-    """
-    try:
-        import yaml
-        with path.open("r", encoding="utf-8") as fh:
-            return yaml.safe_load(fh) or {}
-    except ImportError:  # pragma: no cover
-        out: dict[str, Any] = {}
-        with path.open("r", encoding="utf-8") as fh:
-            for line in fh:
-                line = line.split("#", 1)[0].strip()
-                if not line or ":" not in line:
-                    continue
-                k, v = line.split(":", 1)
-                out[k.strip()] = v.strip()
-        return out
-
-
-def _apply_overrides(cfg: dict[str, Any], overrides: Sequence[str]) -> None:
-    """Apply ``key.subkey=value`` overrides in place.
-
-    :param cfg: Configuration dictionary.
-    :type cfg: dict
-    :param overrides: Sequence of dotted overrides.
-    :type overrides: Sequence[str]
-    """
-    for ov in overrides:
-        if "=" not in ov:
-            continue
-        key, val = ov.split("=", 1)
-        path = key.split(".")
-        node = cfg
-        for p in path[:-1]:
-            node = node.setdefault(p, {})
-        try:
-            node[path[-1]] = json.loads(val)
-        except json.JSONDecodeError:
-            node[path[-1]] = val
-
-
 def main(argv: Sequence[str] | None = None) -> int:
-    """Parse CLI arguments and run the configured evaluation task.
+    """Parse CLI arguments and run the configured evaluation.
 
     :param argv: Optional argument vector (defaults to ``sys.argv[1:]``).
     :type argv: Sequence[str] | None
-    :returns: Process exit code (0 on success).
+    :returns: Process exit code (0 on success, 2 on a config error).
     :rtype: int
     """
     parser = argparse.ArgumentParser(
-        description="Evaluate saved LoRA adapters on BeaverTails and HaluEval.",
+        description="Score saved LoRA adapters on the configured benchmarks.",
     )
     parser.add_argument(
         "--config",
         required=True,
-        help="Path to a YAML evaluation config.",
+        help="Training YAML with an eval block, or a standalone eval job.",
     )
     parser.add_argument(
         "overrides",
@@ -97,8 +60,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    cfg = _load_yaml(Path(args.config))
-    _apply_overrides(cfg, args.overrides)
+    try:
+        cfg = load_config(args.config, args.overrides, validate=False)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if is_unified_config(cfg):
+        reports = run_unified_eval(cfg)
+        for path in reports:
+            print(f"wrote {path}")
+        return 0
     job = EvalJobConfig.from_mapping(cfg)
     if job.task not in _TASKS:
         print(

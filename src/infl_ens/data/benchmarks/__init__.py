@@ -7,7 +7,6 @@ axis, plus a combined builder. Public surface:
 - :func:`load_beavertails`: BeaverTails loader (harm axis).
 - :func:`load_halueval`: HaluEval loader (hallucination axis).
 - :func:`load_jbb_behaviors`: JBB-Behaviors loader (jailbreak axis).
-- :func:`load_toxicchat`: ToxicChat loader (legacy jailbreak axis).
 - :func:`load_ai4privacy`: AI4Privacy PII loader (privacy-density axis).
 - :func:`load_orbench`: OR-Bench loader (over-refusal axis).
 - :func:`load_prompt_injection`: prompt-injection loader (injection axis).
@@ -36,10 +35,6 @@ from infl_ens.data.benchmarks.halueval import (
     load_halueval,
 )
 from infl_ens.data.benchmarks.jbb_behaviors import load_jbb_behaviors
-from infl_ens.data.benchmarks.toxicchat import (
-    TOXICCHAT_SCORE_MODES,
-    load_toxicchat,
-)
 from infl_ens.data.benchmarks.ai4privacy import (
     PII_SCORE_MODES,
     load_ai4privacy,
@@ -62,7 +57,6 @@ __all__ = [
     "LearnedAxis",
     "ORBENCH_CONFIGS",
     "PII_SCORE_MODES",
-    "TOXICCHAT_SCORE_MODES",
     "build_safety_trait_space",
     "load_ai4privacy",
     "load_beavertails",
@@ -71,5 +65,4 @@ __all__ = [
     "load_jbb_behaviors",
     "load_orbench",
     "load_prompt_injection",
-    "load_toxicchat",
 ]

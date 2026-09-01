@@ -1,7 +1,0 @@
-# configs/data/do_not_answer.yaml
-# Static loader settings for the Do-Not-Answer policy-violation axis.
-
-kind: do_not_answer
-path: data/do_not_answer
-include_benign: true
-max_records: null
