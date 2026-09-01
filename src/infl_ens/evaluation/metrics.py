@@ -25,6 +25,29 @@ def format_chat_example(prompt: str, response: Optional[str]) -> str:
     return _format_chat(prompt, response)
 
 
+def build_chat_formatter(
+    base_model: str,
+) -> Callable[[str, Optional[str]], str]:
+    """Build a chat formatter for ``base_model`` from its tokenizer.
+
+    Loads the model's tokenizer and returns
+    :func:`infl_ens.training.sft_training.make_chat_formatter` of it, so
+    callers that only hold a model id (e.g. route-then-score) format NLL
+    text with the same base-model chat template used at training time.
+
+    :param base_model: HuggingFace model id.
+    :type base_model: str
+    :returns: A ``(prompt, response) -> str`` formatter.
+    :rtype: Callable[[str, str | None], str]
+    """
+    from transformers import AutoTokenizer
+
+    from infl_ens.training.sft_training import make_chat_formatter
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+    return make_chat_formatter(tokenizer)
+
+
 def split_to_texts(
     split: BenchmarkSplit,
     *,

@@ -302,11 +302,16 @@ def stage_routing(ctx: PipelineContext) -> None:
         run_flat_routing_eval,
     )
 
-    gen = ctx.exp.generalist
-    if gen is None:
+    if not ctx.exp.generalists:
         raise ValueError("routing stage needs a generalist arm (role: generalist)")
     settings = ctx.exp.eval
     for arm in ctx.arms(specialists_only=True):
+        gen = ctx.exp.generalist_for(arm)
+        if gen is None:
+            raise ValueError(
+                f"routing: specialist {arm.name!r} has no paired generalist "
+                f"(match by (family, scale) or define a single generalist)"
+            )
         out_json = arm.run_dir / "routing_ensemble_diagnostics.json"
         if out_json.is_file() and not ctx.force:
             log.info("routing: %s already has %s", arm.name, out_json)

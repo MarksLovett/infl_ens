@@ -1,0 +1,8 @@
+# Scale-family cell: Qwen2.5, ~1B.
+includes:
+  - _specialist_base.yaml
+
+output_dir: results/scale_family/qwen_1b/seed0
+
+sft:
+  base_model: Qwen/Qwen2.5-1.5B-Instruct

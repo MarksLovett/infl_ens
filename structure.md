@@ -75,6 +75,7 @@ infl_ens/
 │   │   ├── pair_positions.py             final pair positions over every axis pair; within-pair separation
 │   │   ├── benchmark_space.py            pairwise trait-space resource heatmaps
 │   │   ├── benchmark_nll_bar.py          grouped bar chart: base vs adapter benchmark NLL
+│   │   ├── scale_family.py               family x scale held-out NLL grid + table (pure builders)
 │   │   ├── trait_representation.py       clipped-vs-quantile trait marginals / pair densities / stats
 │   │   ├── pgf_tex.py                    oracle_routing_tex, arm_comparison_tex, compile_tex
 │   │   ├── per_round_tables.py           held-out NLL by pair at selected rounds (csv/md/tex/json)
@@ -109,9 +110,15 @@ infl_ens/
 │   │   ├── topk3_unit_pairs.yaml         soft, k = 3, unit weight
 │   │   ├── hard_topk3_pairs.yaml         sampled top-3 without replacement, unit weight
 │   │   ├── hard_pairs_matched.yaml       hard (one sampled winner), unit weight
-│   │   └── generalist_replay.yaml        pooled generalist replayed from the k = 3 arm
+│   │   ├── generalist_replay.yaml        pooled generalist replayed from the k = 3 arm
+│   │   └── scale_family/                 model scale-family sweep cells (share the pinned fingerprint)
+│   │       ├── _specialist_base.yaml     soft k = 3 base; cells override only output_dir + sft.base_model
+│   │       ├── _generalist_base.yaml     pooled-baseline replay base; cells add base_model + history_path
+│   │       ├── {qwen,llama,gemma}_{1b,3b,8b}.yaml        9 specialist cells (3 family x 3 scale)
+│   │       └── {qwen,llama,gemma}_{1b,3b,8b}_gen.yaml    9 per-cell pooled generalists
 │   └── experiments/
-│       └── seven_axis_3arm.yaml          the canonical experiment: arms, stages, eval window, figures, smoke
+│       ├── seven_axis_3arm.yaml          the canonical experiment: arms, stages, eval window, figures, smoke
+│       └── scale_family_sweep.yaml       18-arm sweep (9 specialist + 9 generalist); family x scale NLL figure
 ├── scripts/
 │   ├── run_on_doob.sh                    the only shell script: sync + tmux launch + status + pull
 │   └── figures/seven_axis_safety_resource_separated.png   included by docs/project_overview/project_overview.tex
@@ -137,7 +144,7 @@ infl_ens/
 | File | Role |
 |---|---|
 | `config.py` | `load_config` (includes → overrides → validation), key tables (`TOP_LEVEL_KEYS`, `CLOSED_LOOP_KEYS`, ...), `resolve_sft_block`, `ConfigError` |
-| `experiment.py` | `load_experiment` → `ExperimentConfig` (`arms`, `stages`, `eval`, `figures`, `smoke`), `ArmSpec` |
+| `experiment.py` | `load_experiment` → `ExperimentConfig` (`arms`, `stages`, `eval`, `figures`, `smoke`), `ArmSpec` (with optional `family`/`scale` + `cell`); `generalists`/`generalist_for` pair each specialist with its same `(family, scale)` generalist |
 
 ## `src/infl_ens/data/`
 
@@ -174,7 +181,7 @@ infl_ens/
 | `agent_init.py` | `resolve_agent_entries`, `init_agents_theory_gradient(_paired)`, `co_locate_theory_pairs`, pairing rules, separated random starts |
 | `position_step.py` | `blend_for_round`, `expected_pool_centroid` (+ re-exports of `position_blend`) |
 | `router_training.py` | `RouterTrainingConfig`, `train_router_positions` |
-| `sft_training.py` | `SFTTrainingConfig`, `sft_train_agent`, weighted causal-LM loss |
+| `sft_training.py` | `SFTTrainingConfig`, `sft_train_agent`, weighted causal-LM loss, `make_chat_formatter` (base-model chat template with Qwen fallback) |
 | `merge_training.py` | `parse_sft_merge_groups`, `merge_groups_from_theory_pairs`, `snap_configured_merge_pairs`, `soft_pair_assignments`, `soft_pair_position_target`, `closed_loop_weight_args` |
 | `baseline_replay.py` | `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
 | `data_split.py` | `resolve_closed_loop_data_split`, `shuffled_train_batch_indices`, `partitioned_splits_for_eval` |
@@ -189,14 +196,14 @@ infl_ens/
 | `evaluate.py` | `AdapterEvalConfig`, `EvalJobConfig` (+ `from_unified`), `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_unified_eval`, `final_round_from_history`, `write_eval_report` |
 | `routing_eval.py` | `run_flat_routing_eval` (pooled / expected / sampled / argmax G / oracle), `report_to_dict`, `format_headline_markdown` |
 | `adapters.py` | `AdapterRef`, `discover_adapters`, `resolve_adapter_dir`, `load_adapter_model` |
-| `metrics.py` | `format_chat_example`, `mean_token_nll`, `split_to_texts` |
+| `metrics.py` | `format_chat_example`, `build_chat_formatter` (chat formatter from a base-model id), `mean_token_nll`, `split_to_texts` |
 | `benchmarks.py` | re-exports `data.benchmarks.loading` |
 
 ## `src/infl_ens/figures/`
 
 | File | Role |
 |---|---|
-| `render.py` | `FigureSpec`, `FIGURES` (`oracle_routing`, `arm_comparison`, `pair_positions`, `within_pair`, `closed_loop_history`, `per_round_tables`, `cross_arm_report`, gpu: `trait_representation`, `benchmark_space`), `render_all` |
+| `render.py` | `FigureSpec`, `FIGURES` (`oracle_routing`, `arm_comparison`, `pair_positions`, `within_pair`, `closed_loop_history`, `per_round_tables`, `cross_arm_report`, `family_scale_nll`, gpu: `trait_representation`, `benchmark_space`), `render_all` |
 | `__main__.py` | CLI over `render_all` |
 | `style.py` | `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`, `PGF_BENCHMARK_ORDER` |
 | `save.py` | `save_figure` |
@@ -204,6 +211,7 @@ infl_ens/
 | `pair_positions.py` | `plot_final_positions`, `plot_within_pair`, `merge_groups_from_config/history`, `within_pair_series` |
 | `benchmark_space.py` | `plot_pairwise_heatmaps` |
 | `benchmark_nll_bar.py` | `plot_benchmark_nll_comparison` |
+| `scale_family.py` | `CellNLL`, `plot_family_scale_nll` (family x scale NLL heatmap), `write_family_scale_table` (csv/md/tex/json) |
 | `trait_representation.py` | `legacy_coordinates`, `representation_stats`, `plot_marginals`, `plot_pair_comparison`, `plot_dataset_composition`, `stratified_sample` |
 | `pgf_tex.py` | `oracle_routing_tex`, `arm_comparison_tex`, `compile_tex`, `tex_escape` |
 | `per_round_tables.py` | `load_eval_rows`, `eval_rows_cover`, `pivot_per_round`, `write_per_round_outputs`, `build_per_round_tables` |
@@ -234,9 +242,14 @@ infl_ens/
 | `models/qwen2_5_1_5b_instruct.yaml` | top-level `sft` block: base model, LoRA r/alpha/dropout, batch, epochs, bf16, cumulative LoRA |
 | `arms/_closed_loop_base.yaml` | includes data + trait_space + model; theory-paired init, `sft_merge_groups: from_init`, `position_update: theory_matched`, final-round `eval` |
 | `arms/*.yaml` | one arm each: only `output_dir` and the routing knobs differ (see the on-disk tree) |
+| `arms/scale_family/_specialist_base.yaml` | includes `_closed_loop_base.yaml` + soft k = 3 routing; the shared base for every sweep cell |
+| `arms/scale_family/_generalist_base.yaml` | pooled-baseline replay base (data + trait_space + model), no hardcoded run paths |
+| `arms/scale_family/{qwen,llama,gemma}_{1b,3b,8b}.yaml` | 9 specialist cells; each overrides only `output_dir` + `sft.base_model` |
+| `arms/scale_family/{qwen,llama,gemma}_{1b,3b,8b}_gen.yaml` | 9 per-cell generalists; each sets `sft.base_model`, `history_path`, `output_dir` |
 | `experiments/seven_axis_3arm.yaml` | five specialist arms + generalist, stages, `perround_rounds: [4, final]`, figure list, smoke gate |
+| `experiments/scale_family_sweep.yaml` | 3 family x 3 scale sweep: 9 specialist + 9 generalist arms (with `family`/`scale`), routing per cell, `family_scale_nll` figure |
 
-Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py`.
+Every arm (including all scale-family cells) resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py` and `tests/test_scale_family.py`.
 
 ## `tests/`
 
@@ -244,6 +257,7 @@ Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache 
 |---|---|
 | `test_config.py` | includes, overrides, key validation of `infl_ens.config` |
 | `test_config_fingerprint.py` | every arm keeps the cache fingerprint; arms differ only in routing knobs |
+| `test_scale_family.py` | the 9 sweep cells keep the fingerprint and differ only in `sft.base_model`; experiment pairs each cell's generalist; `make_chat_formatter` template + fallback; `family_scale_nll` figure/table |
 | `test_encoder_config.py` | encoder presets and `make_encoder` resolution (no torch) |
 | `test_encoders.py` | `HuggingFaceEncoder` pooling / placement (mocked transformers; needs torch) |
 | `test_training_cli.py` | `python -m infl_ens.training` dispatch and error exits |
@@ -261,9 +275,9 @@ Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache 
 - `infl_ens.data`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `QuantileNormalizer`, `benchmarks`
 - `infl_ens.data.benchmarks`: `BenchmarkSplit`, `LearnedAxis`, `build_safety_trait_space`, the seven `load_*` loaders and their constants
 - `infl_ens.inflgame.router`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `utility_gradient`, `strategic_routing_weights`, `top_k_allocation_weights`, `sampled_top_k_mask`, `matched_centroid_mass`, `group_allocation_weights`
-- `infl_ens.training`: `RouterTrainingConfig`, `train_router_positions` (eager); `SFTTrainingConfig`, `sft_train_agent` (lazy)
-- `infl_ens.evaluation`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_eval_job`, `run_unified_eval`, `final_round_from_history`, `write_eval_report`, `AdapterRef`, `discover_adapters`, `is_adapter_dir`, `resolve_adapter_dir`, `BENCHMARK_KINDS`, `load_benchmark_splits`, `subsample_split`; lazy `format_chat_example`, `mean_token_nll`, `split_to_texts`
-- `infl_ens.figures`: the pure plot functions, `oracle_routing_tex`, `arm_comparison_tex`, `save_figure`, `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`
+- `infl_ens.training`: `RouterTrainingConfig`, `train_router_positions` (eager); `SFTTrainingConfig`, `sft_train_agent`, `make_chat_formatter` (lazy)
+- `infl_ens.evaluation`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_eval_job`, `run_unified_eval`, `final_round_from_history`, `write_eval_report`, `AdapterRef`, `discover_adapters`, `is_adapter_dir`, `resolve_adapter_dir`, `BENCHMARK_KINDS`, `load_benchmark_splits`, `subsample_split`; lazy `build_chat_formatter`, `format_chat_example`, `mean_token_nll`, `split_to_texts`
+- `infl_ens.figures`: the pure plot functions (incl. `plot_family_scale_nll`, `write_family_scale_table`, `CellNLL`), `oracle_routing_tex`, `arm_comparison_tex`, `save_figure`, `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`
 - `infl_ens.pipeline`: `STAGES`, `PipelineContext`, `run_pipeline`, `run_smoke`
 - `infl_ens.utils`: `weighted_mean`, `weighted_covariance`, `gaussian_stability_threshold`
 

@@ -1,0 +1,192 @@
+# Model scale-family sweep: 3 families x 3 scales (9 cells).
+#
+# The SAME soft top-k = 3 closed loop is run for every cell, holding
+# everything fixed except the agent base model. Each specialist cell is
+# paired with a pooled generalist replayed from its own logged batches (same
+# base model), so route-then-score is a fair, data-matched comparison within
+# each cell. The headline is the family x scale NLL grid.
+#
+#   family      scale   specialist base model
+#   Qwen2.5     ~1B     Qwen/Qwen2.5-1.5B-Instruct
+#   Qwen2.5     ~3B     Qwen/Qwen2.5-3B-Instruct
+#   Qwen2.5     ~8B     Qwen/Qwen2.5-7B-Instruct
+#   Llama-3.x   ~1B     meta-llama/Llama-3.2-1B-Instruct
+#   Llama-3.x   ~3B     meta-llama/Llama-3.2-3B-Instruct
+#   Llama-3.x   ~8B     meta-llama/Llama-3.1-8B-Instruct
+#   Gemma       ~1B     google/gemma-3-1b-it
+#   Gemma       ~3B     google/gemma-3-4b-it
+#   Gemma       ~8B     google/gemma-2-9b-it
+#
+# Every specialist resolves to byte-identical benchmarks + trait_space
+# blocks, so ONE trait-space cache (fingerprint 3b42c68a8dd334c5) serves all.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/scale_family_sweep.yaml
+#   python -m infl_ens.pipeline --config ... --smoke
+name: scale_family_sweep
+results_dir: results/scale_family_sweep
+figures_dir: figures/scale_family_sweep
+
+arms:
+  # --- specialists (train first; generalists replay their history) ---
+  - name: qwen_1b
+    label: "Qwen2.5 1B"
+    title: "Qwen2.5 ~1B (soft k=3)"
+    role: specialist
+    family: Qwen2.5
+    scale: 1b
+    config: ../arms/scale_family/qwen_1b.yaml
+  - name: qwen_3b
+    label: "Qwen2.5 3B"
+    title: "Qwen2.5 ~3B (soft k=3)"
+    role: specialist
+    family: Qwen2.5
+    scale: 3b
+    config: ../arms/scale_family/qwen_3b.yaml
+  - name: qwen_8b
+    label: "Qwen2.5 8B"
+    title: "Qwen2.5 ~8B (soft k=3)"
+    role: specialist
+    family: Qwen2.5
+    scale: 8b
+    config: ../arms/scale_family/qwen_8b.yaml
+  - name: llama_1b
+    label: "Llama-3.x 1B"
+    title: "Llama-3.x ~1B (soft k=3)"
+    role: specialist
+    family: Llama-3.x
+    scale: 1b
+    config: ../arms/scale_family/llama_1b.yaml
+  - name: llama_3b
+    label: "Llama-3.x 3B"
+    title: "Llama-3.x ~3B (soft k=3)"
+    role: specialist
+    family: Llama-3.x
+    scale: 3b
+    config: ../arms/scale_family/llama_3b.yaml
+  - name: llama_8b
+    label: "Llama-3.x 8B"
+    title: "Llama-3.x ~8B (soft k=3)"
+    role: specialist
+    family: Llama-3.x
+    scale: 8b
+    config: ../arms/scale_family/llama_8b.yaml
+  - name: gemma_1b
+    label: "Gemma 1B"
+    title: "Gemma ~1B (soft k=3)"
+    role: specialist
+    family: Gemma
+    scale: 1b
+    config: ../arms/scale_family/gemma_1b.yaml
+  - name: gemma_3b
+    label: "Gemma 3B"
+    title: "Gemma ~3B (soft k=3)"
+    role: specialist
+    family: Gemma
+    scale: 3b
+    config: ../arms/scale_family/gemma_3b.yaml
+  - name: gemma_8b
+    label: "Gemma 8B"
+    title: "Gemma ~8B (soft k=3)"
+    role: specialist
+    family: Gemma
+    scale: 8b
+    config: ../arms/scale_family/gemma_8b.yaml
+  # --- pooled generalists (one per cell, same base model) ---
+  - name: qwen_1b_gen
+    label: "Qwen2.5 1B pooled"
+    title: "Qwen2.5 ~1B pooled generalist"
+    role: generalist
+    family: Qwen2.5
+    scale: 1b
+    config: ../arms/scale_family/qwen_1b_gen.yaml
+  - name: qwen_3b_gen
+    label: "Qwen2.5 3B pooled"
+    title: "Qwen2.5 ~3B pooled generalist"
+    role: generalist
+    family: Qwen2.5
+    scale: 3b
+    config: ../arms/scale_family/qwen_3b_gen.yaml
+  - name: qwen_8b_gen
+    label: "Qwen2.5 8B pooled"
+    title: "Qwen2.5 ~8B pooled generalist"
+    role: generalist
+    family: Qwen2.5
+    scale: 8b
+    config: ../arms/scale_family/qwen_8b_gen.yaml
+  - name: llama_1b_gen
+    label: "Llama-3.x 1B pooled"
+    title: "Llama-3.x ~1B pooled generalist"
+    role: generalist
+    family: Llama-3.x
+    scale: 1b
+    config: ../arms/scale_family/llama_1b_gen.yaml
+  - name: llama_3b_gen
+    label: "Llama-3.x 3B pooled"
+    title: "Llama-3.x ~3B pooled generalist"
+    role: generalist
+    family: Llama-3.x
+    scale: 3b
+    config: ../arms/scale_family/llama_3b_gen.yaml
+  - name: llama_8b_gen
+    label: "Llama-3.x 8B pooled"
+    title: "Llama-3.x ~8B pooled generalist"
+    role: generalist
+    family: Llama-3.x
+    scale: 8b
+    config: ../arms/scale_family/llama_8b_gen.yaml
+  - name: gemma_1b_gen
+    label: "Gemma 1B pooled"
+    title: "Gemma ~1B pooled generalist"
+    role: generalist
+    family: Gemma
+    scale: 1b
+    config: ../arms/scale_family/gemma_1b_gen.yaml
+  - name: gemma_3b_gen
+    label: "Gemma 3B pooled"
+    title: "Gemma ~3B pooled generalist"
+    role: generalist
+    family: Gemma
+    scale: 3b
+    config: ../arms/scale_family/gemma_3b_gen.yaml
+  - name: gemma_8b_gen
+    label: "Gemma 8B pooled"
+    title: "Gemma ~8B pooled generalist"
+    role: generalist
+    family: Gemma
+    scale: 8b
+    config: ../arms/scale_family/gemma_8b_gen.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - family_scale_nll           # the headline family x scale NLL grid
+    - per_round_tables
+    - oracle_routing
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_scale_family.py
+    - tests/test_soft_pairs.py
+    - tests/test_pipeline.py
+  arms: [qwen_1b]
+  output_root: results/_smoke_scale_family
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

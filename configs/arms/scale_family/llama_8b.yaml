@@ -1,0 +1,8 @@
+# Scale-family cell: Llama-3.x, ~8B.
+includes:
+  - _specialist_base.yaml
+
+output_dir: results/scale_family/llama_8b/seed0
+
+sft:
+  base_model: meta-llama/Llama-3.1-8B-Instruct

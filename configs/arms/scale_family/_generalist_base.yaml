@@ -1,0 +1,21 @@
+# Shared pooled-generalist base for the model scale-family sweep.
+#
+# One cumulative LoRA replayed from a specialist cell's logged batches (the
+# data-matched comparator). Each cell's generalist file sets `sft.base_model`
+# to that cell's base model, `history_path` to its specialist run's
+# history.json, and its own `output_dir`.
+#
+# The agent name must stay `pooled-baseline`: the route-then-score evaluator
+# loads the generalist from <baseline_run_dir>/agents/pooled-baseline/round-NN.
+includes:
+  - ../../data/seven_axis_safety.yaml
+  - ../../trait_space/seven_axis.yaml
+  - ../../models/qwen2_5_1_5b_instruct.yaml
+
+task: baseline_replay
+seed: 0
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null                      # replay every logged round

@@ -233,6 +233,68 @@ def render_per_round_tables(exp: ExperimentConfig, out: Path) -> list[Path]:
     return written
 
 
+def render_family_scale_nll(exp: ExperimentConfig, out: Path) -> list[Path]:
+    """Family x scale held-out NLL grid + table for the scale-family sweep.
+
+    Reads each specialist cell's ``routing_ensemble_diagnostics.json`` (the
+    route-then-score report), taking the learned-routing NLL as the headline
+    metric plus pooled/oracle where present, groups the cells by
+    ``(family, scale)`` and writes a heatmap and a csv/md/tex/json table.
+    Cells whose routing report is missing are skipped.
+    """
+    from infl_ens.figures.scale_family import (
+        CellNLL,
+        plot_family_scale_nll,
+        write_family_scale_table,
+    )
+
+    cells: list[CellNLL] = []
+    families: list[str] = []
+    scales: list[str] = []
+    for arm in exp.specialists:
+        if arm.family is None or arm.scale is None:
+            continue
+        if arm.family not in families:
+            families.append(arm.family)
+        if arm.scale not in scales:
+            scales.append(arm.scale)
+        try:
+            flat = _routing_report(arm).get("flat", {})
+        except FileNotFoundError:
+            log.warning("family_scale_nll: %s has no routing report; skipping cell", arm.name)
+            continue
+        learned = flat.get("learned_routing_nll", flat.get("learned_routing_expected_nll"))
+        if learned is None:
+            log.warning("family_scale_nll: %s report has no learned NLL; skipping", arm.name)
+            continue
+        cells.append(
+            CellNLL(
+                family=arm.family,
+                scale=arm.scale,
+                learned_nll=float(learned),
+                pooled_nll=(float(flat["pooled_nll"]) if flat.get("pooled_nll") is not None else None),
+                oracle_nll=(
+                    float(flat["oracle_routing_nll"])
+                    if flat.get("oracle_routing_nll") is not None else None
+                ),
+            )
+        )
+    if not cells:
+        raise ValueError("no specialist cell with a routing report and family/scale metadata")
+
+    apply_paper_style()
+    fig = plot_family_scale_nll(
+        cells, families=families, scales=scales,
+        title=f"{exp.name}: family x scale held-out NLL",
+    )
+    written = _save(fig, out / "family_scale_nll", exp)
+    tables = write_family_scale_table(
+        cells, out / "family_scale_nll", families=families, scales=scales, label=exp.name,
+    )
+    written += list(tables.values())
+    return written
+
+
 # ---------------------------------------------------------------------------
 # renderers (encoder required)
 # ---------------------------------------------------------------------------
@@ -386,6 +448,7 @@ FIGURES: dict[str, FigureSpec] = {
         FigureSpec("closed_loop_history", "trajectories + utility tracking per arm", render_closed_loop_history),
         FigureSpec("per_round_tables", "held-out NLL by pair at the eval rounds", render_per_round_tables),
         FigureSpec("cross_arm_report", "data matching, routing headline, pair stability", render_cross_arm_report),
+        FigureSpec("family_scale_nll", "family x scale held-out NLL grid + table", render_family_scale_nll),
         FigureSpec("trait_representation", "clipped vs quantile trait marginals", render_trait_representation, True),
         FigureSpec("benchmark_space", "resource-density heatmaps with positions", render_benchmark_space, True),
     )
@@ -459,6 +522,7 @@ __all__ = [
     "render_benchmark_space",
     "render_closed_loop_history",
     "render_cross_arm_report",
+    "render_family_scale_nll",
     "render_oracle_routing",
     "render_pair_positions",
     "render_per_round_tables",

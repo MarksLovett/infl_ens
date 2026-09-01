@@ -32,9 +32,9 @@ Public surface (eager)
 
 Lazy:
 
-- :func:`format_chat_example`, :func:`mean_token_nll`,
-  :func:`split_to_texts` from :mod:`infl_ens.evaluation.metrics` (via
-  ``__getattr__``).
+- :func:`build_chat_formatter`, :func:`format_chat_example`,
+  :func:`mean_token_nll`, :func:`split_to_texts` from
+  :mod:`infl_ens.evaluation.metrics` (via ``__getattr__``).
 """
 
 from __future__ import annotations
@@ -66,6 +66,7 @@ from infl_ens.evaluation.evaluate import (
 )
 
 _LAZY_METRIC_NAMES: frozenset[str] = frozenset({
+    "build_chat_formatter",
     "format_chat_example",
     "mean_token_nll",
     "split_to_texts",
@@ -77,6 +78,7 @@ __all__ = [
     "BENCHMARK_KINDS",
     "BenchmarkEvalResult",
     "EvalJobConfig",
+    "build_chat_formatter",
     "discover_adapters",
     "evaluate_adapter_on_split",
     "evaluate_adapter_on_splits",
