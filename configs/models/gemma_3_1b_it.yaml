@@ -1,0 +1,26 @@
+# Base language model + LoRA hyperparameters for the SFT trainer.
+#
+# Gemma-3-1B-IT: ~1B params, hidden 1152, 26 layers, vocab 262,144.
+# LoRA geometry and optimiser settings match qwen2_5_1_5b_instruct.yaml exactly
+# so a model comparison changes only the base model.
+#
+# Note the vocab: at 262k it is 1.7x Qwen's and 2x Llama-3.2's. The vocab-logits
+# tensor dominates the non-weight memory at this batch and sequence length
+# (measured on the Qwen family: ~18 GB of overhead at 152k vocab, nearly
+# independent of model size), so this 1B model carries a heavier footprint than
+# its parameter count suggests. Still far inside an 80 GB A100.
+sft:
+  base_model: google/gemma-3-1b-it
+  max_seq_length: 1024
+  per_device_batch_size: 8
+  gradient_accumulation_steps: 2
+  num_train_epochs: 1.0
+  learning_rate: 2.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 1
+  cumulative_lora: true
+  seed: 0

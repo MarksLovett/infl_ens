@@ -1,0 +1,20 @@
+{
+  "above_mean": -5.152078276844385e-05,
+  "above_sd": 0.003921797904048908,
+  "below_mean": 0.02503974178928166,
+  "caveat": "one data split per point",
+  "figure": "naive start vs game equilibrium, by pair count",
+  "generated": "2026-09-11T20:22:03+00:00",
+  "per_k": {
+    "2": 0.0258,
+    "3": 0.013,
+    "4": 0.0363,
+    "5": -0.0054,
+    "6": 0.0012,
+    "7": 0.0033,
+    "8": -0.0028,
+    "9": 0.0035
+  },
+  "seed": "seed0",
+  "threshold": 4.5
+}

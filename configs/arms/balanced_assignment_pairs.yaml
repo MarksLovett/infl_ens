@@ -1,0 +1,11 @@
+# BASE-style optimal-transport allocation control (not exact BASE training).
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_balanced_assignment_pairs/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 1
+  soft_loss: unit
+  soft_select: balanced_assignment

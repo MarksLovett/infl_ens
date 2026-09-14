@@ -97,7 +97,12 @@ _VALID_SOFT_LOSS_MODES: tuple[str, ...] = ("weighted", "unit")
 #: ``topk`` keeps the ``soft_top_k`` largest shares per query (argmax gate);
 #: ``sample`` draws ``soft_top_k`` distinct units without replacement from the
 #: shares (:func:`infl_ens.inflgame.router.allocation.sampled_top_k_mask`).
-_VALID_SOFT_SELECT_MODES: tuple[str, ...] = ("topk", "sample")
+_VALID_SOFT_SELECT_MODES: tuple[str, ...] = (
+    "topk",
+    "sample",
+    "balanced_assignment",
+    "expert_choice",
+)
 
 
 def validate_routing_and_loss_modes(
@@ -283,6 +288,11 @@ def validate_routing_and_loss_modes(
                 "closed_loop.position_update ('theory_matched' = dense "
                 "G_i(1-G_i) mass over the batch, 'naive' = renormalised share)."
             )
+        if soft_select in ("balanced_assignment", "expert_choice") and soft_loss != "unit":
+            raise ValueError(
+                f"closed_loop.soft_select={soft_select!r} is a discrete "
+                "allocation control and requires soft_loss='unit'"
+            )
         if soft_top_k < 1:
             raise ValueError(
                 f"closed_loop.soft_top_k must be >= 1, got {soft_top_k}"
@@ -381,9 +391,49 @@ def init_agents_closed_loop(
         log_meta["theory_end"] = np.asarray(meta["theory_end"]).tolist()
         return agents, log_meta
 
+    if init_mode == "given":
+        # Start every clone at a position supplied by the config instead of
+        # solving for one. Added so the theory equilibrium can be used as the
+        # starting point directly: the solve that produces it is CPU-only and
+        # can be run offline, and pinning the result here keeps the positions
+        # visible in the resolved config rather than recomputed per run.
+        from infl_ens.training.pool_dynamics import pairwise_spread
+
+        given = cl.get("init_positions")
+        if not isinstance(given, dict) or not given:
+            raise ValueError(
+                "closed_loop.init_mode='given' requires closed_loop."
+                "init_positions as a {agent_name: [coords]} mapping",
+            )
+        names = [a["name"] for a in cfg.get("agents", [])]
+        missing = [n for n in names if n not in given]
+        if missing:
+            raise ValueError(
+                f"closed_loop.init_positions is missing {len(missing)} agents: "
+                f"{missing[:4]}",
+            )
+        agents = []
+        for name in names:
+            pos = np.asarray(given[name], dtype=float)
+            if pos.shape != (space.L,):
+                raise ValueError(
+                    f"init_positions[{name!r}] has shape {pos.shape}, "
+                    f"expected ({space.L},)",
+                )
+            agents.append(RouterAgent(name=name, position=pos.copy()))
+        start = np.stack([a.position for a in agents], axis=0)
+        return agents, {
+            "init_mode": "given",
+            "init_positions_source": cl.get("init_positions_source", "config"),
+            "theory_end": start.tolist(),
+            "theory_initial": start.tolist(),
+            "theory_converged": True,
+            "final_spread": float(pairwise_spread(start)),
+        }
+
     raise ValueError(
-        "closed_loop.init_mode must be mean_noise, theory_gradient, or "
-        f"theory_gradient_paired, got {init_mode!r}",
+        "closed_loop.init_mode must be mean_noise, theory_gradient, "
+        f"theory_gradient_paired, or given, got {init_mode!r}",
     )
 
 
@@ -539,6 +589,7 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
     # 'sample' draws k distinct units per query without replacement from
     # those shares (hard routing's draw, generalised past one winner).
     soft_select = str(cl.get("soft_select", "topk"))
+    capacity_factor = float(cl.get("capacity_factor", 3.0))
     validate_routing_and_loss_modes(
         routing_weight,
         loss_reweight,
@@ -623,6 +674,7 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
     split_manifest = None
     val_splits: list[BenchmarkSplit] = []
     train_batch_indices: list[np.ndarray] | None = None
+    all_record_ids: list[str] = []
     if data_split_cfg:
         from infl_ens.training.data_split import (
             partitioned_splits_for_eval,
@@ -652,6 +704,13 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
         )
         all_prompts = train_prompts
         all_responses = train_responses
+        from infl_ens.data.splits import flatten_partition_records
+
+        id_prompts, id_responses, _id_labels, all_record_ids = (
+            flatten_partition_records(splits, split_manifest, "train")
+        )
+        if id_prompts != all_prompts or id_responses != all_responses:
+            raise ValueError("manifest record IDs do not align with training rows")
         print(
             f"data split: train={len(train_prompts)} val={split_manifest.n_val} "
             f"test={split_manifest.n_test} pool={len(pool_prompts)} "
@@ -665,6 +724,7 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             r for s in splits for r in (s.responses or [""] * s.n)
         ]
         pool_prompts = all_prompts
+        all_record_ids = [f"unsplit:{i}" for i in range(len(all_prompts))]
 
     if static_merge_groups is not None:
         from infl_ens.training.pool_dynamics import agent_pairwise_geometry
@@ -773,10 +833,12 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             idx = train_batch_indices[r]
             batch_prompts = [all_prompts[int(i)] for i in idx]
             batch_responses = [all_responses[int(i)] for i in idx]
+            batch_record_ids = [all_record_ids[int(i)] for i in idx]
         else:
             idx = rng.integers(0, len(all_prompts), size=batch_size)
             batch_prompts = [all_prompts[i] for i in idx]
             batch_responses = [all_responses[i] for i in idx]
+            batch_record_ids = [all_record_ids[int(i)] for i in idx]
         choices = router.route_batch(
             batch_prompts, rng=rng, routing_weight=routing_weight,
         )
@@ -839,20 +901,35 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                         soft_top_k,
                         select=soft_select,
                         rng=rng,
+                        round_idx=r,
+                        capacity_factor=capacity_factor,
                     )
                 )                                                   # (P, M)
-            elif soft_select == "sample":
+            elif soft_select in ("sample", "balanced_assignment", "expert_choice"):
                 from infl_ens.inflgame.router.allocation import (
+                    balanced_assignment_mask,
+                    expert_choice_mask,
                     sampled_top_k_mask,
                 )
 
-                keep = sampled_top_k_mask(G_soft, soft_top_k, rng)
-                masked = np.where(keep, G_soft, 0.0)
-                col = masked.sum(axis=0, keepdims=True)
-                safe = col > 0.0
-                soft_weights = np.where(
-                    safe, masked / np.where(safe, col, 1.0), 0.0,
-                )
+                if soft_select == "sample":
+                    keep = sampled_top_k_mask(G_soft, soft_top_k, rng)
+                    masked = np.where(keep, G_soft, 0.0)
+                    col = masked.sum(axis=0, keepdims=True)
+                    safe = col > 0.0
+                    soft_weights = np.where(
+                        safe, masked / np.where(safe, col, 1.0), 0.0,
+                    )
+                elif soft_select == "balanced_assignment":
+                    soft_weights = balanced_assignment_mask(
+                        G_soft, round_idx=r,
+                    ).astype(float)
+                else:
+                    soft_weights = expert_choice_mask(
+                        G_soft,
+                        capacity_factor=capacity_factor,
+                        round_idx=r,
+                    ).astype(float)
             else:
                 soft_weights = top_k_allocation_weights(G_soft, soft_top_k)
 
@@ -885,6 +962,7 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
         merge_sft_logs: dict[str, list[dict[str, Any]]] = {}
         merge_prompt_counts: dict[str, int] = {}
         merge_loaded_prior: dict[str, Optional[str]] = {}
+        resource_accounting: dict[str, dict[str, Any]] = {}
         # Soft-pair bookkeeping: which batch rows each pair trained on, the
         # shared position it moved to, and its mean share of the batch.
         agent_batch_indices: dict[str, list[int]] = {}
@@ -900,6 +978,9 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             if routing_mode == "soft":
                 assert soft_weights is not None
                 mine_idx_soft = np.flatnonzero(soft_weights[i_agent] > 0.0)
+                agent_batch_indices[agent.name] = [
+                    int(index) for index in mine_idx_soft
+                ]
                 mine_p = [batch_prompts[int(m)] for m in mine_idx_soft]
                 mine_r = [batch_responses[int(m)] for m in mine_idx_soft]
             else:
@@ -989,6 +1070,19 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             )
             agent_sft_logs[agent.name] = sft_result.get("log_history", [])
             agent_loaded_prior[agent.name] = sft_result.get("loaded_prior_lora")
+            resource_accounting[agent.name] = {
+                key: sft_result[key]
+                for key in (
+                    "n_train",
+                    "trainable_parameters",
+                    "token_exposures",
+                    "peak_memory_bytes",
+                    "wall_seconds",
+                    "active_lora_rank",
+                    "model_forwards",
+                )
+                if key in sft_result
+            }
             if not skip_pos and "position_blend_effective" in sft_result:
                 agent_blend_effective[agent.name].append(
                     float(sft_result["position_blend_effective"])
@@ -1094,6 +1188,19 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                     merge_loaded_prior[train_name] = sft_result.get(
                         "loaded_prior_lora",
                     )
+                    resource_accounting[train_name] = {
+                        key: sft_result[key]
+                        for key in (
+                            "n_train",
+                            "trainable_parameters",
+                            "token_exposures",
+                            "peak_memory_bytes",
+                            "wall_seconds",
+                            "active_lora_rank",
+                            "model_forwards",
+                        )
+                        if key in sft_result
+                    }
                     agent_sft_logs[train_name] = merge_sft_logs[train_name]
                     agent_loaded_prior[train_name] = merge_loaded_prior[train_name]
                 if position_update == "theory_matched":
@@ -1181,6 +1288,19 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                 merge_loaded_prior[train_name] = sft_result.get(
                     "loaded_prior_lora",
                 )
+                resource_accounting[train_name] = {
+                    key: sft_result[key]
+                    for key in (
+                        "n_train",
+                        "trainable_parameters",
+                        "token_exposures",
+                        "peak_memory_bytes",
+                        "wall_seconds",
+                        "active_lora_rank",
+                        "model_forwards",
+                    )
+                    if key in sft_result
+                }
 
 
         observed = np.array(
@@ -1202,6 +1322,25 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             merge_groups=static_merge_groups,
         )
         round_geometry["geometry_phase"] = f"round_{r}"
+        selection_count = np.zeros(len(batch_prompts), dtype=int)
+        for selected_indices in agent_batch_indices.values():
+            selection_count[np.asarray(selected_indices, dtype=int)] += 1
+        allocation_accounting = (
+            {
+                "total_selections": int(selection_count.sum()),
+                "duplicated_selections": int(
+                    np.maximum(selection_count - 1, 0).sum()
+                ),
+                "unassigned_prompts": int(np.sum(selection_count == 0)),
+                "fanout_histogram": {
+                    str(fanout): int(np.sum(selection_count == fanout))
+                    for fanout in sorted(set(selection_count.tolist()))
+                },
+            }
+            if routing_mode == "soft"
+            and soft_select in {"balanced_assignment", "expert_choice"}
+            else None
+        )
         history.append({
             "round": r,
             "positions": {a.name: a.position.tolist() for a in agents},
@@ -1215,6 +1354,10 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             "soft_top_k": soft_top_k if routing_mode == "soft" else None,
             "soft_loss": soft_loss if routing_mode == "soft" else None,
             "soft_select": soft_select if routing_mode == "soft" else None,
+            "capacity_factor": (
+                capacity_factor if soft_select == "expert_choice" else None
+            ),
+            "allocation_accounting": allocation_accounting,
             "loss_reweight": loss_reweight,
             "position_update": position_update,
             "agent_prompts": agent_prompts,
@@ -1229,15 +1372,11 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             # above: under soft theory-matched routing the dense G(1-G)
             # mass over the whole batch, aligned with `batch_prompts`.
             "agent_position_weights": agent_position_weights,
-            **(
-                {
-                    "batch_prompts": list(batch_prompts),
-                    "batch_responses": list(batch_responses),
-                }
-                if routing_mode == "soft" and not soft_pairs
-                else {}
-            ),
+            "batch_prompts": list(batch_prompts),
+            "batch_responses": list(batch_responses),
+            "batch_record_ids": list(batch_record_ids),
             "agent_loaded_prior": agent_loaded_prior,
+            "resource_accounting": resource_accounting,
             "agent_blend_effective": agent_blend_effective,
             "position_step": position_step,
             "blend_base": blend_base,

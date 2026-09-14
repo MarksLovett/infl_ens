@@ -1,0 +1,25 @@
+{
+  "figure": "pair-count ablation",
+  "generated": "2026-09-11T20:22:04+00:00",
+  "pairs": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "runs": {
+    "2": "seven_axis_2pair_sigma05",
+    "3": "seven_axis_3pair_sigma05",
+    "4": "seven_axis_4pair_sigma05",
+    "5": "seven_axis_5pair_sigma05",
+    "6": "seven_axis_6pair_sigma05",
+    "7": "seven_axis_soft_full_pairs",
+    "8": "seven_axis_8pair_sigma05",
+    "9": "seven_axis_9pair_sigma05"
+  },
+  "seed": "seed0"
+}

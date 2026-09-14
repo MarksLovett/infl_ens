@@ -1,0 +1,35 @@
+{
+  "benchmarks": [
+    "beavertails",
+    "halueval",
+    "jbb_behaviors",
+    "ai4privacy",
+    "orbench",
+    "prompt_injection",
+    "do_not_answer"
+  ],
+  "figure": "per-benchmark routing gain",
+  "generated": "2026-09-11T20:22:05+00:00",
+  "pairs": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "sigmas": [
+    0.05,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.45,
+    0.5,
+    0.55,
+    0.6,
+    0.7
+  ]
+}

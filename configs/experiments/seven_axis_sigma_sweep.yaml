@@ -1,0 +1,84 @@
+# Sigma sweep: how competitive reach drives specialization.
+#
+# One factor moves. Every arm is the FULLY DISTRIBUTED soft arm (k = 7,
+# share-weighted) from `seven_axis_3arm`, changing only `sigma_fraction` --
+# a fraction of the Gaussian stability threshold sigma_0*, not an absolute
+# sigma. Below sigma_0* the co-located configuration is unstable, so a
+# smaller fraction means a shorter competitive reach and a stronger pull
+# apart.
+#
+#   arm        sigma_fraction   run dir
+#   sigma07    0.7              results/seven_axis_sigma07_full/seed0
+#   sigma03    0.3              results/seven_axis_sigma03_full/seed0
+#   sigma01    0.1              results/seven_axis_sigma01_full/seed0
+#
+# sigma_fraction = 0.5 is NOT re-run here: it already exists as
+# `soft_full` in results/seven_axis_soft_full_pairs/seed0 and is folded
+# into the comparison after the fact.
+#
+# The generalist is the EXISTING pooled replay from seven_axis_3arm. It is
+# already trained, so `train` skips it, and because every arm draws the same
+# round batches from the same manifest and seed, one generalist stays
+# data-matched to the whole sweep -- the pooled column is therefore directly
+# comparable to the seven_axis_3arm results.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_sigma_sweep.yaml
+name: seven_axis_sigma_sweep
+results_dir: results/seven_axis_sigma_sweep
+figures_dir: figures/seven_axis_sigma_sweep
+
+arms:
+  - name: sigma07
+    label: "sigma 0.7"
+    title: "Fully distributed, sigma_fraction 0.7"
+    role: specialist
+    config: ../arms/soft_full_sigma07.yaml
+  - name: sigma03
+    label: "sigma 0.3"
+    title: "Fully distributed, sigma_fraction 0.3"
+    role: specialist
+    config: ../arms/soft_full_sigma03.yaml
+  - name: sigma01
+    label: "sigma 0.1"
+    title: "Fully distributed, sigma_fraction 0.1"
+    role: specialist
+    config: ../arms/soft_full_sigma01.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (shared with seven_axis_3arm)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - oracle_routing
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+    - tests/test_unified_eval.py
+    - tests/test_routing_eval.py
+  arms: [sigma07, sigma03, sigma01]
+  output_root: results/_smoke_sigma
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

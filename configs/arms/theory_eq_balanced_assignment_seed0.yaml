@@ -1,0 +1,18 @@
+# BASE-style optimal-transport allocation, started at the theory equilibrium.
+# Control for the allocation rule: one assignment per record, quota spread
+# at most one.
+#
+# Starts from the SAME equilibrium as every other seven-pair theory_eq arm
+# (see _theory_eq_init_7pair.yaml), so this is a one-factor comparison.
+
+includes:
+  - _closed_loop_base.yaml
+  - _theory_eq_init_7pair.yaml
+
+output_dir: results/seven_axis_theory_eq_balanced_assignment/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 1
+  soft_loss: unit
+  soft_select: balanced_assignment

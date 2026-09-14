@@ -1,0 +1,51 @@
+# ABLATION: 2 pairs (4 clones) instead of 7 pairs (14 clones), seed 0.
+#
+# Pair count is the ONLY thing that moves. Same 7-axis trait space, same base
+# model, same seed 0 and the same pinned seed-0 split
+# (data/splits/seven_axis_soft_seed0.json, inherited from
+# configs/data/seven_axis_safety.yaml), so this is scored on the identical test
+# pool as results/seven_axis_soft_full_pairs/seed0 and compares to it directly.
+#
+# The trait-space fingerprint (3b42c68a8dd334c5) hashes `benchmarks` and
+# `trait_space` only -- `agents` is not an input -- so the cached Qwen3-8B
+# encode is reused and no re-encode is triggered.
+#
+# THE GENERALIST IS NOT RETRAINED. Round batches come from the manifest and
+# data_split.seed, both unchanged, and under fully dense soft routing the
+# pooled per-round batch is the whole round batch at any pair count. So the
+# existing pooled replay in results/seven_axis_3arm_generalist/seed0 stays
+# data-matched to this arm and is reused as-is.
+#
+# SIGMA IS FRACTION-MATCHED, NOT ABSOLUTE-MATCHED. sigma_0* is computed from
+# the agent count: sqrt((N-2)/(N-1) * Lambda_max), Lambda_max = 0.18190372
+# fixed by the benchmark space. So
+#
+#   sigma_0*(N=14) = 0.40977  ->  sigma = 0.5 * 0.40977 = 0.204885
+#   sigma_0*(N=4)  = 0.34824  ->  sigma = 0.5 * 0.34824 = 0.174119
+#
+# Both runs therefore sit at the same RELATIVE depth below their own
+# bifurcation threshold -- the invariant that makes "half the critical reach"
+# mean the same thing at either pair count -- while this run's absolute
+# competitive reach is ~15% shorter. To hold absolute sigma fixed instead, drop
+# `sigma_fraction` and set `sigma_mode: absolute` with `sigma: 0.204885`.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_2pair_sigma05/seed0
+
+sigma_fraction: 0.50
+
+# An explicit list replaces the base's `agents: {pairs_from_axes: true}`
+# mapping, which would otherwise expand to N = 2L = 14. `theory_gradient_paired`
+# pairs any even N by position order and never consults the axis count, so
+# N = 4 initializes as 2 co-located pairs (pair-0, pair-1).
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 2                     # == number of pairs: fully dense over 2
+  soft_loss: weighted

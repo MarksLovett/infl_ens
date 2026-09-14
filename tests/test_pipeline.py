@@ -21,6 +21,7 @@ from infl_ens.pipeline.stages import (
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENT = ROOT / "configs" / "experiments" / "seven_axis_3arm.yaml"
+BASELINE_EXPERIMENT = ROOT / "configs" / "experiments" / "seven_axis_baselines.yaml"
 FINGERPRINT = "3b42c68a8dd334c5"
 
 
@@ -34,6 +35,26 @@ def test_load_canonical_experiment() -> None:
     assert exp.stages == ("manifest", "train", "perround", "routing", "figures")
     assert set(exp.smoke.arms) <= {a.name for a in exp.arms}
     assert exp.smoke.overrides["data_split"] is None
+
+
+def test_baseline_experiment_supports_multiple_generalists() -> None:
+    exp = load_experiment(BASELINE_EXPERIMENT)
+    assert [arm.name for arm in exp.generalists] == [
+        "generalist_r16",
+        "generalist_r112",
+    ]
+    assert exp.generalist is exp.generalists[0]
+
+
+def test_baseline_smoke_rewrites_intra_experiment_dependencies() -> None:
+    exp = load_experiment(BASELINE_EXPERIMENT)
+    label_cfg = smoke_config(exp.arm("label_experts"), exp)
+    merge_cfg = smoke_config(exp.arm("adapter_merges"), exp)
+    expected_game = Path(exp.smoke.output_root) / "game" / "seed0" / "history.json"
+    expected_labels = Path(exp.smoke.output_root) / "label_experts" / "seed0"
+    assert Path(label_cfg["history_path"]) == expected_game
+    assert Path(merge_cfg["adapter_merge"]["source_run_dir"]) == expected_labels
+    assert merge_cfg["adapter_merge"]["methods"] == ["linear"]
 
 
 def test_dry_run_prints_every_arm_with_the_cached_fingerprint(capsys: pytest.CaptureFixture[str]) -> None:

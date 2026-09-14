@@ -1,0 +1,23 @@
+# Pooled GENERALIST for the 7B scale run.
+#
+# A generalist is only a fair comparator when it shares the specialists' base
+# model: pooled_nll from a 1.5B baseline says nothing about 3B/7B specialists.
+# So each model scale trains its own, replaying that scale's logged batches.
+# Runs after the specialist arm, which supplies history.json.
+#
+# The agent name must stay `pooled-baseline`: the route-then-score evaluator
+# loads the generalist from <baseline_run_dir>/agents/pooled-baseline/round-NN.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_7b_instruct.yaml
+
+task: baseline_replay
+seed: 0
+history_path: results/seven_axis_soft_full_7b/seed0/history.json
+output_dir: results/seven_axis_generalist_7b/seed0
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null

@@ -1,0 +1,51 @@
+{
+  "by_metric": {
+    "expected": {
+      "mean": 0.0007011825265553995,
+      "median": 0.0026902943111182243,
+      "n": 10,
+      "wins": 8
+    },
+    "mixture": {
+      "mean": -0.001878878943960749,
+      "median": -0.0007534411436954658,
+      "n": 10,
+      "wins": 4
+    }
+  },
+  "dseed1_equilibrium_arms_scored": 1,
+  "excluded_from_footer": 0.7,
+  "figure": "naive start vs game equilibrium at matched reach (paired)",
+  "generated": "2026-09-14T15:35:44+00:00",
+  "n_reaches": 10,
+  "paired_basis": "same test pool (n=5671), same generalist (2.0152)",
+  "smoothness": {
+    "expected": {
+      "ratio": 7.800661187785697,
+      "rising_equilibrium": [
+        3,
+        8
+      ],
+      "rising_naive": [
+        3,
+        8
+      ],
+      "roughness_equilibrium": 0.002105853487737936,
+      "roughness_naive": 0.01642704956896046
+    },
+    "mixture": {
+      "ratio": 4.457384866090335,
+      "rising_equilibrium": [
+        7,
+        8
+      ],
+      "rising_naive": [
+        4,
+        8
+      ],
+      "roughness_equilibrium": 0.0035838582584104867,
+      "roughness_naive": 0.01597463556325177
+    }
+  },
+  "split": "seed0"
+}

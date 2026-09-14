@@ -1,0 +1,7 @@
+includes:
+  - experts_label.yaml
+
+output_dir: results/seven_axis_experts_kmeans/seed0
+
+partition_replay:
+  mode: kmeans

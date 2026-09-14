@@ -65,6 +65,7 @@ ml = [
     "accelerate>=0.30",
     "compressed-tensors",
     "huggingface-hub>=0.22",
+    "scipy>=1.11",
 ]
 
 # Plotting (``python -m infl_ens.figures``) is kept separate so headless

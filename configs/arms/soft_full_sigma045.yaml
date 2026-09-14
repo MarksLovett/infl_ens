@@ -1,0 +1,23 @@
+# SIGMA SERIES: fully distributed soft routing (k = 7, share-weighted) at
+# sigma_fraction = 0.45.
+#
+# Identical to soft_full_pairs.yaml except the competitive reach.
+# `sigma_mode: stability_fraction` means sigma = 0.45 * sigma_0*, a FRACTION
+# of the Gaussian stability threshold (sigma_0* = 0.40977), not an absolute
+# sigma. This point fills in the transition between the near-threshold arm
+# at 0.70, which routes poorly, and the plateau that runs from 0.50 down.
+#
+# The `benchmarks` and `trait_space` blocks are untouched, so this arm
+# resolves to the same trait-space cache (3b42c68a8dd334c5) and re-uses the
+# Qwen3-Embedding-8B encode.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_sigma045_full/seed0
+
+sigma_fraction: 0.45
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

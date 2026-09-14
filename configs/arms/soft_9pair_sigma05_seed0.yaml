@@ -1,0 +1,59 @@
+# ABLATION: 9 pairs (18 clones) -- MORE PAIRS THAN AXES (L = 7).
+#
+# Pair count is the ONLY thing that moves. Same 7-axis trait space, same base
+# model, same seed 0 and the same pinned seed-0 split, so this is scored on the
+# same test pool as every other arm in the series.
+#
+# This arm deliberately runs MORE routing units than there are trait axes.
+# Nothing in the code ties the two: `theory_gradient_paired` pairs any even N
+# by position order and `sft_merge_groups: from_init` just enumerates whatever
+# pairs the init produced -- neither consults L. The open question is whether
+# the extra pairs can find distinct positions in a 7-dimensional space or
+# whether they crowd; watch the within-pair and pair-position diagnostics, and
+# note `closed_loop.theory_gradient.min_pairwise: 0.2` is the constraint most
+# likely to bind first as the space fills up.
+#
+# The trait-space fingerprint (3b42c68a8dd334c5) hashes `benchmarks` and
+# `trait_space` only -- `agents` is not an input -- so the cached Qwen3-8B
+# encode is reused and no re-encode is triggered.
+#
+# THE GENERALIST IS NOT RETRAINED: round batches come from the manifest and
+# data_split.seed (both unchanged), and under fully dense soft routing the
+# pooled per-round batch is the whole round batch at any pair count.
+#
+# SIGMA IS FRACTION-MATCHED. sigma_0* = sqrt((N-2)/(N-1) * Lambda_max) with
+# Lambda_max = 0.18190372:
+#     N = 18  ->  sigma_0* = 0.413767  ->  sigma = 0.50 * sigma_0* = 0.206884
+# By this point sigma_0* has all but saturated (0.4098 at 7 pairs), so these
+# high-pair arms are close to a pure pair-count contrast.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_9pair_sigma05/seed0
+
+sigma_fraction: 0.50
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+  - name: clone-4
+  - name: clone-5
+  - name: clone-6
+  - name: clone-7
+  - name: clone-8
+  - name: clone-9
+  - name: clone-10
+  - name: clone-11
+  - name: clone-12
+  - name: clone-13
+  - name: clone-14
+  - name: clone-15
+  - name: clone-16
+  - name: clone-17
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 9                     # == number of pairs: fully dense
+  soft_loss: weighted

@@ -21,6 +21,7 @@ does the disk I/O.
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
@@ -92,6 +93,48 @@ def round_prompt_sets(records: Sequence[dict[str, Any]]) -> list[set[str]]:
     return out
 
 
+def round_record_sequences(records: Sequence[dict[str, Any]]) -> list[tuple[str, ...]]:
+    """Return duplicate-preserving record sequences for data-match audits.
+
+    :param records: History records.
+    :type records: Sequence[dict[str, Any]]
+    :returns: One ordered record-ID sequence per round.
+    :rtype: list[tuple[str, ...]]
+    """
+    out: list[tuple[str, ...]] = []
+    for record in records:
+        record_ids = record.get("batch_record_ids")
+        if record_ids is not None:
+            out.append(tuple(str(value) for value in record_ids))
+            continue
+        prompts = list(record.get("batch_prompts") or [])
+        responses = list(record.get("batch_responses") or [""] * len(prompts))
+        if prompts:
+            out.append(tuple(
+                f"{prompt}\0{response}"
+                for prompt, response in zip(prompts, responses)
+            ))
+            continue
+        flattened: list[str] = []
+        agent_prompts = record.get("agent_prompts") or {}
+        agent_responses = record.get("agent_responses") or {}
+        for name in sorted(agent_prompts):
+            p_values = list(agent_prompts[name])
+            r_values = list(agent_responses.get(name) or [""] * len(p_values))
+            flattened.extend(
+                f"{prompt}\0{response}" for prompt, response in zip(p_values, r_values)
+            )
+        out.append(tuple(flattened))
+    return out
+
+
+def _multiset_jaccard(left: Sequence[str], right: Sequence[str]) -> float:
+    a = Counter(left)
+    b = Counter(right)
+    union = sum((a | b).values())
+    return sum((a & b).values()) / union if union else 1.0
+
+
 def within_pair_distances(records: Sequence[dict[str, Any]]) -> dict[str, list[float]]:
     """Per-pair within-group L2 across rounds, from logged geometry.
 
@@ -109,6 +152,54 @@ def within_pair_distances(records: Sequence[dict[str, Any]]) -> dict[str, list[f
     return series
 
 
+def resource_ledger(records: Sequence[dict[str, Any]]) -> dict[str, float | int | None]:
+    """Aggregate comparable training-resource fields from history.
+
+    :param records: Run history.
+    :type records: Sequence[dict[str, Any]]
+    :returns: Stored/trainable parameters, exposures, memory, forwards, and GPU-hours.
+    :rtype: dict[str, float | int | None]
+    """
+    total_tokens = 0
+    total_wall = 0.0
+    total_forwards = 0
+    peak_memory = 0
+    last_units: list[dict[str, Any]] = []
+    for record in records:
+        raw = record.get("resource_accounting") or {}
+        units = (
+            [dict(value) for value in raw.values() if isinstance(value, dict)]
+            if isinstance(raw, dict) and any(isinstance(value, dict) for value in raw.values())
+            else [dict(raw)] if isinstance(raw, dict) and raw else []
+        )
+        if units:
+            last_units = units
+        total_tokens += sum(int(unit.get("token_exposures", 0)) for unit in units)
+        total_wall += sum(float(unit.get("wall_seconds", 0.0)) for unit in units)
+        total_forwards += sum(int(unit.get("model_forwards", 0)) for unit in units)
+        peak_memory = max(
+            [peak_memory, *(int(unit.get("peak_memory_bytes", 0)) for unit in units)]
+        )
+    parameters = sum(int(unit.get("trainable_parameters", 0)) for unit in last_units)
+    stored_rank = sum(
+        int(unit.get("stored_lora_rank", unit.get("active_lora_rank", 0)))
+        for unit in last_units
+    )
+    active_rank = max(
+        (int(unit.get("active_lora_rank", 0)) for unit in last_units),
+        default=0,
+    )
+    return {
+        "stored_trainable_parameters": parameters or None,
+        "stored_lora_rank": stored_rank or None,
+        "active_lora_rank": active_rank or None,
+        "token_exposures": total_tokens or None,
+        "peak_memory_bytes": peak_memory or None,
+        "model_forwards": total_forwards or None,
+        "gpu_hours": total_wall / 3600.0 if total_wall else None,
+    }
+
+
 def data_matching(
     histories: Sequence[tuple[str, Sequence[dict[str, Any]]]],
 ) -> dict[str, Any]:
@@ -122,19 +213,22 @@ def data_matching(
     if len(histories) < 2:
         return {"n_arms": len(histories), "all_identical": True, "pairs": []}
     ref_label, ref_records = histories[0]
-    ref_sets = round_prompt_sets(ref_records)
+    ref_sequences = round_record_sequences(ref_records)
     pairs = []
     all_same = True
     for label, records in histories[1:]:
-        sets = round_prompt_sets(records)
-        n = min(len(ref_sets), len(sets))
-        identical = [ref_sets[i] == sets[i] for i in range(n)]
-        jaccard = [
-            (len(ref_sets[i] & sets[i]) / len(ref_sets[i] | sets[i]))
-            if (ref_sets[i] | sets[i]) else 1.0
+        sequences = round_record_sequences(records)
+        n = min(len(ref_sequences), len(sequences))
+        identical = [
+            ref_sequences[i] == sequences[i]
+            or Counter(ref_sequences[i]) == Counter(sequences[i])
             for i in range(n)
         ]
-        same = bool(n) and all(identical)
+        jaccard = [
+            _multiset_jaccard(ref_sequences[i], sequences[i])
+            for i in range(n)
+        ]
+        same = bool(n) and len(ref_sequences) == len(sequences) and all(identical)
         all_same = all_same and same
         pairs.append({
             "arm_a": ref_label,
@@ -155,24 +249,44 @@ def build_cross_arm_report(
     arms: Sequence[tuple[str, Path]],
     *,
     generalist_run_dir: Optional[Path] = None,
+    generalist_runs: Optional[Sequence[tuple[str, Path]]] = None,
 ) -> tuple[dict[str, Any], str]:
     """Assemble the cross-arm report from the arms' run directories.
 
     :param arms: ``(label, run_dir)`` per specialist arm, in display order.
     :type arms: Sequence[tuple[str, pathlib.Path]]
     :param generalist_run_dir: Optional pooled-generalist run, recorded
-        for provenance.
+        for provenance. Retained for compatibility with older callers.
     :type generalist_run_dir: pathlib.Path | None
+    :param generalist_runs: Named pooled-reference runs.
+    :type generalist_runs: Sequence[tuple[str, pathlib.Path]] | None
     :returns: ``(report_json, report_markdown)``.
     :rtype: tuple[dict, str]
     """
     histories = [(label, load_history(run)) for label, run in arms]
+    named_generalists = list(generalist_runs or [])
+    if not named_generalists and generalist_run_dir is not None:
+        named_generalists = [(generalist_run_dir.name, generalist_run_dir)]
+    generalist_histories = [
+        (label, load_history(run))
+        for label, run in named_generalists
+        if (run / "history.json").is_file()
+    ]
     report: dict[str, Any] = {"arms": {}, "data_matching": {}, "notes": []}
     md: list[str] = ["# Cross-arm analysis", ""]
 
     md.append("## 1. Data matching (is one generalist fair to every arm?)")
     md.append("")
-    matching = data_matching(histories)
+
+    training_histories = [
+        (label, records)
+        for label, records in histories
+        if any(
+            record.get("batch_record_ids") or record.get("batch_prompts")
+            for record in records
+        )
+    ]
+    matching = data_matching(training_histories)
     report["data_matching"] = matching
     if matching["pairs"]:
         for pair in matching["pairs"]:
@@ -213,7 +327,9 @@ def build_cross_arm_report(
         flat = rep["flat"]
         oracle = float(flat["oracle_routing_nll"])
         pooled = float(flat["pooled_nll"])
-        learned = float(flat["learned_routing_expected_nll"])
+        learned = float(
+            flat.get("learned_model_nll", flat["learned_routing_expected_nll"])
+        )
         report["arms"].setdefault(label, {})["routing"] = {
             "oracle": oracle, "pooled": pooled, "learned": learned,
             "learned_minus_pooled": learned - pooled,
@@ -230,6 +346,68 @@ def build_cross_arm_report(
         "data-matched generalist. `Oracle − Learned` is the headroom a "
         "perfect router would still recover from this same set of adapters._"
     )
+    md.append("")
+
+    md.append("### Router matrix")
+    md.append("")
+    md.append(
+        "| Arm | Router | Test expected NLL | Low-support NLL | "
+        "Sequence mixture | Oracle regret | Utilization | Effective experts |"
+    )
+    md.append("|---|---|---:|---:|---:|---:|---:|---:|")
+    first_report: Optional[dict[str, Any]] = None
+    for label, run in arms:
+        rep = load_routing_report(run)
+        if rep is None:
+            continue
+        if first_report is None:
+            first_report = rep
+        low_routers = (
+            ((rep.get("slices") or {}).get("low_support_id") or {}).get("routers") or {}
+        )
+        learned_model = rep.get("learned_model") or {}
+        if learned_model:
+            low_slice = (rep.get("slices") or {}).get("low_support_id") or {}
+            learned_value = learned_model.get("mean_nll")
+            oracle_value = (rep.get("oracle") or {}).get("mean_nll")
+            regret = (
+                float(learned_value) - float(oracle_value)
+                if learned_value is not None and oracle_value is not None
+                else None
+            )
+            md.append(
+                f"| {label} | deployed learned mixture | {_fmt(learned_value)} | "
+                f"{_fmt(low_slice.get('learned_model_nll'))} | -- | "
+                f"{_fmt(regret)} | -- | -- |"
+            )
+        report["arms"].setdefault(label, {})["routers"] = rep.get("routers") or {}
+        for router_name, values in (rep.get("routers") or {}).items():
+            low = low_routers.get(router_name) or {}
+            utilization = values.get("utilization") or []
+            used_fraction = (
+                sum(float(value) > 0.0 for value in utilization) / len(utilization)
+                if utilization
+                else None
+            )
+            md.append(
+                f"| {label} | {router_name} | {_fmt(values.get('expected_nll'))} | "
+                f"{_fmt(low.get('expected_nll'))} | "
+                f"{_fmt(values.get('sequence_mixture_nll'))} | "
+                f"{_fmt(values.get('oracle_regret'))} | "
+                f"{_fmt(used_fraction, 2)} | "
+                f"{_fmt(values.get('effective_experts'), 2)} |"
+            )
+    if first_report is not None:
+        low_references = (
+            ((first_report.get("slices") or {}).get("low_support_id") or {}).get("references")
+            or {}
+        )
+        for reference_name, values in (first_report.get("references") or {}).items():
+            low = low_references.get(reference_name) or {}
+            md.append(
+                f"| {reference_name} | single adapter | {_fmt(values.get('mean_nll'))} | "
+                f"{_fmt(low.get('mean_nll'))} | -- | -- | 1.00 | 1.00 |"
+            )
     md.append("")
 
     md.append("## 3. Pair stability (within-pair L2)")
@@ -290,9 +468,37 @@ def build_cross_arm_report(
         )
     md.append("")
 
-    if generalist_run_dir is not None:
-        report["generalist_run_dir"] = str(generalist_run_dir)
-        md.append(f"Generalist run: `{generalist_run_dir}`")
+    md.append("## 5. Resource accounting")
+    md.append("")
+    md.append(
+        "| Arm | Stored trainable params | Stored rank | Active rank | Token exposures | "
+        "Model forwards | Peak GiB | GPU-hours |"
+    )
+    md.append("|---|---:|---:|---:|---:|---:|---:|---:|")
+    for label, records in [*histories, *generalist_histories]:
+        ledger = resource_ledger(records)
+        report["arms"].setdefault(label, {})["resources"] = ledger
+        peak = ledger["peak_memory_bytes"]
+        peak_gib = None if peak is None else float(peak) / (1024 ** 3)
+        md.append(
+            f"| {label} | {ledger['stored_trainable_parameters'] or '--'} | "
+            f"{ledger['stored_lora_rank'] or '--'} | "
+            f"{ledger['active_lora_rank'] or '--'} | "
+            f"{ledger['token_exposures'] or '--'} | "
+            f"{ledger['model_forwards'] or '--'} | {_fmt(peak_gib, 2)} | "
+            f"{_fmt(ledger['gpu_hours'], 2)} |"
+        )
+    md.append("")
+
+    if named_generalists:
+        report["generalist_run_dirs"] = {
+            label: str(run) for label, run in named_generalists
+        }
+        report["generalist_run_dir"] = str(named_generalists[0][1])
+        md.append(
+            "Generalist runs: "
+            + ", ".join(f"**{label}** (`{run}`)" for label, run in named_generalists)
+        )
         md.append("")
     if report["notes"]:
         md.append("## Notes")
@@ -307,6 +513,7 @@ def write_cross_arm_report(
     output_dir: Path,
     *,
     generalist_run_dir: Optional[Path] = None,
+    generalist_runs: Optional[Sequence[tuple[str, Path]]] = None,
 ) -> list[Path]:
     """Build the report and write ``cross_analysis.{md,json}``.
 
@@ -316,10 +523,16 @@ def write_cross_arm_report(
     :type output_dir: pathlib.Path
     :param generalist_run_dir: Optional pooled-generalist run.
     :type generalist_run_dir: pathlib.Path | None
+    :param generalist_runs: Named pooled-reference runs.
+    :type generalist_runs: Sequence[tuple[str, pathlib.Path]] | None
     :returns: Written paths.
     :rtype: list[pathlib.Path]
     """
-    report, md = build_cross_arm_report(arms, generalist_run_dir=generalist_run_dir)
+    report, md = build_cross_arm_report(
+        arms,
+        generalist_run_dir=generalist_run_dir,
+        generalist_runs=generalist_runs,
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     md_path = output_dir / "cross_analysis.md"
     json_path = output_dir / "cross_analysis.json"
@@ -335,6 +548,8 @@ __all__ = [
     "load_per_round_table",
     "load_routing_report",
     "round_prompt_sets",
+    "round_record_sequences",
+    "resource_ledger",
     "within_pair_distances",
     "write_cross_arm_report",
 ]

@@ -18,7 +18,20 @@ from infl_ens.config import load_config
 ROOT = Path(__file__).resolve().parents[1]
 ARMS_DIR = ROOT / "configs" / "arms"
 ARMS = sorted(p for p in ARMS_DIR.glob("*.yaml") if not p.name.startswith("_"))
-SPECIALISTS = [p for p in ARMS if p.name != "generalist_replay.yaml"]
+# The five arms of the canonical routing design table (configs/experiments/
+# seven_axis_3arm.yaml). Named explicitly rather than globbed: configs/arms/ now
+# also holds baseline_replay generalists (no closed_loop block), per-data-seed
+# and per-base-model variants, and the pair-count ablation arms, which vary the
+# agent count on purpose. Those are separate experiments and must not be held to
+# "differs only in routing knobs".
+DESIGN_TABLE_ARMS = [
+    "soft_full_pairs",
+    "soft_topk3_pairs",
+    "topk3_unit_pairs",
+    "hard_topk3_pairs",
+    "hard_pairs_matched",
+]
+SPECIALISTS = [ARMS_DIR / f"{name}.yaml" for name in DESIGN_TABLE_ARMS]
 
 EXPECTED_FINGERPRINT = "3b42c68a8dd334c5"
 
@@ -67,15 +80,15 @@ ROUTING_KEYS = {"routing_mode", "soft_top_k", "soft_loss", "soft_select"}
 
 
 def test_all_arms_are_present() -> None:
+    """The canonical arms exist and nobody renamed one.
+
+    A superset check, not equality: configs/arms/ also carries the per-data-seed
+    replicates, the per-base-model variants and the pair-count ablation, which
+    are separate experiments added after this guard was written.
+    """
     names = {p.stem for p in ARMS}
-    assert names == {
-        "soft_full_pairs",
-        "soft_topk3_pairs",
-        "topk3_unit_pairs",
-        "hard_topk3_pairs",
-        "hard_pairs_matched",
-        "generalist_replay",
-    }
+    canonical = set(DESIGN_TABLE_ARMS) | {"generalist_replay"}
+    assert canonical <= names, sorted(canonical - names)
 
 
 @pytest.mark.parametrize("path", ARMS, ids=[p.stem for p in ARMS])

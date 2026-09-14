@@ -1,0 +1,21 @@
+# MODEL FAMILY: the standard fully distributed soft arm (k = 7, share-weighted,
+# sigma_fraction 0.5) on Llama-3.2-1B-Instruct.
+#
+# Everything except the base model matches soft_full_pairs.yaml, so this is a
+# clean cross-family comparison against results/seven_axis_soft_full_pairs/seed0
+# (Qwen2.5-1.5B) as well as against the 3B and 7B Qwen scale runs.
+# `benchmarks` and `trait_space` are untouched, so the arm reuses trait-space
+# cache 3b42c68a8dd334c5 and forces no re-encode.
+includes:
+  - _closed_loop_base.yaml
+  - ../models/llama_3_2_1b_instruct.yaml
+
+output_dir: results/seven_axis_soft_full_llama1b/seed0
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

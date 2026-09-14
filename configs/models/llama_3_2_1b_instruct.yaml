@@ -1,0 +1,22 @@
+# Base language model + LoRA hyperparameters for the SFT trainer.
+#
+# Llama-3.2-1B-Instruct: 1.24B params, hidden 2048, 16 layers, vocab 128,256.
+# LoRA geometry and optimiser settings match qwen2_5_1_5b_instruct.yaml exactly
+# so a model comparison changes only the base model. The smaller vocab means
+# less logits memory than the Qwen family (the vocab-logits term dominates the
+# non-weight footprint at this batch and sequence length).
+sft:
+  base_model: meta-llama/Llama-3.2-1B-Instruct
+  max_seq_length: 1024
+  per_device_batch_size: 8
+  gradient_accumulation_steps: 2
+  num_train_epochs: 1.0
+  learning_rate: 2.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 1
+  cumulative_lora: true
+  seed: 0

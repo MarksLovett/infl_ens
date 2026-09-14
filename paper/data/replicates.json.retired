@@ -1,0 +1,27 @@
+{
+  "note": "Routing diagnostics for the completed replicate data splits, extracted from the training host. Each split varies both the run seed and the data split seed. Values are mean NLL on the held-out test pool at round 11.",
+  "splits": ["seed0", "dseed1", "dseed2"],
+  "pooled_nll": {"seed0": 2.0151, "dseed1": 1.9841, "dseed2": 1.9925},
+  "arms": {
+    "0.70": {
+      "seed0":  {"oracle": 1.8912, "learned": 1.9781, "pooled": 2.0151},
+      "dseed1": {"oracle": 1.8512, "learned": 1.9388, "pooled": 1.9841},
+      "dseed2": {"oracle": 1.8666, "learned": 1.9517, "pooled": 1.9925}
+    },
+    "0.50": {
+      "seed0":  {"oracle": 1.8857, "learned": 1.9459, "pooled": 2.0151},
+      "dseed1": {"oracle": 1.8466, "learned": 1.8977, "pooled": 1.9841},
+      "dseed2": {"oracle": 1.8552, "learned": 1.9084, "pooled": 1.9925}
+    },
+    "0.45": {
+      "seed0":  {"oracle": 1.8993, "learned": 1.9539, "pooled": 2.0151},
+      "dseed1": {"oracle": 1.8555, "learned": 1.9063, "pooled": 1.9841},
+      "dseed2": {"oracle": 1.8601, "learned": 1.9107, "pooled": 1.9925}
+    },
+    "0.20": {
+      "seed0":  {"oracle": 1.8830, "learned": 1.9234, "pooled": 2.0151},
+      "dseed1": {"oracle": 1.8549, "learned": 1.8995, "pooled": 1.9841},
+      "dseed2": {"oracle": 1.8645, "learned": 1.9102, "pooled": 1.9925}
+    }
+  }
+}

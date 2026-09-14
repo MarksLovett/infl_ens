@@ -1,0 +1,62 @@
+# Shared seven-pair theory equilibrium (N = 14 clones, sigma_fraction 0.50).
+#
+# Lifted verbatim from soft_theory_eq_seed0.yaml so every arm that includes
+# this file starts from the SAME equilibrium. That is what makes routing,
+# allocation and position-update comparisons one-factor.
+#
+# This is an equilibrium of the influencer game solved against the empirical
+# prompt cloud, NOT the lattice KDE, and NOT the 8000-step approximate solve
+# that `init_mode: theory_gradient_paired` runs. For N = 14 that approximate
+# solve does not converge -- it caps out at its step limit -- so its endpoint
+# depends on the step count. This one is converged.
+#
+#   sigma (absolute)      0.204885
+#   sigma_0* lattice      0.409770
+#   sigma_0* empirical    0.369053
+#   grad-norm at start    3.112e-09
+#   positions sha256_16   be21721a9ab5c9b2
+#
+# Underscore-prefixed: this is an include fragment, not a runnable arm, and
+# tests/test_config_fingerprint.py skips `_`-prefixed files by design.
+
+closed_loop:
+  init_mode: given
+  init_noise: 0.0
+  init_positions_source: >-
+    influencer-game equilibrium under the empirical prompt measure;
+    identical to seven_axis_theory_eq/seed0
+
+  # Clone 2i and 2i+1 share pair i's position. Co-location is a fixed point
+  # of the update, so the pairs stay merged without being forced.
+  init_positions:
+    clone-0: [0.4487929395, 0.3058468903, 0.4422183696, 0.2139622766, 0.1784189242, 0.8817263399, 0.4873681887]
+    clone-1: [0.4487929395, 0.3058468903, 0.4422183696, 0.2139622766, 0.1784189242, 0.8817263399, 0.4873681887]
+    clone-2: [0.2456187425, 0.8759990358, 0.6231543632, 0.5655192227, 0.5310583966, 0.4506202445, 0.2361941837]
+    clone-3: [0.2456187425, 0.8759990358, 0.6231543632, 0.5655192227, 0.5310583966, 0.4506202445, 0.2361941837]
+    clone-4: [0.8489977773, 0.4755101499, 0.4511701802, 0.5197666826, 0.3885359044, 0.2728255063, 0.2697286643]
+    clone-5: [0.8489977773, 0.4755101499, 0.4511701802, 0.5197666826, 0.3885359044, 0.2728255063, 0.2697286643]
+    clone-6: [0.3197037577, 0.2358387874, 0.4425039151, 0.6619255227, 0.7229742543, 0.4724425240, 0.3782577297]
+    clone-7: [0.3197037577, 0.2358387874, 0.4425039151, 0.6619255227, 0.7229742543, 0.4724425240, 0.3782577297]
+    clone-8: [0.3187945471, 0.4071695558, 0.4830482607, 0.2216694527, 0.2794049860, 0.1253712634, 0.8251148744]
+    clone-9: [0.3187945471, 0.4071695558, 0.4830482607, 0.2216694527, 0.2794049860, 0.1253712634, 0.8251148744]
+    clone-10: [0.6395491778, 0.6326997591, 0.3217751313, 0.6272518744, 0.7083169680, 0.6177418402, 0.6597355017]
+    clone-11: [0.6395491778, 0.6326997591, 0.3217751313, 0.6272518744, 0.7083169680, 0.6177418402, 0.6597355017]
+    clone-12: [0.6625026416, 0.6505388567, 0.7251431725, 0.6812474315, 0.6896606418, 0.6403524447, 0.6496044748]
+    clone-13: [0.6625026416, 0.6505388567, 0.7251431725, 0.6812474315, 0.6896606418, 0.6403524447, 0.6496044748]
+
+  # Pinned to match the co-location above, since no solve runs to infer it.
+  sft_merge_groups:
+    - train_as: pair-0
+      names: [clone-0, clone-1]
+    - train_as: pair-1
+      names: [clone-2, clone-3]
+    - train_as: pair-2
+      names: [clone-4, clone-5]
+    - train_as: pair-3
+      names: [clone-6, clone-7]
+    - train_as: pair-4
+      names: [clone-8, clone-9]
+    - train_as: pair-5
+      names: [clone-10, clone-11]
+    - train_as: pair-6
+      names: [clone-12, clone-13]

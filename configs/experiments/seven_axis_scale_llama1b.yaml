@@ -1,0 +1,58 @@
+# Model family at fixed routing: the standard fully distributed soft arm
+# (k = 7, share-weighted, sigma_fraction 0.5) on Llama-3.2-1B-Instruct.
+#
+# Compare against results/seven_axis_soft_full_pairs/seed0 (Qwen2.5-1.5B at the
+# same settings) to separate a model-FAMILY effect from the model-SIZE effect
+# the Qwen 1.5B/3B/7B ladder measures. Manifest, seed, batches and trait space
+# are shared, so the round batches are the same 17,976 unique prompts.
+#
+# The generalist is trained on Llama, not reused from the Qwen work: pooled_nll
+# must come from the same base model as the specialists it is scored against.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_scale_llama1b.yaml
+name: seven_axis_scale_llama1b
+results_dir: results/seven_axis_scale_llama1b
+figures_dir: figures/seven_axis_scale_llama1b
+
+arms:
+  - name: soft_full_llama1b
+    label: "Soft k=7 wtd (Llama 1B)"
+    title: "Fully distributed soft, Llama-3.2-1B base"
+    role: specialist
+    config: ../arms/soft_full_pairs_llama1b.yaml
+  - name: generalist
+    label: "Pooled generalist (Llama 1B)"
+    title: "Pooled generalist, Llama-3.2-1B base"
+    role: generalist
+    config: ../arms/generalist_replay_llama1b.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - oracle_routing
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+  arms: [soft_full_llama1b]
+  output_root: results/_smoke_llama1b
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

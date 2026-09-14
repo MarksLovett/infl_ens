@@ -1,0 +1,27 @@
+# Pooled GENERALIST for data-split seed 6.
+#
+# One generalist serves every sigma at this split: all arms sharing a manifest
+# draw identical round batches, so replaying any one history yields a baseline
+# data-matched to all of them. It must NOT be shared across splits -- a
+# different split means a different test pool.
+#
+# The agent name must stay `pooled-baseline`: the route-then-score evaluator
+# loads it from <baseline_run_dir>/agents/pooled-baseline/round-NN.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: baseline_replay
+seed: 6
+history_path: results/seven_axis_sigma07_full/dseed6/history.json
+output_dir: results/seven_axis_generalist_dseed6/seed0
+
+data_split:
+  seed: 6
+  manifest: data/splits/seven_axis_soft_dseed6.json
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null

@@ -1,0 +1,74 @@
+# Pair-count ablation at seed 0: does 7 pairs beat 2?
+#
+# One factor moves -- the number of co-located routing pairs. Both specialist
+# arms are fully dense soft routing (soft_top_k == n_pairs) at
+# sigma_fraction 0.50 on the identical seed-0 split, so they are scored on the
+# same test pool and differ only in pair count.
+#
+#   arm         pairs  clones  soft_top_k  sigma      run dir
+#   2pair       2      4       2           0.174119   results/seven_axis_2pair_sigma05/seed0
+#   7pair       7      14      7           0.204885   results/seven_axis_soft_full_pairs/seed0
+#
+# sigma is FRACTION-matched, not absolute-matched: sigma_0* is computed from N,
+# so the same fraction 0.50 puts each arm at the same relative depth below its
+# own bifurcation threshold. See the arm file for the arithmetic.
+#
+# ONLY THE 2-PAIR ARM TRAINS. The 7-pair arm and the pooled generalist are both
+# already complete, so `train` skips them and they are folded into the
+# comparison as-is. The generalist stays data-matched at either pair count:
+# round batches come from the manifest and data_split.seed (unchanged), and
+# under fully dense soft routing the pooled per-round batch is the whole round
+# batch regardless of how many pairs it is shared out to.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_2pair_ablation.yaml
+name: seven_axis_2pair_ablation
+results_dir: results/seven_axis_2pair_ablation
+figures_dir: figures/seven_axis_2pair_ablation
+
+arms:
+  - name: 2pair
+    label: "2 pairs"
+    title: "Fully distributed, 2 pairs (4 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_2pair_sigma05_seed0.yaml
+  - name: 7pair
+    label: "7 pairs"
+    title: "Fully distributed, 7 pairs (14 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_full_pairs.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing seed-0 replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+  arms: [2pair]
+  output_root: results/_smoke_2pair
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

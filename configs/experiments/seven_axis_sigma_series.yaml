@@ -1,0 +1,121 @@
+# Sigma series: the complete competitive-reach sweep, five points.
+#
+# Supersedes `seven_axis_sigma_sweep.yaml` by adding the two arms that were
+# not in it -- sigma_fraction 0.5 (already trained as `soft_full` in
+# seven_axis_3arm) and 0.05 -- so one cross-arm analysis covers the whole
+# series. `train` skips every arm whose run directory is already complete,
+# so re-running this only trains what is missing.
+#
+#   arm        sigma_fraction   sigma      run dir
+#   sigma07    0.70             0.28684    results/seven_axis_sigma07_full/seed0
+#   sigma06    0.60             0.24586    results/seven_axis_sigma06_full/seed0
+#   sigma055   0.55             0.22537    results/seven_axis_sigma055_full/seed0
+#   sigma05    0.50             0.20489    results/seven_axis_soft_full_pairs/seed0
+#   sigma045   0.45             0.18440    results/seven_axis_sigma045_full/seed0
+#   sigma04    0.40             0.16391    results/seven_axis_sigma04_full/seed0
+#   sigma03    0.30             0.12293    results/seven_axis_sigma03_full/seed0
+#   sigma02    0.20             0.08195    results/seven_axis_sigma02_full/seed0
+#   sigma01    0.10             0.04098    results/seven_axis_sigma01_full/seed0
+#   sigma005   0.05             0.02049    results/seven_axis_sigma005_full/seed0
+#
+# sigma_0* = 0.40977 (L = 7, N = 14 clones). Every arm sits below it, so all
+# five spread; the series varies how hard.
+#
+# One shared generalist serves the whole series: every arm draws identical
+# round batches from the same manifest and seed (verified 12/12 rounds,
+# Jaccard 1.0000), so the pooled column is directly comparable across arms
+# AND against the seven_axis_3arm results.
+name: seven_axis_sigma_series
+results_dir: results/seven_axis_sigma_series
+figures_dir: figures/seven_axis_sigma_series
+
+arms:
+  - name: sigma07
+    label: "sigma 0.70"
+    title: "Fully distributed, sigma_fraction 0.70"
+    role: specialist
+    config: ../arms/soft_full_sigma07.yaml
+  - name: sigma06
+    label: "sigma 0.60"
+    title: "Fully distributed, sigma_fraction 0.60"
+    role: specialist
+    config: ../arms/soft_full_sigma06.yaml
+  - name: sigma055
+    label: "sigma 0.55"
+    title: "Fully distributed, sigma_fraction 0.55"
+    role: specialist
+    config: ../arms/soft_full_sigma055.yaml
+  - name: sigma05
+    label: "sigma 0.50"
+    title: "Fully distributed, sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_full_pairs.yaml
+  - name: sigma045
+    label: "sigma 0.45"
+    title: "Fully distributed, sigma_fraction 0.45"
+    role: specialist
+    config: ../arms/soft_full_sigma045.yaml
+  - name: sigma04
+    label: "sigma 0.40"
+    title: "Fully distributed, sigma_fraction 0.40"
+    role: specialist
+    config: ../arms/soft_full_sigma04.yaml
+  - name: sigma03
+    label: "sigma 0.30"
+    title: "Fully distributed, sigma_fraction 0.30"
+    role: specialist
+    config: ../arms/soft_full_sigma03.yaml
+  - name: sigma02
+    label: "sigma 0.20"
+    title: "Fully distributed, sigma_fraction 0.20"
+    role: specialist
+    config: ../arms/soft_full_sigma02.yaml
+  - name: sigma01
+    label: "sigma 0.10"
+    title: "Fully distributed, sigma_fraction 0.10"
+    role: specialist
+    config: ../arms/soft_full_sigma01.yaml
+  - name: sigma005
+    label: "sigma 0.05"
+    title: "Fully distributed, sigma_fraction 0.05"
+    role: specialist
+    config: ../arms/soft_full_sigma005.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (shared with seven_axis_3arm)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - benchmark_space            # KDE resource density B(b) per axis pair, with prompt scatter
+    - oracle_routing
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+    - tests/test_routing_eval.py
+  arms: [sigma055, sigma02]
+  output_root: results/_smoke_sigma_ext
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

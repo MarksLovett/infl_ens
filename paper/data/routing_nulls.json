@@ -1,0 +1,604 @@
+{
+  "seven_axis_2pair_sigma05": {
+    "label": "2 pairs, naive",
+    "pairs": 2,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 2.0162591864339956,
+        "mixture": 1.9990421108080574,
+        "gain_expected": -0.0010914281159077888,
+        "gain_mixture": 0.016125647510030428
+      },
+      "uniform-mix": {
+        "expected": 2.06864109890231,
+        "mixture": 1.9999016915829109,
+        "gain_expected": -0.05347334058422204,
+        "gain_mixture": 0.015266066735176942
+      },
+      "game-hard": {
+        "expected": 2.014234461790249,
+        "mixture": 2.014234461790249,
+        "gain_expected": 0.0009332965278390226,
+        "gain_mixture": 0.0009332965278390226
+      },
+      "oracle": {
+        "expected": 1.9806524904668488,
+        "mixture": 1.9806524904668488,
+        "gain_expected": 0.03451526785123904,
+        "gain_mixture": 0.03451526785123904
+      },
+      "shuffled": {
+        "expected": 2.1210230113706245,
+        "mixture": 2.067491329608715,
+        "gain_expected": -0.10585525305253674,
+        "gain_mixture": -0.05232357129062715
+      },
+      "random-hard": {
+        "expected": 2.068676750063373,
+        "mixture": 2.068676750063373,
+        "gain_expected": -0.05350899174528534,
+        "gain_mixture": -0.05350899174528534
+      }
+    }
+  },
+  "seven_axis_theory_eq_2pair": {
+    "label": "2 pairs, equilibrium",
+    "pairs": 2,
+    "pooled": 2.014995598494534,
+    "policies": {
+      "game": {
+        "expected": 1.9902905867821052,
+        "mixture": 1.970992191559587,
+        "gain_expected": 0.02470501171242856,
+        "gain_mixture": 0.044003406934946865
+      },
+      "uniform-mix": {
+        "expected": 2.124349116185968,
+        "mixture": 1.9821967772923677,
+        "gain_expected": -0.1093535176914342,
+        "gain_mixture": 0.03279882120216615
+      },
+      "game-hard": {
+        "expected": 1.9850457301952917,
+        "mixture": 1.9850457301952917,
+        "gain_expected": 0.029949868299242066,
+        "gain_mixture": 0.029949868299242066
+      },
+      "oracle": {
+        "expected": 1.960548407605581,
+        "mixture": 1.960548407605581,
+        "gain_expected": 0.05444719088895278,
+        "gain_mixture": 0.05444719088895278
+      },
+      "shuffled": {
+        "expected": 2.258407645589831,
+        "mixture": 2.1112742616264795,
+        "gain_expected": -0.24341204709529718,
+        "gain_mixture": -0.09627866313194566
+      },
+      "random-hard": {
+        "expected": 2.124296690312417,
+        "mixture": 2.124296690312417,
+        "gain_expected": -0.10930109181788339,
+        "gain_mixture": -0.10930109181788339
+      }
+    }
+  },
+  "seven_axis_3pair_sigma05": {
+    "label": "3 pairs, naive",
+    "pairs": 3,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9979037112588796,
+        "mixture": 1.9720479263864896,
+        "gain_expected": 0.017264047059208254,
+        "gain_mixture": 0.043119831931598185
+      },
+      "uniform-mix": {
+        "expected": 2.134407945279896,
+        "mixture": 1.9864232693928283,
+        "gain_expected": -0.11924018696180827,
+        "gain_mixture": 0.028744488925259493
+      },
+      "game-hard": {
+        "expected": 1.9918485616927128,
+        "mixture": 1.9918485616927128,
+        "gain_expected": 0.02331919662537496,
+        "gain_mixture": 0.02331919662537496
+      },
+      "oracle": {
+        "expected": 1.9538634489755995,
+        "mixture": 1.9538634489755995,
+        "gain_expected": 0.06130430934248832,
+        "gain_mixture": 0.06130430934248832
+      },
+      "shuffled": {
+        "expected": 2.1617087920840996,
+        "mixture": 2.0531037937673964,
+        "gain_expected": -0.1465410337660118,
+        "gain_mixture": -0.03793603544930857
+      },
+      "random-hard": {
+        "expected": 2.134239936765382,
+        "mixture": 2.134239936765382,
+        "gain_expected": -0.11907217844729434,
+        "gain_mixture": -0.11907217844729434
+      }
+    }
+  },
+  "seven_axis_theory_eq_3pair": {
+    "label": "3 pairs, equilibrium",
+    "pairs": 3,
+    "pooled": 2.014995598494534,
+    "policies": {
+      "game": {
+        "expected": 1.9847158688862885,
+        "mixture": 1.961781289650649,
+        "gain_expected": 0.03027972960824532,
+        "gain_mixture": 0.05321430884388478
+      },
+      "uniform-mix": {
+        "expected": 2.221356742534661,
+        "mixture": 1.9803973280860634,
+        "gain_expected": -0.20636114404012718,
+        "gain_mixture": 0.03459827040847041
+      },
+      "game-hard": {
+        "expected": 1.9757216979410046,
+        "mixture": 1.9757216979410046,
+        "gain_expected": 0.039273900553529195,
+        "gain_mixture": 0.039273900553529195
+      },
+      "oracle": {
+        "expected": 1.9464469510103488,
+        "mixture": 1.9464469510103488,
+        "gain_expected": 0.06854864748418499,
+        "gain_mixture": 0.06854864748418499
+      },
+      "shuffled": {
+        "expected": 2.2686849172643355,
+        "mixture": 2.062333732419294,
+        "gain_expected": -0.2536893187698017,
+        "gain_mixture": -0.04733813392476005
+      },
+      "random-hard": {
+        "expected": 2.2215267455172154,
+        "mixture": 2.2215267455172154,
+        "gain_expected": -0.2065311470226816,
+        "gain_mixture": -0.2065311470226816
+      }
+    }
+  },
+  "seven_axis_4pair_sigma05": {
+    "label": "4 pairs, naive",
+    "pairs": 4,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9879429961245114,
+        "mixture": 1.952943723489755,
+        "gain_expected": 0.02722476219357639,
+        "gain_mixture": 0.06222403482833272
+      },
+      "uniform-mix": {
+        "expected": 2.2175234796466534,
+        "mixture": 1.974838931049889,
+        "gain_expected": -0.2023557213285656,
+        "gain_mixture": 0.04032882726819875
+      },
+      "game-hard": {
+        "expected": 1.9774668018688835,
+        "mixture": 1.9774668018688835,
+        "gain_expected": 0.03770095644920435,
+        "gain_mixture": 0.03770095644920435
+      },
+      "oracle": {
+        "expected": 1.9324657996481551,
+        "mixture": 1.9324657996481551,
+        "gain_expected": 0.08270195866993268,
+        "gain_mixture": 0.08270195866993268
+      },
+      "shuffled": {
+        "expected": 2.22750523979979,
+        "mixture": 2.047660652162253,
+        "gain_expected": -0.21233748148170228,
+        "gain_mixture": -0.032492893844165316
+      },
+      "random-hard": {
+        "expected": 2.21710560321892,
+        "mixture": 2.21710560321892,
+        "gain_expected": -0.201937844900832,
+        "gain_mixture": -0.201937844900832
+      }
+    }
+  },
+  "seven_axis_theory_eq_4pair": {
+    "label": "4 pairs, equilibrium",
+    "pairs": 4,
+    "pooled": 2.014995598494534,
+    "policies": {
+      "game": {
+        "expected": 1.9514637333104858,
+        "mixture": 1.9281276202014601,
+        "gain_expected": 0.06353186518404796,
+        "gain_mixture": 0.08686797829307369
+      },
+      "uniform-mix": {
+        "expected": 2.383380026860204,
+        "mixture": 1.959976808532894,
+        "gain_expected": -0.3683844283656703,
+        "gain_mixture": 0.05501878996163989
+      },
+      "game-hard": {
+        "expected": 1.9422977012293907,
+        "mixture": 1.9422977012293907,
+        "gain_expected": 0.07269789726514309,
+        "gain_mixture": 0.07269789726514309
+      },
+      "oracle": {
+        "expected": 1.91475763995272,
+        "mixture": 1.91475763995272,
+        "gain_expected": 0.10023795854181383,
+        "gain_mixture": 0.10023795854181383
+      },
+      "shuffled": {
+        "expected": 2.402158996144975,
+        "mixture": 2.080154598563152,
+        "gain_expected": -0.38716339765044117,
+        "gain_mixture": -0.06515900006861841
+      },
+      "random-hard": {
+        "expected": 2.38337303606927,
+        "mixture": 2.38337303606927,
+        "gain_expected": -0.3683774375747362,
+        "gain_mixture": -0.3683774375747362
+      }
+    }
+  },
+  "seven_axis_5pair_sigma05": {
+    "label": "5 pairs, naive",
+    "pairs": 5,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.939804107887629,
+        "mixture": 1.9073545673974373,
+        "gain_expected": 0.0753636504304589,
+        "gain_mixture": 0.10781319092065056
+      },
+      "uniform-mix": {
+        "expected": 2.3990420612408525,
+        "mixture": 1.9470777067379363,
+        "gain_expected": -0.3838743029227647,
+        "gain_mixture": 0.06809005158015147
+      },
+      "game-hard": {
+        "expected": 1.9267737843165889,
+        "mixture": 1.9267737843165889,
+        "gain_expected": 0.08839397400149895,
+        "gain_mixture": 0.08839397400149895
+      },
+      "oracle": {
+        "expected": 1.894221413978465,
+        "mixture": 1.894221413978465,
+        "gain_expected": 0.12094634433962281,
+        "gain_mixture": 0.12094634433962281
+      },
+      "shuffled": {
+        "expected": 2.402901203706006,
+        "mixture": 2.0671908568810564,
+        "gain_expected": -0.387733445387918,
+        "gain_mixture": -0.052023098562968606
+      },
+      "random-hard": {
+        "expected": 2.3994627259560017,
+        "mixture": 2.3994627259560017,
+        "gain_expected": -0.38429496763791393,
+        "gain_mixture": -0.38429496763791393
+      }
+    }
+  },
+  "seven_axis_theory_eq_5pair": {
+    "label": "5 pairs, equilibrium",
+    "pairs": 5,
+    "pooled": 2.014995598494534,
+    "policies": {
+      "game": {
+        "expected": 1.9450450372109185,
+        "mixture": 1.9162869164004097,
+        "gain_expected": 0.06995056128361532,
+        "gain_mixture": 0.09870868209412409
+      },
+      "uniform-mix": {
+        "expected": 2.407532717685098,
+        "mixture": 1.9543287319735143,
+        "gain_expected": -0.392537119190564,
+        "gain_mixture": 0.06066686652101949
+      },
+      "game-hard": {
+        "expected": 1.9330675625923008,
+        "mixture": 1.9330675625923008,
+        "gain_expected": 0.08192803590223297,
+        "gain_mixture": 0.08192803590223297
+      },
+      "oracle": {
+        "expected": 1.90163898821168,
+        "mixture": 1.90163898821168,
+        "gain_expected": 0.11335661028285382,
+        "gain_mixture": 0.11335661028285382
+      },
+      "shuffled": {
+        "expected": 2.41141916878152,
+        "mixture": 2.079376001072551,
+        "gain_expected": -0.39642357028698605,
+        "gain_mixture": -0.06438040257801703
+      },
+      "random-hard": {
+        "expected": 2.4080018698864354,
+        "mixture": 2.4080018698864354,
+        "gain_expected": -0.3930062713919016,
+        "gain_mixture": -0.3930062713919016
+      }
+    }
+  },
+  "seven_axis_6pair_sigma05": {
+    "label": "6 pairs, naive",
+    "pairs": 6,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9333468675991532,
+        "mixture": 1.9015976591302441,
+        "gain_expected": 0.08182089071893461,
+        "gain_mixture": 0.11357009918784366
+      },
+      "uniform-mix": {
+        "expected": 2.456282400688306,
+        "mixture": 1.9462378301076082,
+        "gain_expected": -0.44111464237021814,
+        "gain_mixture": 0.06892992821047961
+      },
+      "game-hard": {
+        "expected": 1.9208764170574524,
+        "mixture": 1.9208764170574524,
+        "gain_expected": 0.09429134126063543,
+        "gain_mixture": 0.09429134126063543
+      },
+      "oracle": {
+        "expected": 1.8867308257265583,
+        "mixture": 1.8867308257265583,
+        "gain_expected": 0.12843693259152955,
+        "gain_mixture": 0.12843693259152955
+      },
+      "shuffled": {
+        "expected": 2.456269497789899,
+        "mixture": 2.084381891957901,
+        "gain_expected": -0.4411017394718111,
+        "gain_mixture": -0.0692141336398131
+      },
+      "random-hard": {
+        "expected": 2.4568879759170823,
+        "mixture": 2.4568879759170823,
+        "gain_expected": -0.4417202175989945,
+        "gain_mixture": -0.4417202175989945
+      }
+    }
+  },
+  "seven_axis_theory_eq_6pair": {
+    "label": "6 pairs, equilibrium",
+    "pairs": 6,
+    "pooled": 2.014995598494534,
+    "policies": {
+      "game": {
+        "expected": 1.9320018712190812,
+        "mixture": 1.9005395915560646,
+        "gain_expected": 0.08299372727545262,
+        "gain_mixture": 0.11445600693846925
+      },
+      "uniform-mix": {
+        "expected": 2.455714371569719,
+        "mixture": 1.9451978940258294,
+        "gain_expected": -0.44071877307518514,
+        "gain_mixture": 0.06979770446870437
+      },
+      "game-hard": {
+        "expected": 1.9195515527188767,
+        "mixture": 1.9195515527188767,
+        "gain_expected": 0.09544404577565713,
+        "gain_mixture": 0.09544404577565713
+      },
+      "oracle": {
+        "expected": 1.8856789029437049,
+        "mixture": 1.8856789029437049,
+        "gain_expected": 0.12931669555082892,
+        "gain_mixture": 0.12931669555082892
+      },
+      "shuffled": {
+        "expected": 2.480126201099023,
+        "mixture": 2.0913110656484677,
+        "gain_expected": -0.46513060260448924,
+        "gain_mixture": -0.07631546715393389
+      },
+      "random-hard": {
+        "expected": 2.455596354051865,
+        "mixture": 2.455596354051865,
+        "gain_expected": -0.44060075555733125,
+        "gain_mixture": -0.44060075555733125
+      }
+    }
+  },
+  "seven_axis_soft_full_pairs": {
+    "label": "7 pairs, naive",
+    "pairs": 7,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9458916745645012,
+        "mixture": 1.9056770065431439,
+        "gain_expected": 0.06927608375358663,
+        "gain_mixture": 0.10949075177494394
+      },
+      "uniform-mix": {
+        "expected": 2.4294809857030284,
+        "mixture": 1.94904809571554,
+        "gain_expected": -0.4143132273849406,
+        "gain_mixture": 0.06611966260254776
+      },
+      "game-hard": {
+        "expected": 1.9335288725671178,
+        "mixture": 1.9335288725671178,
+        "gain_expected": 0.08163888575097,
+        "gain_mixture": 0.08163888575097
+      },
+      "oracle": {
+        "expected": 1.8857193275684403,
+        "mixture": 1.8857193275684403,
+        "gain_expected": 0.12944843074964751,
+        "gain_mixture": 0.12944843074964751
+      },
+      "shuffled": {
+        "expected": 2.4266477906090818,
+        "mixture": 2.0822748137781275,
+        "gain_expected": -0.41148003229099395,
+        "gain_mixture": -0.0671070554600397
+      },
+      "random-hard": {
+        "expected": 2.4295617530485085,
+        "mixture": 2.4295617530485085,
+        "gain_expected": -0.4143939947304207,
+        "gain_mixture": -0.4143939947304207
+      }
+    }
+  },
+  "seven_axis_theory_eq": {
+    "label": "7 pairs, equilibrium",
+    "pairs": 7,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9426131105305544,
+        "mixture": 1.9059358708441605,
+        "gain_expected": 0.0725546477875334,
+        "gain_mixture": 0.10923188747392731
+      },
+      "uniform-mix": {
+        "expected": 2.448444089219982,
+        "mixture": 1.949876213726596,
+        "gain_expected": -0.4332763309018941,
+        "gain_mixture": 0.06529154459149189
+      },
+      "game-hard": {
+        "expected": 1.9298473473180435,
+        "mixture": 1.9298473473180435,
+        "gain_expected": 0.08532041100004428,
+        "gain_mixture": 0.08532041100004428
+      },
+      "oracle": {
+        "expected": 1.8861577560863383,
+        "mixture": 1.8861577560863383,
+        "gain_expected": 0.12901000223174952,
+        "gain_mixture": 0.12901000223174952
+      },
+      "shuffled": {
+        "expected": 2.45243021763365,
+        "mixture": 2.081919994232374,
+        "gain_expected": -0.43726245931556207,
+        "gain_mixture": -0.06675223591428603
+      },
+      "random-hard": {
+        "expected": 2.4485986585353046,
+        "mixture": 2.4485986585353046,
+        "gain_expected": -0.43343090021721675,
+        "gain_mixture": -0.43343090021721675
+      }
+    }
+  },
+  "seven_axis_9pair_sigma05": {
+    "label": "9 pairs, naive",
+    "pairs": 9,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9370509728975718,
+        "mixture": 1.8947835188851099,
+        "gain_expected": 0.07811678542051603,
+        "gain_mixture": 0.12038423943297794
+      },
+      "uniform-mix": {
+        "expected": 2.4548307101286824,
+        "mixture": 1.94426353717395,
+        "gain_expected": -0.43966295181059456,
+        "gain_mixture": 0.07090422114413775
+      },
+      "game-hard": {
+        "expected": 1.9206422211484417,
+        "mixture": 1.9206422211484417,
+        "gain_expected": 0.09452553716964607,
+        "gain_mixture": 0.09452553716964607
+      },
+      "oracle": {
+        "expected": 1.8735145995318838,
+        "mixture": 1.8735145995318838,
+        "gain_expected": 0.141653158786204,
+        "gain_mixture": 0.141653158786204
+      },
+      "shuffled": {
+        "expected": 2.4510898958614296,
+        "mixture": 2.075181371755849,
+        "gain_expected": -0.43592213754334175,
+        "gain_mixture": -0.060013613437761126
+      },
+      "random-hard": {
+        "expected": 2.4546921129921206,
+        "mixture": 2.4546921129921206,
+        "gain_expected": -0.43952435467403284,
+        "gain_mixture": -0.43952435467403284
+      }
+    }
+  },
+  "seven_axis_theory_eq_9pair": {
+    "label": "9 pairs, equilibrium",
+    "pairs": 9,
+    "pooled": 2.015167758318088,
+    "policies": {
+      "game": {
+        "expected": 1.9335476341970734,
+        "mixture": 1.8923960842755712,
+        "gain_expected": 0.08162012412101438,
+        "gain_mixture": 0.12277167404251665
+      },
+      "uniform-mix": {
+        "expected": 2.50242286334883,
+        "mixture": 1.942035810648029,
+        "gain_expected": -0.4872551050307421,
+        "gain_mixture": 0.0731319476700587
+      },
+      "game-hard": {
+        "expected": 1.9193723110521181,
+        "mixture": 1.9193723110521181,
+        "gain_expected": 0.09579544726596967,
+        "gain_mixture": 0.09579544726596967
+      },
+      "oracle": {
+        "expected": 1.8704837858939671,
+        "mixture": 1.8704837858939671,
+        "gain_expected": 0.14468397242412068,
+        "gain_mixture": 0.14468397242412068
+      },
+      "shuffled": {
+        "expected": 2.506398220525428,
+        "mixture": 2.087580256780195,
+        "gain_expected": -0.49123046220734023,
+        "gain_mixture": -0.07241249846210707
+      },
+      "random-hard": {
+        "expected": 2.5022267612866944,
+        "mixture": 2.5022267612866944,
+        "gain_expected": -0.4870590029686066,
+        "gain_mixture": -0.4870590029686066
+      }
+    }
+  }
+}

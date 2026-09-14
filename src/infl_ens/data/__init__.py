@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from infl_ens.data import benchmarks
 from infl_ens.data.encoders import HuggingFaceEncoder
+from infl_ens.data.splits import flatten_partition_records
 from infl_ens.data.trait_normalize import QuantileNormalizer
 from infl_ens.data.trait_space import (
     TraitSpace,
@@ -35,5 +36,6 @@ __all__ = [
     "TraitSpace",
     "benchmarks",
     "build_trait_space",
+    "flatten_partition_records",
     "position_from_corpus",
 ]

@@ -1,0 +1,25 @@
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: partition_replay
+seed: 0
+history_path: results/seven_axis_theory_eq_soft_topk3/seed0/history.json
+output_dir: results/seven_axis_experts_label/seed0
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+partition_replay:
+  mode: benchmark
+  n_experts: 7
+  seed: 0
+  n_init: 20
+  max_iter: 300
+  tol: 1.0e-6
+
+eval:
+  partitions: [val, test]
+  rounds: final
+  max_eval_records: 1000
+  forward_batch_size: 8

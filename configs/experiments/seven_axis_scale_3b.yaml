@@ -1,0 +1,58 @@
+# Model scale at fixed routing: the standard fully distributed soft arm
+# (k = 7, share-weighted, sigma_fraction 0.5) on a 3B base.
+#
+# Compare against results/seven_axis_soft_full_pairs/seed0, the identical arm
+# at 1.5B. Only the base model changes; manifest, seed, batches and trait
+# space are shared, so the round batches are the same 17,976 unique prompts.
+#
+# The generalist is trained at THIS scale, not reused from the 1.5B work --
+# pooled_nll must come from the same base model as the specialists it is
+# scored against, or the Learned - Pooled column is meaningless.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_scale_3b.yaml
+name: seven_axis_scale_3b
+results_dir: results/seven_axis_scale_3b
+figures_dir: figures/seven_axis_scale_3b
+
+arms:
+  - name: soft_full_3b
+    label: "Soft k=7 wtd (3B)"
+    title: "Fully distributed soft, 3B base"
+    role: specialist
+    config: ../arms/soft_full_pairs_3b.yaml
+  - name: generalist
+    label: "Pooled generalist (3B)"
+    title: "Pooled generalist, 3B base"
+    role: generalist
+    config: ../arms/generalist_replay_3b.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - oracle_routing
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+  arms: [soft_full_3b]
+  output_root: results/_smoke_scale_3b
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

@@ -399,6 +399,8 @@ def soft_pair_assignments(
     *,
     select: str = "topk",
     rng: Optional[np.random.Generator] = None,
+    round_idx: int = 0,
+    capacity_factor: float = 3.0,
 ) -> tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]:
     """Top-``k`` soft routing weights at the merge-group level (training only).
 
@@ -437,6 +439,10 @@ def soft_pair_assignments(
     :param rng: Generator for ``select='sample'``; required in that mode so
         the draw is reproducible from the run seed.
     :type rng: numpy.random.Generator | None
+    :param round_idx: Round used by capacity-balanced selection modes.
+    :type round_idx: int
+    :param capacity_factor: Total Expert-Choice selections per prompt.
+    :type capacity_factor: float
     :returns: ``(W, idx, weights)`` where ``W`` is the ``(P, M)`` weight
         matrix, ``idx[p]`` the batch positions this group trains on and
         ``weights[p]`` the aligned per-example weights.
@@ -445,13 +451,16 @@ def soft_pair_assignments(
         requested without an ``rng``.
     """
     from infl_ens.inflgame.router.allocation import (
+        balanced_assignment_mask,
+        expert_choice_mask,
         group_allocation_weights,
         sampled_top_k_mask,
         top_k_allocation_weights,
     )
 
-    if select not in ("topk", "sample"):
-        raise ValueError(f"select must be 'topk' or 'sample', got {select!r}")
+    valid = ("topk", "sample", "balanced_assignment", "expert_choice")
+    if select not in valid:
+        raise ValueError(f"select must be one of {valid}, got {select!r}")
     G_group = group_allocation_weights(G_clone, group_index, n_groups)
     if select == "sample":
         if rng is None:
@@ -461,6 +470,14 @@ def soft_pair_assignments(
         col = masked.sum(axis=0, keepdims=True)
         safe = col > 0.0
         W = np.where(safe, masked / np.where(safe, col, 1.0), 0.0)
+    elif select == "balanced_assignment":
+        W = balanced_assignment_mask(G_group, round_idx=round_idx).astype(float)
+    elif select == "expert_choice":
+        W = expert_choice_mask(
+            G_group,
+            capacity_factor=capacity_factor,
+            round_idx=round_idx,
+        ).astype(float)
     else:
         W = top_k_allocation_weights(G_group, soft_top_k)
     idx = [np.flatnonzero(W[p] > 0.0) for p in range(n_groups)]

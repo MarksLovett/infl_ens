@@ -1,0 +1,67 @@
+# Routing ladder at the theory equilibrium: Hard k=1 (one categorical draw). Seed 0.
+#
+# Starts from the SAME equilibrium as soft_theory_eq_seed0.yaml -- the
+# position block below is lifted from it verbatim, not re-solved. The
+# theory solve is gradient ascent on the allocation and never consults
+# the routing rule, and all five ladder arms are N = 14 at the same
+# sigma, so one equilibrium serves them all. Only the routing design
+# moves, which is what makes this a one-factor comparison against
+# the corresponding arm of seven_axis_3arm.
+#
+#   sigma (absolute)      0.204885
+#   grad-norm at start    3.112e-09
+#   pairs                 7  (14 clones, co-located)
+#
+# NOTE: hard routing's centroid uses (1-G_i) on routed prompts; the
+# sampling step supplies the other G_i factor, so in expectation it
+# is the same estimator and the equilibrium is unchanged. It is
+# higher variance, so expect more drift from the start than the
+# soft arms showed (0.013 mean L2 over twelve rounds).
+
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_theory_eq_hard_matched/seed0
+
+sigma_fraction: 0.50
+
+closed_loop:
+  routing_mode: hard
+  init_mode: given
+  init_noise: 0.0
+  init_positions_source: >-
+    influencer-game equilibrium under the empirical prompt measure;
+    identical to seven_axis_theory_eq/seed0
+
+  init_positions:
+    clone-0: [0.4487929395, 0.3058468903, 0.4422183696, 0.2139622766, 0.1784189242, 0.8817263399, 0.4873681887]
+    clone-1: [0.4487929395, 0.3058468903, 0.4422183696, 0.2139622766, 0.1784189242, 0.8817263399, 0.4873681887]
+    clone-2: [0.2456187425, 0.8759990358, 0.6231543632, 0.5655192227, 0.5310583966, 0.4506202445, 0.2361941837]
+    clone-3: [0.2456187425, 0.8759990358, 0.6231543632, 0.5655192227, 0.5310583966, 0.4506202445, 0.2361941837]
+    clone-4: [0.8489977773, 0.4755101499, 0.4511701802, 0.5197666826, 0.3885359044, 0.2728255063, 0.2697286643]
+    clone-5: [0.8489977773, 0.4755101499, 0.4511701802, 0.5197666826, 0.3885359044, 0.2728255063, 0.2697286643]
+    clone-6: [0.3197037577, 0.2358387874, 0.4425039151, 0.6619255227, 0.7229742543, 0.4724425240, 0.3782577297]
+    clone-7: [0.3197037577, 0.2358387874, 0.4425039151, 0.6619255227, 0.7229742543, 0.4724425240, 0.3782577297]
+    clone-8: [0.3187945471, 0.4071695558, 0.4830482607, 0.2216694527, 0.2794049860, 0.1253712634, 0.8251148744]
+    clone-9: [0.3187945471, 0.4071695558, 0.4830482607, 0.2216694527, 0.2794049860, 0.1253712634, 0.8251148744]
+    clone-10: [0.6395491778, 0.6326997591, 0.3217751313, 0.6272518744, 0.7083169680, 0.6177418402, 0.6597355017]
+    clone-11: [0.6395491778, 0.6326997591, 0.3217751313, 0.6272518744, 0.7083169680, 0.6177418402, 0.6597355017]
+    clone-12: [0.6625026416, 0.6505388567, 0.7251431725, 0.6812474315, 0.6896606418, 0.6403524447, 0.6496044748]
+    clone-13: [0.6625026416, 0.6505388567, 0.7251431725, 0.6812474315, 0.6896606418, 0.6403524447, 0.6496044748]
+
+  # Pinned to match the co-location above, since no solve runs to infer it.
+  sft_merge_groups:
+    - train_as: pair-0
+      names: [clone-0, clone-1]
+    - train_as: pair-1
+      names: [clone-2, clone-3]
+    - train_as: pair-2
+      names: [clone-4, clone-5]
+    - train_as: pair-3
+      names: [clone-6, clone-7]
+    - train_as: pair-4
+      names: [clone-8, clone-9]
+    - train_as: pair-5
+      names: [clone-10, clone-11]
+    - train_as: pair-6
+      names: [clone-12, clone-13]

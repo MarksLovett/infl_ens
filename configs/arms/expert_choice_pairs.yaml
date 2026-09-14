@@ -1,0 +1,12 @@
+# Prompt-level Expert-Choice allocation ablation (not token-level Expert Choice).
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_expert_choice_pairs/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 3
+  soft_loss: unit
+  soft_select: expert_choice
+  capacity_factor: 3.0

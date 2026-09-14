@@ -1,0 +1,38 @@
+{
+  "figure": "distance from trained positions to each theory solve",
+  "generated": "2026-09-11T20:22:23+00:00",
+  "matched_by": "Hungarian on final positions",
+  "rows": {
+    "2 pairs": {
+      "mean_l2": 0.2898,
+      "mean_l2_true": 0.1798,
+      "radius_final": 0.2532,
+      "theory_gap": 0.4419
+    },
+    "5 pairs": {
+      "mean_l2": 0.2403,
+      "mean_l2_true": 0.1491,
+      "radius_final": 0.4626,
+      "theory_gap": 0.3411
+    },
+    "reach 0.05": {
+      "mean_l2": 0.3955,
+      "mean_l2_true": 0.0753,
+      "radius_final": 0.5644,
+      "theory_gap": 0.421
+    },
+    "reach 0.50": {
+      "mean_l2": 0.2533,
+      "mean_l2_true": 0.0383,
+      "radius_final": 0.5175,
+      "theory_gap": 0.2746
+    },
+    "reach 0.70": {
+      "mean_l2": 0.2701,
+      "mean_l2_true": 0.1233,
+      "radius_final": 0.3569,
+      "theory_gap": 0.3507
+    }
+  },
+  "seed": "seed0"
+}

@@ -4,6 +4,9 @@
 - ``baseline_replay``: :func:`run_baseline_replay`, one pooled cumulative
   LoRA trained on the union of the per-round routed batches logged in an
   existing ``history.json`` (see :mod:`infl_ens.training.baseline_replay`).
+- ``partition_replay``: deterministic benchmark, k-means, or random shards.
+- ``mixture_lora``: jointly trained dense or trait-gated LoRA components.
+- ``adapter_merge``: validation-selected router-free delta merging.
 """
 
 from __future__ import annotations
@@ -14,7 +17,7 @@ from typing import Any, Callable
 
 from infl_ens.config import resolve_sft_block
 from infl_ens.training.closed_loop import run_closed_loop
-from infl_ens.training.setup import load_splits, make_trait_space
+from infl_ens.training.setup import load_splits, make_trait_space, write_resolved_config
 
 
 def run_baseline_replay(cfg: dict[str, Any]) -> int:
@@ -58,6 +61,8 @@ def run_baseline_replay(cfg: dict[str, Any]) -> int:
 
     out_dir = Path(cfg["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
+    cfg["sft"] = dict(sft_cfg_dict)
+    write_resolved_config(cfg, out_dir / "resolved_config.yaml")
     summary_path = out_dir / "replay_summary.json"
     history_path = out_dir / "history.json"
     baseline_history = [
@@ -69,6 +74,10 @@ def run_baseline_replay(cfg: dict[str, Any]) -> int:
             "n_train": s["n_train"],
             "cumulative_n_train": s["cumulative_n_train"],
             "output_dir": s["output_dir"],
+            "batch_prompts": s.get("batch_prompts", []),
+            "batch_responses": s.get("batch_responses", []),
+            "batch_record_ids": s.get("batch_record_ids"),
+            "resource_accounting": s.get("resource_accounting", {}),
         }
         for s in summaries
     ]
@@ -93,11 +102,60 @@ def run_baseline_replay(cfg: dict[str, Any]) -> int:
     return 0
 
 
+def run_partition_replay(cfg: dict[str, Any]) -> int:
+    """Dispatch fixed-partition cumulative expert training.
+
+    :param cfg: Resolved run configuration.
+    :type cfg: dict[str, Any]
+    :returns: Exit code.
+    :rtype: int
+    """
+    from infl_ens.training.fixed_partition import run_partition_replay as run
+
+    return run(cfg)
+
+
+def run_mixture_lora(cfg: dict[str, Any]) -> int:
+    """Dispatch jointly trained learned-gate LoRA mixtures.
+
+    :param cfg: Resolved run configuration.
+    :type cfg: dict[str, Any]
+    :returns: Exit code.
+    :rtype: int
+    """
+    from infl_ens.training.mixture_lora import run_mixture_lora as run
+
+    return run(cfg)
+
+
+def run_adapter_merge(cfg: dict[str, Any]) -> int:
+    """Dispatch router-free adapter merging.
+
+    :param cfg: Resolved run configuration.
+    :type cfg: dict[str, Any]
+    :returns: Exit code.
+    :rtype: int
+    """
+    from infl_ens.training.adapter_merge import run_adapter_merge as run
+
+    return run(cfg)
+
+
 #: ``task`` value -> runner. Every runner takes the resolved config and
 #: returns a process exit code.
 TASKS: dict[str, Callable[[dict[str, Any]], int]] = {
     "closed_loop": run_closed_loop,
     "baseline_replay": run_baseline_replay,
+    "partition_replay": run_partition_replay,
+    "mixture_lora": run_mixture_lora,
+    "adapter_merge": run_adapter_merge,
 }
 
-__all__ = ["TASKS", "run_baseline_replay", "run_closed_loop"]
+__all__ = [
+    "TASKS",
+    "run_adapter_merge",
+    "run_baseline_replay",
+    "run_closed_loop",
+    "run_mixture_lora",
+    "run_partition_replay",
+]

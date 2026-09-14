@@ -1,0 +1,96 @@
+# Training from the theory equilibrium, seed 0.
+#
+# One factor moves against seven_axis_8pair_sigma05/seed0: where the
+# clones start. Everything else -- split, absolute sigma, twelve rounds,
+# fully dense soft routing, loss weighting -- is identical, so the two
+# arms share a test pool and the existing seed-0 generalist is still
+# data-matched and is NOT retrained.
+#
+# The positions below are an equilibrium of the influencer game solved
+# against the empirical prompt cloud (28355 prompts, uniform
+# weight) rather than against the lattice KDE. That solve is CPU-only;
+# see paper/true_theory_positions.py. Pinning the result here keeps it
+# in the resolved config instead of being recomputed per run.
+#
+#   sigma (absolute)      0.206020
+#   sigma_0* lattice      0.412040   (what the runs quote against)
+#   sigma_0* empirical    0.371098
+#   pairs                 8  (16 clones, co-located)
+#   grad-norm at start    2.246e-09   (polished from 7.090e-03 in 115 fixed-point iterations)
+
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_theory_eq_8pair/seed0
+
+sigma_fraction: 0.50
+
+# An explicit list replaces the base's `agents: {pairs_from_axes: true}`
+# mapping, which always expands to N = 2L = 14 regardless of pair count.
+# This arm needs N = 16, one clone pair per routing pair.
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+  - name: clone-4
+  - name: clone-5
+  - name: clone-6
+  - name: clone-7
+  - name: clone-8
+  - name: clone-9
+  - name: clone-10
+  - name: clone-11
+  - name: clone-12
+  - name: clone-13
+  - name: clone-14
+  - name: clone-15
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 8                     # == number of pairs: fully dense
+  soft_loss: weighted
+  init_mode: given
+  init_noise: 0.0
+  init_positions_source: >-
+    influencer-game equilibrium under the empirical prompt measure,
+    solved offline from seven_axis_8pair_sigma05/seed0 settings
+
+  # Clone 2i and 2i+1 share pair i's position. Co-location is a fixed
+  # point of the update, so the pairs stay merged without being forced.
+  init_positions:
+    clone-0: [0.3794358029, 0.1828078630, 0.4380301154, 0.1578983746, 0.1449262217, 0.8309987591, 0.3329524668]
+    clone-1: [0.3794358029, 0.1828078630, 0.4380301154, 0.1578983746, 0.1449262217, 0.8309987591, 0.3329524668]
+    clone-2: [0.8503328720, 0.4774682914, 0.4516322635, 0.5216014383, 0.3873738175, 0.2715135341, 0.2710459591]
+    clone-3: [0.8503328720, 0.4774682914, 0.4516322635, 0.5216014383, 0.3873738175, 0.2715135341, 0.2710459591]
+    clone-4: [0.5412400810, 0.4738949790, 0.4555182946, 0.3082673145, 0.2484843301, 0.9012557892, 0.6867803304]
+    clone-5: [0.5412400810, 0.4738949790, 0.4555182946, 0.3082673145, 0.2484843301, 0.9012557892, 0.6867803304]
+    clone-6: [0.2447755632, 0.8763772261, 0.6232957880, 0.5653704719, 0.5305610195, 0.4498339218, 0.2356058811]
+    clone-7: [0.2447755632, 0.8763772261, 0.6232957880, 0.5653704719, 0.5305610195, 0.4498339218, 0.2356058811]
+    clone-8: [0.3177718286, 0.2342382407, 0.4433703612, 0.6629344903, 0.7228620296, 0.4703018833, 0.3765519240]
+    clone-9: [0.3177718286, 0.2342382407, 0.4433703612, 0.6629344903, 0.7228620296, 0.4703018833, 0.3765519240]
+    clone-10: [0.6372892711, 0.6259275688, 0.3207168797, 0.6435454913, 0.7363858512, 0.5954899712, 0.6419087607]
+    clone-11: [0.6372892711, 0.6259275688, 0.3207168797, 0.6435454913, 0.7363858512, 0.5954899712, 0.6419087607]
+    clone-12: [0.3194433670, 0.4090908574, 0.4823509120, 0.2228878253, 0.2813046210, 0.1215076101, 0.8296148722]
+    clone-13: [0.3194433670, 0.4090908574, 0.4823509120, 0.2228878253, 0.2813046210, 0.1215076101, 0.8296148722]
+    clone-14: [0.6632517129, 0.6521753708, 0.7290689299, 0.6904841160, 0.7059377991, 0.6289453978, 0.6405565103]
+    clone-15: [0.6632517129, 0.6521753708, 0.7290689299, 0.6904841160, 0.7059377991, 0.6289453978, 0.6405565103]
+
+  # Pinned to match the co-location above, since no solve runs to infer it.
+  sft_merge_groups:
+    - train_as: pair-0
+      names: [clone-0, clone-1]
+    - train_as: pair-1
+      names: [clone-2, clone-3]
+    - train_as: pair-2
+      names: [clone-4, clone-5]
+    - train_as: pair-3
+      names: [clone-6, clone-7]
+    - train_as: pair-4
+      names: [clone-8, clone-9]
+    - train_as: pair-5
+      names: [clone-10, clone-11]
+    - train_as: pair-6
+      names: [clone-12, clone-13]
+    - train_as: pair-7
+      names: [clone-14, clone-15]

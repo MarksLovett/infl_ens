@@ -39,7 +39,7 @@ infl_ens/
 │   │   └── router/
 │   │       ├── __init__.py
 │   │       ├── agents.py                 RouterAgent
-│   │       ├── allocation.py             G_i, u_i, ∇u_i, top-k / sampled top-k / per-group soft weights
+│   │       ├── allocation.py             G_i, u_i, ∇u_i, top-k / sampled top-k / balanced / Expert-Choice weights
 │   │       ├── core.py                   InfluencerRouter
 │   │       └── verification.py           numerical gradient-alignment checks of the position updates
 │   ├── training/
@@ -54,6 +54,9 @@ infl_ens/
 │   │   ├── sft_training.py               LoRA SFT trainer (weighted loss, cumulative adapters)
 │   │   ├── merge_training.py             pair-merge SFT helpers; soft routing over pairs
 │   │   ├── baseline_replay.py            pooled generalist replayed from history.json batches
+│   │   ├── fixed_partition.py            benchmark / hard-k-means / random partition replay with stable record IDs
+│   │   ├── mixture_lora.py                EWoRA-style dense and trait-gated top-k LoRA mixtures
+│   │   ├── adapter_merge.py               delta-space linear / task arithmetic / TIES / DARE-TIES / KnOTS merging
 │   │   ├── data_split.py                 resolve train/val/test partitions + batch plan for a run
 │   │   ├── closed_loop_eval.py           periodic validation NLL during training
 │   │   └── pool_dynamics.py              grid-Nash gradient ascent, layout classification, pair geometry
@@ -62,6 +65,8 @@ infl_ens/
 │   │   ├── __main__.py                   single CLI; unified (training-YAML) or standalone eval jobs
 │   │   ├── evaluate.py                   evaluate_adapter_on_*, run_unified_eval, JSON reports
 │   │   ├── routing_eval.py               flat-pool route-then-score: pooled / learned / oracle
+│   │   ├── nll_artifact.py               pickle-free, checkpoint-provenanced expert/reference NLL matrices
+│   │   ├── routers.py                    pure geometric, metadata, null, fitted, stacking, and oracle routers
 │   │   ├── adapters.py                   resolve + load saved LoRA checkpoints
 │   │   ├── metrics.py                    mean NLL on chat-formatted splits
 │   │   └── benchmarks.py                 re-export shim of data.benchmarks.loading
@@ -104,14 +109,29 @@ infl_ens/
 │   │   └── qwen2_5_1_5b_instruct.yaml    base LM + LoRA hyperparameters (sft block)
 │   ├── arms/
 │   │   ├── _closed_loop_base.yaml        everything the specialist arms share
+│   │   ├── _theory_eq_init_7pair.yaml    shared converged seven-pair equilibrium (init_mode: given)
 │   │   ├── soft_full_pairs.yaml          soft, k = 7, share-weighted
 │   │   ├── soft_topk3_pairs.yaml         soft, k = 3, share-weighted
 │   │   ├── topk3_unit_pairs.yaml         soft, k = 3, unit weight
 │   │   ├── hard_topk3_pairs.yaml         sampled top-3 without replacement, unit weight
 │   │   ├── hard_pairs_matched.yaml       hard (one sampled winner), unit weight
-│   │   └── generalist_replay.yaml        pooled generalist replayed from the k = 3 arm
+│   │   ├── generalist_replay.yaml        pooled rank-16 generalist replayed from the k = 3 arm
+│   │   ├── generalist_r112.yaml          stored-parameter-matched pooled rank-112 control
+│   │   ├── soft_full_naive_centroid.yaml damped online soft-k-means positioning control
+│   │   ├── experts_label.yaml            benchmark-partitioned domain experts
+│   │   ├── experts_kmeans.yaml           train-only hard-k-means partitioned experts
+│   │   ├── experts_random.yaml           seeded equal random-shard experts
+│   │   ├── balanced_assignment_pairs.yaml BASE-style balanced optimal-transport allocation
+│   │   ├── expert_choice_pairs.yaml      prompt-level Expert-Choice allocation ablation
+│   │   ├── theory_eq_naive_centroid_seed0.yaml      positioning control, at the equilibrium
+│   │   ├── theory_eq_balanced_assignment_seed0.yaml BASE-style allocation, at the equilibrium
+│   │   ├── theory_eq_expert_choice_seed0.yaml       Expert-Choice allocation, at the equilibrium
+│   │   ├── ewora_dense.yaml              dense learned seven-component LoRA mixture
+│   │   ├── trait_gated_lora_moe.yaml     trait-gated top-3 LoRA mixture
+│   │   └── domain_adapter_merges.yaml    router-free validation-selected adapter merges
 │   └── experiments/
-│       └── seven_axis_3arm.yaml          the canonical experiment: arms, stages, eval window, figures, smoke
+│       ├── seven_axis_3arm.yaml          the canonical experiment: arms, stages, eval window, figures, smoke
+│       └── seven_axis_baselines.yaml     causal, routing, learned-mixture, and deployment baselines
 ├── scripts/
 │   ├── run_on_doob.sh                    the only shell script: sync + tmux launch + status + pull
 │   └── figures/seven_axis_safety_resource_separated.png   included by docs/project_overview/project_overview.tex
@@ -127,7 +147,7 @@ infl_ens/
 | Command | Module | Purpose |
 |---|---|---|
 | `python -m infl_ens.pipeline --config configs/experiments/<name>.yaml` | `pipeline/__main__.py` | run an experiment end to end (`--stages`, `--only-arm`, `--force`, `--smoke`, `--dry-run`) |
-| `python -m infl_ens.training --config configs/arms/<arm>.yaml [-- k=v]` | `training/__main__.py` | one arm: `closed_loop` or `baseline_replay` |
+| `python -m infl_ens.training --config configs/arms/<arm>.yaml [-- k=v]` | `training/__main__.py` | one arm: `closed_loop`, `baseline_replay`, `partition_replay`, `mixture_lora`, or `adapter_merge` |
 | `python -m infl_ens.evaluation --config <run>/resolved_config.yaml [-- k=v]` | `evaluation/__main__.py` | score archived adapters on the held-out partitions |
 | `python -m infl_ens.figures --config <experiment> [--only a,b] [--list]` | `figures/__main__.py` | render figures and tables into `figures/<experiment>/` |
 | `bash scripts/run_on_doob.sh` | — | drive the pipeline on the GPU host under tmux |
@@ -148,7 +168,7 @@ infl_ens/
 | `trait_space_cache.py` | `trait_space_fingerprint` (hashes `benchmarks` + `trait_space` minus throughput keys), save/load cache, `build_or_load_safety_trait_space`, `load_cache_artifacts`, `coordinate_chain_from_cache` |
 | `trait_normalize.py` | `QuantileNormalizer`, `fit_quantile_normalizer` |
 | `position_blend.py` | `apply_position_update`, `parse_position_step`, `effective_blend` |
-| `splits.py` | `DataSplitManifest`, `build_split_manifest`, `choose_exact_train_coverage`, `apply_manifest_partition`, `build_manifest_from_config` |
+| `splits.py` | `DataSplitManifest`, `build_split_manifest`, `choose_exact_train_coverage`, `apply_manifest_partition`, `flatten_partition_records`, `build_manifest_from_config` |
 | `download.py` | `download_<kind>` functions, `DOWNLOADERS`, `download_for_entry`, `entry_is_present` |
 | `benchmarks/loading.py` | `BENCHMARK_KINDS`, `load_benchmark_split(s)`, `load_benchmark_splits_with_partition`, `subsample_split` |
 | `benchmarks/<kind>.py` | one offline loader per benchmark returning a `BenchmarkSplit` |
@@ -159,7 +179,7 @@ infl_ens/
 | File | Role |
 |---|---|
 | `agents.py` | `RouterAgent` (name, position, `from_calibration`, `update_position_from_corpus`) |
-| `allocation.py` | `allocation_weights`, `expected_utilities`, `empirical_utility`, `utility_gradient`, `strategic_routing_weights`, `top_k_allocation_weights`, `sampled_top_k_mask`, `matched_centroid_mass`, `group_allocation_weights` |
+| `allocation.py` | `allocation_weights`, `expected_utilities`, `empirical_utility`, `utility_gradient`, `strategic_routing_weights`, top-k helpers, `balanced_assignment_mask`, `expert_choice_mask`, `matched_centroid_mass`, `group_allocation_weights` |
 | `core.py` | `InfluencerRouter` (`route`, `route_batch`, `expected_utilities`) |
 | `verification.py` | expected-drift derivations and Monte-Carlo checks of every routing / position-update rule (used by tests) |
 
@@ -168,7 +188,7 @@ infl_ens/
 | File | Role |
 |---|---|
 | `__main__.py` | argparse → `load_config` → `TASKS[cfg["task"]]`; exit 2 on config errors |
-| `tasks.py` | `TASKS = {closed_loop, baseline_replay}`, `run_baseline_replay` |
+| `tasks.py` | `TASKS = {closed_loop, baseline_replay, partition_replay, mixture_lora, adapter_merge}` and lazy task wrappers |
 | `closed_loop.py` | `run_closed_loop`, `validate_routing_and_loss_modes`, `init_agents_closed_loop`; module docstring lists every `closed_loop.*` knob |
 | `setup.py` | `load_splits`, `make_trait_space`, `sigma_from_config`, `init_agents`, `coords_for_prompts`, `write_history`, `write_resolved_config` |
 | `agent_init.py` | `resolve_agent_entries`, `init_agents_theory_gradient(_paired)`, `co_locate_theory_pairs`, pairing rules, separated random starts |
@@ -177,6 +197,9 @@ infl_ens/
 | `sft_training.py` | `SFTTrainingConfig`, `sft_train_agent`, weighted causal-LM loss |
 | `merge_training.py` | `parse_sft_merge_groups`, `merge_groups_from_theory_pairs`, `snap_configured_merge_pairs`, `soft_pair_assignments`, `soft_pair_position_target`, `closed_loop_weight_args` |
 | `baseline_replay.py` | `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
+| `fixed_partition.py` | deterministic benchmark / k-means++ / equal-random partitions, exact record-ID replay audit, cumulative fixed-expert training |
+| `mixture_lora.py` | jointly trained dense EWoRA-style and sparse trait-gated rank-16 LoRA components, lightweight checkpoint format |
+| `adapter_merge.py` | reconstructs `BA` deltas; validation-selects linear, task arithmetic, TIES, DARE-TIES, and joint-SVD KnOTS merges at ranks 16/112 |
 | `data_split.py` | `resolve_closed_loop_data_split`, `shuffled_train_batch_indices`, `partitioned_splits_for_eval` |
 | `closed_loop_eval.py` | `run_closed_loop_val_eval`, `append_val_eval_summary` |
 | `pool_dynamics.py` | `run_gradient_ascent_theory`, `classify_layout`, `pairwise_spread`, `agent_pairwise_geometry` |
@@ -187,7 +210,9 @@ infl_ens/
 |---|---|
 | `__main__.py` | argparse → `load_config` → `run_unified_eval` (training YAML with `eval`) or `run_eval_job` |
 | `evaluate.py` | `AdapterEvalConfig`, `EvalJobConfig` (+ `from_unified`), `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_unified_eval`, `final_round_from_history`, `write_eval_report` |
-| `routing_eval.py` | `run_flat_routing_eval` (pooled / expected / sampled / argmax G / oracle), `report_to_dict`, `format_headline_markdown` |
+| `routing_eval.py` | reusable `(M,K)` router scorer, cached standard/mixture evaluation, low-support slice, schema-v2 diagnostics and legacy aliases |
+| `nll_artifact.py` | `NllMatrixArtifact`, checkpoint/ordered-record SHA-256 provenance, pickle-free `.npz` validation |
+| `routers.py` | Gaussian/centroid/metadata/uniform/permutation/oracle routers, validation-CV linear gates and simplex stacking |
 | `adapters.py` | `AdapterRef`, `discover_adapters`, `resolve_adapter_dir`, `load_adapter_model` |
 | `metrics.py` | `format_chat_example`, `mean_token_nll`, `split_to_texts` |
 | `benchmarks.py` | re-exports `data.benchmarks.loading` |
@@ -207,7 +232,7 @@ infl_ens/
 | `trait_representation.py` | `legacy_coordinates`, `representation_stats`, `plot_marginals`, `plot_pair_comparison`, `plot_dataset_composition`, `stratified_sample` |
 | `pgf_tex.py` | `oracle_routing_tex`, `arm_comparison_tex`, `compile_tex`, `tex_escape` |
 | `per_round_tables.py` | `load_eval_rows`, `eval_rows_cover`, `pivot_per_round`, `write_per_round_outputs`, `build_per_round_tables` |
-| `cross_arm_report.py` | `data_matching`, `round_prompt_sets`, `within_pair_distances`, `build_cross_arm_report`, `write_cross_arm_report` |
+| `cross_arm_report.py` | duplicate-preserving data matching, router/slice headline matrix, pair stability, NLL movement, and resource ledger |
 
 ## `src/infl_ens/pipeline/`
 
@@ -235,6 +260,14 @@ infl_ens/
 | `arms/_closed_loop_base.yaml` | includes data + trait_space + model; theory-paired init, `sft_merge_groups: from_init`, `position_update: theory_matched`, final-round `eval` |
 | `arms/*.yaml` | one arm each: only `output_dir` and the routing knobs differ (see the on-disk tree) |
 | `experiments/seven_axis_3arm.yaml` | five specialist arms + generalist, stages, `perround_rounds: [4, final]`, figure list, smoke gate |
+| `arms/generalist_r112.yaml`, `arms/soft_full_naive_centroid.yaml` | stored-parameter and positioning controls |
+| `arms/experts_{label,kmeans,random}.yaml` | fixed train-only partition replay controls |
+| `arms/balanced_assignment_pairs.yaml`, `arms/expert_choice_pairs.yaml` | capacity-allocation controls |
+| `arms/_theory_eq_init_7pair.yaml` | shared converged seven-pair equilibrium: `init_mode: given`, positions sha `be21721a9ab5c9b2`, pinned `sft_merge_groups`. Include fragment, not a runnable arm |
+| `arms/theory_eq_{naive_centroid,balanced_assignment,expert_choice}_seed0.yaml` | the positioning and allocation controls started at the converged equilibrium rather than the 8000-step approximate solve, which does not converge at N = 14 |
+| `arms/ewora_dense.yaml`, `arms/trait_gated_lora_moe.yaml` | joint dense and sparse learned LoRA mixtures |
+| `arms/domain_adapter_merges.yaml` | validation-selected router-free merge suite |
+| `experiments/seven_axis_baselines.yaml` | canonical external-baseline experiment with two generalists and staged smoke dependencies |
 
 Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py`.
 
@@ -253,16 +286,20 @@ Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache 
 | `test_soft_pairs.py`, `test_topk_matched.py`, `test_sampled_topk.py`, `test_weighted_sft_loss.py` | soft / top-k / sampled routing, theory-matched updates, weighted SFT loss, stubbed closed loops |
 | `test_merge_training.py`, `test_agent_init.py`, `test_position_step.py`, `test_data_splits.py` | merge groups, theory init, position steps, split manifests |
 | `test_evaluation.py`, `test_unified_eval.py`, `test_routing_eval.py` | adapter scoring, unified eval from a training YAML, route-then-score |
+| `test_nll_artifact.py`, `test_routers.py` | cache provenance/invalidation and the pure/fitted router suite |
+| `test_fixed_partition.py` | record-ID audits and deterministic benchmark/k-means/random partitions |
+| `test_mixture_lora_model.py` | gated-component forward equivalence, top-k gating, and load balance |
+| `test_adapter_merge.py` | delta reconstruction, serving-rank SVD, TIES/DARE, and KnOTS alignment |
 | `test_benchmark_loaders.py`, `test_new_benchmark_loaders.py`, `test_ai4privacy_loader.py`, `test_jbb_behaviors_loader.py` | offline benchmark loaders |
 | `test_safety_trait_space.py`, `test_trait_normalize.py`, `test_trait_space_cache.py` | trait-space construction, quantile normaliser, cache round-trip and fingerprint |
 
 ## Re-exports
 
-- `infl_ens.data`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `QuantileNormalizer`, `benchmarks`
+- `infl_ens.data`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `flatten_partition_records`, `HuggingFaceEncoder`, `QuantileNormalizer`, `benchmarks`
 - `infl_ens.data.benchmarks`: `BenchmarkSplit`, `LearnedAxis`, `build_safety_trait_space`, the seven `load_*` loaders and their constants
-- `infl_ens.inflgame.router`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `utility_gradient`, `strategic_routing_weights`, `top_k_allocation_weights`, `sampled_top_k_mask`, `matched_centroid_mass`, `group_allocation_weights`
-- `infl_ens.training`: `RouterTrainingConfig`, `train_router_positions` (eager); `SFTTrainingConfig`, `sft_train_agent` (lazy)
-- `infl_ens.evaluation`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_eval_job`, `run_unified_eval`, `final_round_from_history`, `write_eval_report`, `AdapterRef`, `discover_adapters`, `is_adapter_dir`, `resolve_adapter_dir`, `BENCHMARK_KINDS`, `load_benchmark_splits`, `subsample_split`; lazy `format_chat_example`, `mean_token_nll`, `split_to_texts`
+- `infl_ens.inflgame.router`: existing game/router API plus `balanced_assignment_mask` and `expert_choice_mask`
+- `infl_ens.training`: existing router/SFT API plus lazy fixed-partition, learned-mixture, and adapter-merge entry points
+- `infl_ens.evaluation`: existing adapter/eval API plus `NllMatrixArtifact` and the pure/fitted router constructors; lazy chat/NLL metrics
 - `infl_ens.figures`: the pure plot functions, `oracle_routing_tex`, `arm_comparison_tex`, `save_figure`, `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`
 - `infl_ens.pipeline`: `STAGES`, `PipelineContext`, `run_pipeline`, `run_smoke`
 - `infl_ens.utils`: `weighted_mean`, `weighted_covariance`, `gaussian_stability_threshold`

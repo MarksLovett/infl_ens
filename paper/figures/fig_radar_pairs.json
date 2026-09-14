@@ -1,0 +1,43 @@
+{
+  "axis_order": [
+    "harm",
+    "hallucination",
+    "jailbreak",
+    "privacy",
+    "over-refusal",
+    "injection",
+    "policy"
+  ],
+  "caveat": "theory init used B from _kde_on_grid, which is near-uniform over the lattice; the empirical-B solve is the comparison",
+  "dominant_axis": {
+    "2": [
+      1,
+      6
+    ],
+    "5": [
+      1,
+      3,
+      5,
+      0,
+      1
+    ],
+    "7": [
+      1,
+      6,
+      4,
+      5,
+      2,
+      0,
+      0
+    ]
+  },
+  "empirical_theory_overlay": true,
+  "figure": "pair positions vs pair count",
+  "generated": "2026-09-11T20:22:11+00:00",
+  "rows": [
+    2,
+    5,
+    7
+  ],
+  "seed": "seed0"
+}

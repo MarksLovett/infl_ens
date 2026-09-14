@@ -1,0 +1,28 @@
+# Router-free deployment controls selected on validation NLL.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: adapter_merge
+seed: 0
+output_dir: results/seven_axis_domain_adapter_merges/seed0
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+adapter_merge:
+  source_run_dir: results/seven_axis_experts_label/seed0
+  source_experts: null
+  methods: [linear, task_arithmetic, ties, dare_ties, knots_linear, knots_ties]
+  task_arithmetic_scales: [0.25, 0.5, 0.75, 1.0]
+  ties_densities: [0.1, 0.2, 0.5]
+  dare_drop_rates: [0.2, 0.5, 0.8]
+  serving_ranks: [16, 112]
+  alignment_rank: 112
+  seed: 0
+
+eval:
+  partitions: [val, test]
+  rounds: final
+  max_eval_records: 1000
+  forward_batch_size: 8

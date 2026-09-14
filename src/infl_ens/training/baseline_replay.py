@@ -239,6 +239,22 @@ def replay_pooled_baseline_sft(
             "cumulative_n_train": cumulative_n,
             "cumulative_centroid": cumulative_centroid.tolist(),
             "position": agent.position.tolist(),
+            "batch_prompts": list(prompts),
+            "batch_responses": list(responses or [""] * len(prompts)),
+            "batch_record_ids": rec.get("batch_record_ids"),
+            "resource_accounting": {
+                key: result[key]
+                for key in (
+                    "n_train",
+                    "trainable_parameters",
+                    "token_exposures",
+                    "peak_memory_bytes",
+                    "wall_seconds",
+                    "active_lora_rank",
+                    "model_forwards",
+                )
+                if key in result
+            },
         })
     return summaries
 

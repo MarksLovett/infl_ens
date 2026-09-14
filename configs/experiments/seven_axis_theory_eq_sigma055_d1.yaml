@@ -1,0 +1,24 @@
+# Reach 0.55 at the theory equilibrium, data split 1.
+#
+# Contrast against seven_axis_sigma550_full/dseed1 (naive init, same split),
+# which already exists from the replicate sweep. The dseed1 generalist
+# is reused and NOT retrained.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_sigma055_d1.yaml
+name: seven_axis_theory_eq_sigma055_d1
+results_dir: results/seven_axis_theory_eq_sigma055_d1
+figures_dir: figures/seven_axis_theory_eq_sigma055_d1
+
+arms:
+  - name: theory_eq_sigma055_d1
+    label: "Reach 0.55, split 1"
+    title: "Reach 0.55 at the empirical-B equilibrium, data split 1"
+    role: specialist
+    config: ../arms/soft_theory_eq_sigma055_d1_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist (split 1)"
+    title: "Pooled generalist for data split 1 (existing replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay_dseed1.yaml
+
+stages: [manifest, train, perround, routing, figures]

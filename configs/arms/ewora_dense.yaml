@@ -1,0 +1,23 @@
+# EWoRA-style dense context aggregation over seven jointly trained rank-16 components.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: mixture_lora
+seed: 0
+output_dir: results/seven_axis_ewora_dense/seed0
+
+mixture_lora:
+  mode: dense
+  n_experts: 7
+  expert_rank: 16
+  top_k: 7
+  load_balance_coefficient: 0.0
+  gate_learning_rate: 2.0e-4
+
+eval:
+  partitions: [val, test]
+  rounds: final
+  max_eval_records: 1000
+  forward_batch_size: 8

@@ -1,0 +1,22 @@
+{
+  "figure": "ensemble mixture NLL across the study",
+  "generated": "2026-09-11T20:22:02+00:00",
+  "mixture_available": true,
+  "note": "sequence-level mixture of completed sequences, not token-level mixing at generation time",
+  "panels": {
+    "sigma": {
+      "n_per_sigma": {
+        "0.05": 4,
+        "0.10": 4,
+        "0.20": 4,
+        "0.30": 4,
+        "0.40": 4,
+        "0.45": 4,
+        "0.50": 4,
+        "0.55": 4,
+        "0.60": 4,
+        "0.70": 4
+      }
+    }
+  }
+}

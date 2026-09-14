@@ -30,6 +30,8 @@ them.
 
 from __future__ import annotations
 
+import math
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
@@ -561,7 +563,27 @@ def sft_train_agent(
                 max_seq_length=cfg.max_seq_length,
                 **trainer_kwargs,
             )
+    trainable_parameters = int(
+        sum(parameter.numel() for parameter in trainer.model.parameters() if parameter.requires_grad)
+    )
+    if weighted:
+        token_exposures = int(sum(len(ids) for ids in enc["input_ids"]))
+    else:
+        tokenized_for_accounting = tokenizer(
+            texts, truncation=True, max_length=cfg.max_seq_length,
+        )
+        token_exposures = int(
+            sum(len(ids) for ids in tokenized_for_accounting["input_ids"])
+        )
+    token_exposures = int(round(token_exposures * float(cfg.num_train_epochs)))
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+    started = time.perf_counter()
     result = trainer.train()
+    wall_seconds = float(time.perf_counter() - started)
+    peak_memory_bytes = (
+        int(torch.cuda.max_memory_allocated()) if torch.cuda.is_available() else 0
+    )
     trainer.model.save_pretrained(str(out_dir))
     tokenizer.save_pretrained(str(out_dir))
 
@@ -595,4 +617,15 @@ def sft_train_agent(
         "position_blend_effective": float(blend_eff),
         "log_history": log_history,
         "loaded_prior_lora": str(prior_lora) if prior_lora is not None else None,
+        "trainable_parameters": trainable_parameters,
+        "token_exposures": token_exposures,
+        "peak_memory_bytes": peak_memory_bytes,
+        "wall_seconds": wall_seconds,
+        "active_lora_rank": int(cfg.lora_r),
+        "model_forwards": int(
+            math.ceil(
+                math.ceil(len(prompts) / max(cfg.per_device_batch_size, 1))
+                * float(cfg.num_train_epochs)
+            )
+        ),
     }

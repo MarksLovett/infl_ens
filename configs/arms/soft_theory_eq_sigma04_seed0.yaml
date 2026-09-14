@@ -1,0 +1,58 @@
+# Reach 0.40 at the theory equilibrium. Seed 0.
+#
+# One factor moves against seven_axis_sigma04_full/seed0: the starting positions.
+# The equilibrium is solved at THIS arm's sigma against the
+# empirical prompt cloud, then polished to a fixed point.
+#
+#   sigma (absolute)      0.163908
+#   grad-norm at start    3.574e-09
+#   pairs                 7  (14 clones, co-located)
+
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_theory_eq_sigma04/seed0
+
+sigma_fraction: 0.40
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7
+  soft_loss: weighted
+  init_mode: given
+  init_noise: 0.0
+  init_positions_source: >-
+    influencer-game equilibrium at sigma 0.163908 under the
+    empirical prompt measure
+
+  init_positions:
+    clone-0: [0.4475868001, 0.3036165659, 0.4423705509, 0.2116701722, 0.1730813660, 0.8872022663, 0.4858433624]
+    clone-1: [0.4475868001, 0.3036165659, 0.4423705509, 0.2116701722, 0.1730813660, 0.8872022663, 0.4858433624]
+    clone-2: [0.8621789335, 0.4726277611, 0.4501722293, 0.5153449754, 0.3753831148, 0.2616688934, 0.2514073475]
+    clone-3: [0.8621789335, 0.4726277611, 0.4501722293, 0.5153449754, 0.3753831148, 0.2616688934, 0.2514073475]
+    clone-4: [0.3088711077, 0.2219708611, 0.4443923771, 0.6692114009, 0.7220536671, 0.4675885945, 0.3669672350]
+    clone-5: [0.3088711077, 0.2219708611, 0.4443923771, 0.6692114009, 0.7220536671, 0.4675885945, 0.3669672350]
+    clone-6: [0.2350253807, 0.8884501091, 0.6222327375, 0.5630952935, 0.5243109261, 0.4449824154, 0.2238768092]
+    clone-7: [0.2350253807, 0.8884501091, 0.6222327375, 0.5630952935, 0.5243109261, 0.4449824154, 0.2238768092]
+    clone-8: [0.3148695972, 0.4063457940, 0.4851822167, 0.2192672209, 0.2732581504, 0.1201962396, 0.8316116531]
+    clone-9: [0.3148695972, 0.4063457940, 0.4851822167, 0.2192672209, 0.2732581504, 0.1201962396, 0.8316116531]
+    clone-10: [0.6719983935, 0.6557287725, 0.7513866673, 0.6858163995, 0.6964708491, 0.6456897872, 0.6575699569]
+    clone-11: [0.6719983935, 0.6557287725, 0.7513866673, 0.6858163995, 0.6964708491, 0.6456897872, 0.6575699569]
+    clone-12: [0.6415427608, 0.6343221847, 0.2701560510, 0.6204079217, 0.7214465025, 0.6191250236, 0.6684914575]
+    clone-13: [0.6415427608, 0.6343221847, 0.2701560510, 0.6204079217, 0.7214465025, 0.6191250236, 0.6684914575]
+
+  sft_merge_groups:
+    - train_as: pair-0
+      names: [clone-0, clone-1]
+    - train_as: pair-1
+      names: [clone-2, clone-3]
+    - train_as: pair-2
+      names: [clone-4, clone-5]
+    - train_as: pair-3
+      names: [clone-6, clone-7]
+    - train_as: pair-4
+      names: [clone-8, clone-9]
+    - train_as: pair-5
+      names: [clone-10, clone-11]
+    - train_as: pair-6
+      names: [clone-12, clone-13]

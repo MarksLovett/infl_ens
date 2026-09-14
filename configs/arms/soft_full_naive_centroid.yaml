@@ -1,0 +1,10 @@
+# Damped online soft k-means control: identical to soft_full except the
+# G-weighted centroid update replaces the game's G(1-G) matched update.
+includes:
+  - soft_full_pairs.yaml
+
+output_dir: results/seven_axis_soft_full_naive_centroid/seed0
+
+closed_loop:
+  position_update: naive
+  blend: 0.5

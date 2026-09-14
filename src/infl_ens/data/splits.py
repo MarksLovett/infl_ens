@@ -394,6 +394,43 @@ def flatten_partition_prompts(
     return prompts, responses, bench_names
 
 
+def flatten_partition_records(
+    splits: Sequence[BenchmarkSplit],
+    manifest: DataSplitManifest,
+    partition: PartitionName,
+) -> tuple[list[str], list[str], list[str], list[str]]:
+    """Flatten a partition together with stable manifest record IDs.
+
+    Record IDs are ``"<benchmark>:<original-row-index>"``.  They remain
+    unique even when two benchmarks contain identical prompt/response text,
+    which makes them suitable for exact data-matching audits and evaluation
+    cache provenance.
+
+    :param splits: Full loaded benchmark splits.
+    :type splits: Sequence[BenchmarkSplit]
+    :param manifest: Persisted split manifest.
+    :type manifest: DataSplitManifest
+    :param partition: Partition to flatten.
+    :type partition: str
+    :returns: ``(prompts, responses, benchmark_names, record_ids)``.
+    :rtype: tuple[list[str], list[str], list[str], list[str]]
+    """
+    prompts: list[str] = []
+    responses: list[str] = []
+    bench_names: list[str] = []
+    record_ids: list[str] = []
+    for split in splits:
+        part = manifest.partition_for(split.name)
+        indices = part.select(partition)
+        resp = split.responses or [""] * split.n
+        for index in indices:
+            prompts.append(split.prompts[index])
+            responses.append(resp[index])
+            bench_names.append(split.name)
+            record_ids.append(f"{split.name}:{int(index)}")
+    return prompts, responses, bench_names, record_ids
+
+
 def choose_exact_train_coverage(
     train_n: int,
     *,

@@ -1,0 +1,19 @@
+# Stored-parameter-matched pooled generalist: 7 x rank-16 = rank 112.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: baseline_replay
+seed: 0
+history_path: results/seven_axis_theory_eq_soft_topk3/seed0/history.json
+output_dir: results/seven_axis_generalist_r112/seed0
+
+sft:
+  lora_r: 112
+  lora_alpha: 224
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null

@@ -1,0 +1,22 @@
+# Pooled GENERALIST for the Llama-3.2-1B run.
+#
+# A generalist is only a fair comparator when it shares the specialists' base
+# model, so this replays the Llama arm's own logged batches on a Llama base.
+# Runs after the specialist arm, which supplies history.json.
+#
+# The agent name must stay `pooled-baseline`: the route-then-score evaluator
+# loads the generalist from <baseline_run_dir>/agents/pooled-baseline/round-NN.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/llama_3_2_1b_instruct.yaml
+
+task: baseline_replay
+seed: 0
+history_path: results/seven_axis_soft_full_llama1b/seed0/history.json
+output_dir: results/seven_axis_generalist_llama1b/seed0
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null

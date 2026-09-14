@@ -1,0 +1,1274 @@
+<title>Routing LoRA Specialists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+:root {
+  color-scheme: light;
+  --ground:#f6f6f4; --surface:#ffffff; --sunk:#f0f1ef;
+  --ink:#14171c; --ink-2:#565d68; --ink-3:#858c96;
+  --rule:#e3e5e2; --rule-strong:#cdd0cc;
+  --accent:#2a78d6; --warn:#b0341f; --good:#0b8f84;
+  --font-display:"IBM Plex Serif",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:#14161a; --surface:#1b1e23; --sunk:#20242a;
+    --ink:#f1f2f4; --ink-2:#a8afb9; --ink-3:#7b828d;
+    --rule:#2b3038; --rule-strong:#3b424c;
+    --accent:#3987e5; --warn:#e06a55; --good:#2bb3a3;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:#14161a; --surface:#1b1e23; --sunk:#20242a;
+  --ink:#f1f2f4; --ink-2:#a8afb9; --ink-3:#7b828d;
+  --rule:#2b3038; --rule-strong:#3b424c;
+  --accent:#3987e5; --warn:#e06a55; --good:#2bb3a3;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--ground); color:var(--ink);
+       font-family:var(--font-body); font-size:15px; line-height:1.62;
+       -webkit-font-smoothing:antialiased; }
+.wrap { max-width:960px; margin:0 auto; padding:44px 24px 80px;
+        display:flex; flex-direction:column; gap:38px; }
+
+header { display:flex; flex-direction:column; gap:14px; }
+.eyebrow { font-family:var(--font-mono); font-size:11.5px; font-weight:500;
+           letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); }
+h1 { font-family:var(--font-display); font-weight:600;
+     font-size:clamp(30px,4.6vw,44px); line-height:1.08; letter-spacing:-.015em;
+     margin:0; text-wrap:balance; }
+.standfirst { margin:0; max-width:68ch; color:var(--ink-2); font-size:16.5px; }
+.standfirst b { color:var(--ink); font-weight:600; }
+
+h2 { font-family:var(--font-display); font-size:24px; font-weight:600;
+     margin:26px 0 4px; letter-spacing:-.012em; scroll-margin-top:18px; }
+h3 { font-family:var(--font-display); font-size:17.5px; font-weight:600;
+     margin:22px 0 2px; letter-spacing:-.006em; }
+p { margin:10px 0; max-width:74ch; }
+p.lead { color:var(--ink-2); }
+section > p:first-of-type { margin-top:6px; }
+
+.toc { background:var(--surface); border:1px solid var(--rule); border-radius:3px;
+       padding:16px 20px; }
+.toc ol { margin:6px 0 0; padding-left:20px; columns:2; column-gap:32px; }
+.toc li { margin:3px 0; font-size:13.5px; }
+.toc a { color:var(--ink-2); text-decoration:none; }
+.toc a:hover { color:var(--accent); text-decoration:underline; }
+
+figure { margin:20px 0 6px; background:var(--surface); border:1px solid var(--rule);
+         border-radius:3px; padding:16px; }
+figure img { display:block; width:100%; height:auto; }
+.prov { margin:10px 0 0; font-family:var(--font-mono); font-size:10.5px;
+        color:var(--ink-3); line-height:1.5; }
+.cap { margin:6px 0 0; font-size:13.5px; color:var(--ink-2); max-width:78ch; }
+.cap b { color:var(--ink); font-weight:600; }
+
+table { width:100%; border-collapse:collapse; margin:14px 0;
+        font-size:13.5px; }
+th { text-align:left; font-weight:600; font-size:11px; letter-spacing:.05em;
+     text-transform:uppercase; color:var(--ink-3); padding:8px 12px;
+     border-bottom:1px solid var(--rule-strong); }
+td { padding:8px 12px; border-bottom:1px solid var(--rule); color:var(--ink-2);
+     vertical-align:top; }
+td:first-child { color:var(--ink); }
+td.num, th.num { text-align:right; font-family:var(--font-mono);
+                 font-variant-numeric:tabular-nums; }
+.table-wrap { overflow-x:auto; }
+
+code { font-family:var(--font-mono); font-size:.87em; background:var(--sunk);
+       padding:1.5px 5px; border-radius:2px; color:var(--ink); }
+.eq { background:var(--surface); border:1px solid var(--rule); border-left:2px solid var(--accent);
+      border-radius:2px; padding:12px 16px; margin:14px 0; overflow-x:auto;
+      font-family:var(--font-mono); font-size:13px; color:var(--ink); max-width:74ch; }
+.note { border-left:2px solid var(--rule-strong); padding:2px 0 2px 16px;
+        margin:16px 0; color:var(--ink-2); font-size:14px; max-width:74ch; }
+.note.warn { border-left-color:var(--warn); }
+.note b { color:var(--ink); }
+
+footer { border-top:1px solid var(--rule); padding-top:18px;
+         font-family:var(--font-mono); font-size:11.5px; line-height:1.7;
+         color:var(--ink-3); }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Seven-axis safety benchmark · influencer-game routing</div>
+  <h1>Routing LoRA Specialists</h1>
+  <p class="standfirst">
+    Every result so far, in the order that makes them make sense, with the method
+    written out alongside. Every figure is regenerated by one command from the
+    run outputs — nothing here is transcribed by hand. The short version:
+    <b>routing works above a capacity threshold, and below that threshold where
+    the agents start decides what they become</b>. Reporting the ensemble
+    mixture rather than the expected loss raises the headline by ~50%.
+  </p>
+</header>
+
+<nav class="toc">
+  <strong style="font-size:13px">Contents</strong>
+  <ol>
+    <li><a href="#setup">The setup</a></li>
+    <li><a href="#split">How the data is split</a></li>
+    <li><a href="#seeds">What a seed changes</a></li>
+    <li><a href="#space">Trait space and the encoder</a></li>
+    <li><a href="#theory">The theory initialisation</a></li>
+    <li><a href="#routing">Routing: hard, soft, top-k, unit</a></li>
+    <li><a href="#update">Why the position update matches the theory</a></li>
+    <li><a href="#r-routing">Result: routing design</a></li>
+    <li><a href="#r-sigma">Result: competitive reach</a></li>
+    <li><a href="#r-pairs">Result: how many pairs</a></li>
+    <li><a href="#r-where">Result: where the pairs go</a></li>
+    <li><a href="#r-init">Result: naive start vs the game equilibrium</a></li>
+    <li><a href="#r-bench">Result: which axes pay</a></li>
+    <li><a href="#r-models">Result: base models</a></li>
+    <li><a href="#ensemble">The ensemble number we should be reporting</a></li>
+    <li><a href="#caveats">Caveats</a></li>
+  </ol>
+</nav>
+
+<section id="setup">
+<h2>The setup</h2>
+<p class="lead">
+  A pool of LoRA adapters over one frozen base model. Each adapter occupies a
+  position in a seven-dimensional <em>trait space</em>; an incoming prompt is
+  embedded to a point in that same space; and the adapter that answers is chosen
+  by how much of the "resource" at that point each adapter commands. The
+  allocation rule and the dynamics come from the influencer's game, so the
+  adapters' positions are not hyperparameters — they are the equilibrium of a
+  game the adapters play against each other over the prompt distribution.
+</p>
+<p>
+  Three numbers recur throughout. <b>Pooled</b> is one generalist adapter trained
+  on all the same data — the honest baseline. <b>Router</b> is what the learned
+  routing achieves. <b>Oracle</b> is what perfect per-prompt routing of the same
+  adapters would achieve; it is a ceiling conditional on the ensemble, not on
+  perfection. From these:
+</p>
+<div class="eq">gain      = pooled − router      what routing won
+envelope  = pooled − oracle      what was there to win
+captured  = gain / envelope      the share the router actually took</div>
+<p>
+  Separating gain from envelope matters more than it looks. They move
+  independently, and nearly every result below turns on the difference between
+  "there was nothing to route between" and "there was, and the router missed it".
+</p>
+</section>
+
+<section id="split">
+<h2>How the data is split</h2>
+<p>
+  Seven safety benchmarks, one per trait axis, partitioned <b>70/10/20</b> per
+  benchmark into train, validation and test. The partition is frozen in a
+  manifest and shared by every arm of an experiment, which is what makes the arms
+  data-matched.
+</p>
+<div class="table-wrap"><table>
+  <tr><th>Partition</th><th class="num">Prompts</th><th>Use</th></tr>
+  <tr><td>train</td><td class="num">19,848</td><td>the twelve closed-loop rounds</td></tr>
+  <tr><td>validation</td><td class="num">2,836</td><td>per-round eval at rounds 4 and final</td></tr>
+  <tr><td>test</td><td class="num">5,671</td><td>every number in this document; never seen in training</td></tr>
+</table></div>
+<p>
+  Rounds are sized so that training covers the train partition <b>exactly
+  once</b>: 1,654 prompts × 12 rounds = 19,848. The round schedule is a
+  without-replacement shuffle, so no prompt is seen twice and none is skipped.
+  Within a round, the batch is routed, each pair's adapter runs one SFT pass on
+  what it was given, and each clone takes one position step. Under fully dense
+  soft routing every pair sees every prompt, weighted by its share.
+</p>
+<p>
+  Two details worth stating because they are easy to assume otherwise. The SFT
+  loss is <b>full-sequence</b> causal LM over the chat-formatted prompt and
+  response — only padding is masked, so prompt tokens are supervised too, not
+  just the completion. And the evaluation NLL uses the identical token scope, so
+  the training objective and the reported metric measure the same thing.
+</p>
+</section>
+
+<section id="seeds">
+<h2>What a seed changes</h2>
+<p>
+  There are two independent seeds and conflating them causes real mistakes, so
+  they are worth separating explicitly.
+</p>
+<div class="table-wrap"><table>
+  <tr><th>Seed</th><th>What it controls</th><th>Consequence</th></tr>
+  <tr>
+    <td><b>run seed</b></td>
+    <td>the random start of the non-convex equilibrium solve; the per-round batch
+        order; stochastic routing draws; LoRA init and dropout</td>
+    <td>selects which <em>basin</em> the solve lands in — i.e. which axis each
+        pair ends up owning. The equilibrium <em>radius</em> is stable to about
+        0.5%; the assignment of pairs to axes is not.</td>
+  </tr>
+  <tr>
+    <td><b>data-split seed</b></td>
+    <td>the 70/10/20 partition itself</td>
+    <td>a different train pool <em>and</em> a different test pool</td>
+  </tr>
+</table></div>
+<p>
+  A <code>dseed</code> replicate moves <b>both together</b>, which is the bound
+  that supports a generalisation claim; a run-seed-only replicate would only
+  bound retraining reproducibility. Each data split trains <b>its own
+  generalist</b> — sharing one across splits would score specialists against a
+  baseline fitted to different data.
+</p>
+<div class="note warn">
+  <b>The consequence that shapes every cross-split figure:</b> absolute NLL is
+  not comparable across data splits, because each has its own test pool. The
+  generalists sit at 2.0151, 1.9841, 1.9925 and 1.9991 across the four completed
+  splits — differences of the same order as the effects being measured. Only
+  within-split contrasts carry across, which is why every replicate figure plots
+  improvement over <em>that split's own</em> generalist rather than raw NLL.
+</div>
+</section>
+
+<section id="space">
+<h2>Trait space and the encoder</h2>
+<p>
+  The seven axes are not chosen by hand; each is learned from one benchmark that
+  supplies positive and negative examples. In benchmark order the axes are
+  <b>harm</b> (BeaverTails), <b>hallucination</b> (HaluEval), <b>jailbreak</b>
+  (JBB-Behaviors), <b>privacy</b> (AI4Privacy), <b>over-refusal</b> (OR-Bench),
+  <b>injection</b> (prompt-injection) and <b>policy violation</b>
+  (Do-Not-Answer). That order is the coordinate order everywhere.
+</p>
+<p>The pipeline from a prompt to a point:</p>
+<div class="eq">prompt → encoder embedding → per-axis Fisher direction (shrinkage, Gram–Schmidt)
+       → robust 5/95 affine calibration → mode-alignment blend
+       → coordinate residualisation → quantile/CDF normalisation → b* ∈ [0,1]⁷</div>
+<p>
+  The CDF stage is always on and is what guarantees the box: each axis is mapped
+  through its own empirical CDF, so the calibration marginals come out
+  near-uniform by construction. Measured on the 28,355-prompt corpus, per-axis
+  means are 0.49–0.50 and standard deviations 0.289–0.291 against the uniform
+  ideal of 0.2887.
+</p>
+<p>
+  The resource density <em>B(b)</em> is a Gaussian KDE of those coordinates on a
+  coarse lattice — three points per axis, so 3⁷ = 2,187 cells. Only the density
+  and the grid enter the game mathematics; the continuous coordinate is what
+  routing actually uses.
+</p>
+{{fig:trait_space}}
+<p class="cap">
+  Left: the density of the 28,355-prompt corpus on three axis pairs, darker
+  where prompts concentrate. Right: each pair's final coordinate on all seven
+  axes. The pairs sit inside the mass rather than at the corners of the box &mdash;
+  they are competing for prompts that exist, not tiling the space.
+</p>
+
+<h3>Swapping the encoder</h3>
+<p>
+  This is deliberately a one-line change: the trait-space config
+  <em>includes</em> an encoder fragment, and swapping that fragment is the whole
+  intervention. Nothing in the source changes. What follows from it:
+</p>
+<div class="table-wrap"><table>
+  <tr><th>Changes</th><th>Does not change</th></tr>
+  <tr>
+    <td>cache fingerprint and directory; a full re-encode of the corpus;
+        embedding dimension; every learned direction, calibration bound,
+        residualiser and CDF knot; the density; σ₀* (weakly); any stored positions</td>
+    <td>the grid; the number and order of axes; the split manifest; the entire
+        learning algorithm; the [0,1]⁷ box with near-uniform marginals; all game
+        mathematics; the σ policy; the theory init; everything downstream</td>
+  </tr>
+</table></div>
+<div class="note">
+  <b>σ₀* is close to encoder-invariant, and that is a property of the design
+  rather than luck.</b> The lattice is pinned to {0, 0.5, 1}⁷ and the CDF pins
+  each marginal to near-uniform, so the resource covariance can only move within
+  a narrow band: its eigenvalues are 0.141–0.182 against the exactly-uniform
+  value of 0.167, putting Λ<sub>max</sub> just 9% above the lattice bound. A
+  different encoder perturbs the threshold; it cannot move it by a large factor.
+</div>
+<div class="note warn">
+  <b>One trap worth knowing before the encoder experiments.</b> The cache
+  fingerprint hashes the encoder's <em>model id</em>, but not its pooling,
+  maximum length or normalisation — all of which do change the geometry. Change
+  those and the fingerprint stays put, so a stale cache is silently reused.
+  Redirect the cache directory when varying them.
+</div>
+</section>
+
+<section id="theory">
+<h2>The theory initialisation</h2>
+<p>
+  Adapters do not start at random positions. They start at the equilibrium of the
+  game, computed before any training:
+</p>
+<ol>
+  <li>Draw 14 clones uniformly in the box (a minimum-separation constraint exists
+      but never binds in seven dimensions — the measured start already has
+      minimum pairwise distance 0.46).</li>
+  <li>Run simultaneous projected gradient ascent, each clone on its <em>own</em>
+      utility, for up to 8,000 steps.</li>
+  <li>Pair the clones by nearest neighbour and co-locate each pair at its
+      centroid. Nearest-neighbour, not harm-order: in seven dimensions the
+      partners are not adjacent along any single axis.</li>
+  <li>Re-run the ascent from the paired state. This second pass provably cannot
+      separate a pair — co-located clones see identical allocations, so they
+      receive identical gradients forever. Co-location is an outcome the theory
+      predicts, not a constraint imposed on the loop.</li>
+</ol>
+<p>The competitive reach is set relative to the stability threshold:</p>
+<div class="eq">σ₀* = √( (N−2)/(N−1) · Λ_max(Σ_B) )     = 0.40977  for N = 14
+σ   = 0.50 · σ₀*                        = 0.20489</div>
+<p>
+  Below σ₀* the symmetric configuration — every adapter stacked at the centre of
+  mass — is unstable along the principal axis of the resource covariance. Every
+  arm here sits deliberately below it, at half the critical reach, because that
+  is the regime in which specialists separate at all.
+</p>
+<div class="note">
+  <b>Two diagnostics that look alarming and are not.</b> The runs report
+  <code>layout = collapsed</code> and <code>converged = False</code>. The first is
+  a legacy label: the classifier sorts along the harm axis alone and was written
+  for a four-agent study in two dimensions. The actual final spread is 0.825,
+  well above its own collapse threshold of 0.45, and the pairs occupy six
+  distinct dominant axes. The second means only that the maximum coordinate
+  change had not fallen below 10⁻⁸ after 8,000 steps — a tolerance artefact at
+  N = 14, not divergence. The solve is bitwise reproducible across processes.
+</div>
+</section>
+
+<section id="routing">
+<h2>Routing: hard, soft, top-k, unit</h2>
+<p>
+  Everything rests on one allocation rule. With a shared multivariate-Gaussian
+  kernel of width σ, adapter <em>i</em> at position <em>x<sub>i</sub></em>
+  commands a share of the prompt at <em>b</em>:
+</p>
+<div class="eq">G_i(x, b) = f_i(x_i, b) / Σ_j f_j(x_j, b)      log f_i = −½ (x_i − b)ᵀ Σ⁻¹ (x_i − b),  Σ = σ²I</div>
+<p>
+  σ is therefore the temperature of a softmax over adapters. Small σ approaches
+  winner-take-all; large σ drives every share toward 1/N.
+</p>
+<h3>Hard versus soft</h3>
+<p>
+  <b>Hard routing</b> draws one winner per prompt from the categorical
+  distribution <em>G</em>. One prompt trains exactly one adapter, at unit weight.
+  <b>Soft routing</b> draws nothing: the prompt trains several adapters at once,
+  each weighted by its share. The routing unit is the co-located <em>pair</em>,
+  whose share is the sum of its members' — which equals the share a single
+  adapter would have at that shared position, but only because every group is the
+  same size. That is why the code requires groups of exactly two.
+</p>
+<h3>Top-k and the loss weighting</h3>
+<p>
+  These are two separate knobs, and the five-arm ladder exists to separate them.
+  <b>Top-k</b> decides <em>which</em> pairs see a prompt: keep the k largest
+  shares and renormalise. When k equals the number of pairs, nothing is truncated
+  and the allocation is untouched. <b>The loss weighting</b> decides <em>how
+  hard</em> each of them is pushed: <code>weighted</code> multiplies each
+  example's loss by that pair's renormalised share, so a prompt a pair barely
+  claims contributes a correspondingly small gradient; <code>unit</code> trains
+  every selected pair as if it fully owned the prompt. The membership is
+  identical either way — only the gradient magnitude differs, and neither touches
+  the position update.
+</p>
+</section>
+
+<section id="update">
+<h2>Why the position update matches the theory</h2>
+<p>
+  The loop never takes a gradient step. It moves each adapter part-way toward a
+  weighted centroid of the prompts it saw:
+</p>
+<div class="eq">x̂_i = Σ_m G_i(1−G_i) b_m / Σ_m G_i(1−G_i)        (weighted centroid of the batch)
+x_i ← (1−β) x_i + β x̂_i                         (β = 0.5)</div>
+<p>And the utility gradient the theory prescribes is:</p>
+<div class="eq">∇_{x_i} u_i = Σ_b B(b) · G_i(1−G_i) · Σ⁻¹ (b − x_i)</div>
+<p>
+  The two are the same direction. The centroid's drift is a positively weighted
+  average of <em>(b − x<sub>i</sub>)</em> with exactly the coefficient
+  <em>G<sub>i</sub>(1−G<sub>i</sub>)</em> that appears in the gradient, and for an
+  isotropic kernel <em>Σ⁻¹</em> is a positive scalar that changes the magnitude
+  but not the direction. That is what "theory-matched" means, and it is checked
+  numerically in the test suite at cosine similarity above 0.9999.
+</p>
+<p>
+  Under hard routing the sampling step already supplies one factor of
+  <em>G<sub>i</sub></em>, so the centroid only needs to carry <em>(1−G<sub>i</sub>)</em>
+  to complete the coefficient. Soft routing samples nothing, so it carries the
+  whole product — and can do so over the entire batch rather than just the
+  prompts a pair trained on, which is the lower-variance form of the same
+  estimator.
+</p>
+<p>
+  One prediction of this falls out cleanly and is worth recording, because it is
+  measured rather than enforced. Two clones sharing a position receive identical
+  allocations, hence identical gradients, hence identical updates — co-location
+  is a fixed point of the dynamics. The loop therefore never constrains partners
+  to stay together; it only records the distance between them. Under soft routing
+  that distance is <b>exactly zero at every round of every run</b>. Under hard
+  routing, which samples a single winner and so breaks the symmetry, the partners
+  drift apart by 0.05–0.11. The theory says which of those should happen, and it
+  is what happens.
+</p>
+</section>
+
+<section id="r-routing">
+<h2>Result: routing design</h2>
+{{fig:routing_ensemble}}
+<p class="cap">
+  <b>Sampling one winner per prompt is worse than not routing at all.</b> The
+  hard arm loses 0.0157 nats to its own generalist — a negative capture. Moving
+  to a deterministic top-3 gate recovers most of the ground, and going fully
+  dense with share-weighted losses roughly doubles the gain again. The ordering
+  is monotone in how much of the allocation each design actually uses.
+</p>
+{{fig:routing_ablation}}
+<p class="cap">
+  The same five arms as absolute NLL, with the oracle for each. The bar between
+  router and generalist is the gain; on the hard arm it points the wrong way. The
+  right panel shows oracle agreement, which separates the deterministic gates
+  (~70%) from the sampled ones (~54%).
+</p>
+<p>
+  The comparison is clean because the five arms differ in exactly three knobs —
+  selection rule, k, and loss weighting — and share everything else: the same
+  manifest, the same round batches, the same theory initialisation, and one
+  generalist that is data-matched to all of them.
+</p>
+
+<h3>Under the ensemble mixture, the hard arm is not a failure</h3>
+<div class="table-wrap"><table>
+  <tr><th>routing design</th><th class="num">expected</th><th class="num">mixture</th>
+      <th class="num">uniform</th><th class="num">oracle</th><th class="num">mix capture</th></tr>
+  <tr><td>Soft k=7 weighted</td><td class="num">+0.0693</td><td class="num">+0.1095</td><td class="num">+0.0661</td><td class="num">+0.1294</td><td class="num">84.6%</td></tr>
+  <tr><td>Soft k=3 weighted</td><td class="num">+0.0416</td><td class="num">+0.0837</td><td class="num">+0.0404</td><td class="num">+0.1042</td><td class="num">80.4%</td></tr>
+  <tr><td>Soft k=3 unit</td><td class="num">+0.0316</td><td class="num">+0.0507</td><td class="num">+0.0227</td><td class="num">+0.0773</td><td class="num">65.6%</td></tr>
+  <tr><td>Sampled k=3 unit</td><td class="num">+0.0282</td><td class="num">+0.0450</td><td class="num">+0.0167</td><td class="num">+0.0715</td><td class="num">63.0%</td></tr>
+  <tr><td><b>Hard k=1 (SFT)</b></td><td class="num"><b>−0.0156</b></td><td class="num"><b>+0.0341</b></td><td class="num">−0.0090</td><td class="num">+0.0551</td><td class="num">61.8%</td></tr>
+</table></div>
+<p>
+  The headline above — that hard k=1 loses to its own generalist — is a property
+  of the <em>expected</em> metric, not of the adapters. Scored as an ensemble the
+  same arm <b>gains +0.0341</b> and captures 62% of its envelope. The experts it
+  trained were fine; committing to one of them was what cost it.
+</p>
+<p>
+  That is the same mechanism the reach sweep shows at long σ, in its most extreme
+  form. Hard routing trains each expert on a single categorical draw, so the
+  experts are noisier and the argmax is least trustworthy — exactly the regime
+  where choosing badly is expensive and averaging is free. Note also that the
+  ladder's spread compresses: on the expected metric it runs −0.016 to +0.069,
+  crossing zero; on the mixture it runs +0.034 to +0.110, a 3.2× ratio with no
+  sign change. Routing design still matters and dense soft still wins, but by
+  less than the expected metric suggests.
+</p>
+<div class="note">
+  <b>The router's weights are earned by the loss weighting, not the gate.</b> The
+  <em>G</em>-vs-uniform margin is +0.043 for both <code>weighted</code> arms, but
+  only +0.028 for two of the three <code>unit</code> arms. Share-weighted
+  training is the setting in which the loss ever sees the allocation, and it is
+  what makes <em>G</em> informative at evaluation time.
+</div>
+</section>
+
+<section id="r-sigma">
+<h2>Result: competitive reach</h2>
+{{fig:sigma_replicates}}
+<p class="cap">
+  Four independent data splits, mean ± 1 SD. Both series are improvements over
+  each split's <em>own</em> generalist, so the generalist is the zero line by
+  construction and <b>higher is better</b> — the axis runs the opposite way to a
+  raw NLL plot.
+</p>
+<p>
+  The single most robust finding in the sweep is at the long-reach end:
+  <b>σ = 0.70 is the worst setting in every split</b> on every column, and it has
+  the tightest error bar of any row. Everything from 0.20 to 0.50 is a plateau
+  whose rows are not separable from one another at n = 4.
+</p>
+<div class="note warn">
+  <b>Do not read a peak off this curve.</b> The best-performing σ is different in
+  <em>every one</em> of the four splits — 0.20, 0.30, 0.50 and 0.40 respectively.
+  A seed-0 spike at σ = 0.20 was what originally motivated running replicates at
+  all, and as a spike it did not reproduce: σ = 0.20 is the argmax only on seed
+  0, where it sits at z = +2.47 against its own split, versus +0.35 to +0.87
+  elsewhere. The shape is real; the argmax is not.
+  <br><br>
+  <b>But do not over-correct either.</b> σ = 0.20 beats its own split's mean in
+  <em>all four</em> splits, ranking 1st, 3rd, 2nd and 3rd of nine. So the
+  short-reach advantage is a reproducible feature of the naive start even though
+  the spike is not — a distinction that matters when the same cell reappears as
+  the largest disagreement between the two initialisations further down.
+</div>
+{{fig:sigma_table}}
+<p class="cap">
+  The same sweep as numbers, with the envelope as its own column. Every entry is
+  a difference from that split's own pooled generalist; <b>higher is better in
+  every column</b>, and shading ranks rows within a column only.
+</p>
+<div class="note">
+  <b>Why the per-replicate bar chart is gone.</b> It plotted the same quantity
+  as the figure above, split by replicate rather than averaged, on an axis where
+  the differences are ~0.005 nats — a flat line at any sane scale, and on the
+  opposite sign convention from everything around it. The table carries what it
+  was there to show, including the per-setting <em>n</em> and the spread, plus
+  the envelope column the stacked-bar chart used to need a whole figure for.
+</div>
+
+<h3>Two different failures that look alike</h3>
+<p>
+  Read the <em>oracle − pooled</em> and <em>captured</em> columns of the table
+  above together, row by row. The router column alone conflates two failures
+  with opposite causes:
+</p>
+<ul>
+  <li>
+    <b>Long reach — a routing failure.</b> At σ = 0.70 the envelope is
+    unremarkable, sitting near its sweep-typical value: the specialists did
+    separate, and the headroom is there. Capture falls to roughly a third, the
+    lowest in the sweep. The router simply cannot tell the specialists apart —
+    which the argmax-agreement column corroborates, also bottoming out on this
+    row.
+  </li>
+  <li>
+    <b>Short reach — a specialisation failure.</b> At σ = 0.05 capture is
+    ordinary, mid-range for the sweep. What has collapsed is the envelope
+    itself, the smallest in the table. The router worked as well as it does
+    anywhere; there was simply less to route to.
+  </li>
+</ul>
+<p>
+  Both show up as a smaller number in the <em>router − pooled</em> column, which
+  is why that column is not diagnostic on its own. This is the whole reason the
+  envelope is carried as a column rather than left implicit.
+</p>
+</section>
+
+<section id="r-pairs">
+<h2>Result: how many pairs</h2>
+{{fig:pair_count}}
+<p class="cap">
+  Eight ensembles from 2 to 9 pairs, all at seed 0 against one shared generalist,
+  so absolute NLL is comparable here. <b>There is a threshold between four and
+  five pairs</b>: the gain nearly triples and capture jumps from 33% to 62%. This
+  is a step, not a slope.
+</p>
+<p>
+  Below the threshold, routing is at best marginal and at two pairs actively
+  harmful — the router loses 0.0011 nats to the generalist. What makes this
+  informative rather than merely negative is that the envelope grows smoothly
+  across the whole range while capture does not: at two, three and four pairs the
+  specialisation <em>is</em> there and the router fails to exploit it.
+</p>
+<div class="note warn">
+  <b>Seven pairs — the configuration the whole replicate sweep is running at — is
+  the worst of the five arms above the threshold.</b> Six pairs gives 0.0818
+  gain at 63.7% capture against seven's 0.0692 at 53.5%, with essentially the
+  same envelope. Five, six, eight and nine pairs all beat it, which makes a
+  sampling artefact less likely than a genuine local minimum. This is n = 1 and
+  wants a second split before it is leaned on, but it bears on where the
+  remaining GPU time should go.
+</div>
+<p>
+  Eight and nine pairs put <b>more routing units than there are trait axes</b>,
+  and nothing degrades: the envelope keeps growing and capture holds near 55%.
+  The axis count is not an upper bound on useful pairs.
+</p>
+</section>
+
+<h3>The mixture confirms the threshold independently</h3>
+<p>
+  Rescoring every pair-count arm as an ensemble reproduces the same step without
+  sharing arithmetic with the expected metric beyond the underlying NLL matrix:
+  the equilibrium start is worth a mean <b>+0.0209</b> in mixture gain at
+  K ≤ 4 and <b>−0.0019</b> at K ≥ 5.
+</p>
+<div class="note">
+  <b>The two regimes have different bottlenecks.</b> What the router's weights
+  are worth over uniform averaging of the same experts rises monotonically with
+  pair count — from <b>+0.0009</b> at K = 2 to <b>+0.0495</b> at K = 9. So
+  starting position matters when pairs are scarce, and the weights matter when
+  pairs are plentiful. At K = 2 from a naive start the weights buy essentially
+  nothing; the equilibrium start lifts that twelvefold, to +0.0112. By K = 6 the
+  two initialisations are indistinguishable on this measure too, because with
+  enough experts the router has something real to discriminate between wherever
+  they started.
+</div>
+
+<section id="r-where">
+<h2>Result: where the pairs go</h2>
+{{fig:radar_pairs}}
+<p class="cap">
+  Each panel is one pair's final position across all seven axes; the grey dashed
+  outline is where the theory solve placed it before any training. <b>The 2-pair
+  polygons are visibly huddled near the centre</b> — barely specialised, which is
+  the geometric picture of the threshold above. By five and seven pairs the
+  shapes are distinct and spiky.
+</p>
+<p>
+  Two details the figure makes visible. At seven pairs, <b>two pairs both
+  specialise on harm and no pair claims privacy</b> — the assignment of pairs to
+  axes is not a bijection. And training moves the pairs a real distance from
+  their theoretical starting points rather than sitting where the solve put them.
+</p>
+
+<h3>How far the pairs leave the theory solve, and why that is the useful part</h3>
+<div class="note warn">
+  <b>Every arm so far begins from a <em>naive start</em>.</b> The theory solve
+  maximises <em>u<sub>i</sub> = Σ<sub>b</sub> B(b) G<sub>i</sub>(b)</em> over
+  agent positions, so the answer it gives depends entirely on what
+  <em>B(b)</em> — the resource measure — says about where prompts live. In every
+  run reported above, <em>B</em> carries almost no information about that: it is
+  close to a <b>uniform prior over the {0, 0.5, 1}<sup>7</sup> lattice</b>,
+  per-axis variance 0.159 and anisotropy 1.29, against the prompt cloud's actual
+  0.084 and 3.10.
+  <br><br>
+  The reason is mechanical. <code>_kde_on_grid</code> subtracts a per-grid-point
+  maximum for log-space stability and never multiplies it back, so each grid
+  point's density is divided by its own nearest-prompt kernel value — the
+  dominant term. A single prompt returns a <em>uniform</em> vector wherever it
+  sits; ninety prompts at one corner and ten at another return
+  <code>[0.45, 0.50, 0.05]</code>, putting the most weight on the location with
+  no prompts at all.
+  <br><br>
+  That makes the existing runs a well-defined baseline rather than a spoiled
+  one: <b>agents started from an uninformative prior over trait space</b>. The
+  natural comparison is against agents started from an equilibrium of the same
+  game solved against the <em>real</em> prompt distribution — which is the
+  ablation the next section runs. Nothing here is invalidated: training always
+  drew its position updates from real prompt batches, so only the starting point
+  and the σ₀* normalising constant came from the naive measure.
+</div>
+<p>
+  Each panel therefore carries three outlines. The grey dashed one is the
+  approximate initialisation the run started from. The red dash-dot one is the
+  same game solved against the empirical prompt cloud — where the theory would
+  have placed that pair had it seen the data. The solid coloured one is where
+  twelve rounds of routed training actually left it. Two gaps matter, and they
+  are different questions: how far training moved from where it started, and how
+  far it finished from where the theory points.
+</p>
+{{fig:theory_drift}}
+<p class="cap">
+  Mean L2 per pair, split 0, in a space of diagonal √7 ≈ 2.65. Pairs are
+  Hungarian-matched before differencing, since the two solves index pairs
+  independently. <b>These are distances, not scores</b> — neither column has a
+  good direction, which is why no arrow appears on them. Rows marked
+  <em>pending</em> are waiting on the offline solve, which is CPU-only and takes
+  minutes per arm.
+</p>
+<p>
+  The third column sets the scale for the other two: the solves are far enough
+  apart that "how far training moved" and "how far it finished from the theory"
+  are independent facts rather than restatements of each other.
+</p>
+
+<h3>Would more rounds have closed the gap?</h3>
+<p>
+  This is answerable without a GPU and without training anything. The position
+  update never looks at an adapter — under soft routing it is just
+</p>
+<div class="eq">x̂_i = Σ_m G_i(1−G_i) b_m / Σ_m G_i(1−G_i),    x_i ← (1−β) x_i + β x̂_i</div>
+<p>
+  which depends only on the prompt coordinates and σ. So the trajectory can be
+  continued on CPU from wherever training stopped. And the fixed point of that
+  update, <em>x̂<sub>i</sub> = x<sub>i</sub></em>, is algebraically the same
+  condition as ∇<sub>x<sub>i</sub></sub>u<sub>i</sub> = 0, because the gradient
+  is σ<sup>−2</sup> Σ<sub>m</sub> G<sub>i</sub>(1−G<sub>i</sub>)(b<sub>m</sub> −
+  x<sub>i</sub>). Continuing the loop therefore has to land on an equilibrium of
+  the game under the empirical measure. The question is <em>which</em> one.
+</p>
+<div class="table-wrap"><table>
+  <tr><th>arm</th><th class="num">‖∇u‖ at round 11</th><th class="num">extra rounds to converge</th>
+      <th class="num">distance moved</th><th class="num">trained → empirical</th>
+      <th class="num">continued → empirical</th></tr>
+  <tr><td>reach 0.05</td><td class="num">68798</td><td class="num">100</td><td class="num">0.042</td><td class="num">0.417</td><td class="num">0.414</td></tr>
+  <tr><td>reach 0.50</td><td class="num">436</td><td class="num">125</td><td class="num">0.032</td><td class="num">0.350</td><td class="num">0.344</td></tr>
+  <tr><td>reach 0.70</td><td class="num">243</td><td class="num">400+</td><td class="num">0.067</td><td class="num">0.209</td><td class="num">0.177</td></tr>
+  <tr><td>2 pairs</td><td class="num">5663</td><td class="num">145</td><td class="num">0.038</td><td class="num">0.294</td><td class="num">0.294</td></tr>
+  <tr><td>5 pairs</td><td class="num">639</td><td class="num">261</td><td class="num">0.115</td><td class="num">0.390</td><td class="num">0.390</td></tr>
+</table></div>
+<p class="cap">
+  Continuation uses the whole train partition each round rather than a sampled
+  batch — the expectation of the update the loop applies — so batch noise is
+  removed and only the fixed point remains. Gradient norms carry a σ<sup>−2</sup>
+  factor, so they are comparable down a column, not across rows.
+</p>
+<p>
+  Three things follow, and the third is the interesting one.
+</p>
+<ul>
+  <li>
+    <b>Twelve rounds is nowhere near converged.</b> The gradient at round 11 is
+    large in every arm. Training stops well short of a fixed point.
+  </li>
+  <li>
+    <b>The loop does converge if you let it</b> — 100 to 260 further rounds
+    reaches ‖∇u‖ &lt; 10<sup>−3</sup>, and it costs seconds of CPU. But the
+    positions barely move getting there: 0.03 to 0.12.
+  </li>
+  <li>
+    <b>It converges to a different equilibrium than the fresh solve.</b> The
+    distance to the empirical-<em>B</em> solve is essentially unchanged by the
+    continuation — 0.350 → 0.344, 0.294 → 0.294. Both endpoints have ‖∇u‖ ≈ 0,
+    so both are genuine equilibria; they are simply different ones. The game has
+    many, and <b>the initialisation picks the basin</b>.
+  </li>
+</ul>
+<div class="note warn">
+  <b>Correction.</b> An earlier version of this section reported that the trained
+  positions sit closer to the empirical solve than to the approximate one they
+  started from. That was computed against a 3,000-prompt subsample of the
+  measure, and it does not survive the full 28,355-prompt solve. At full support
+  the trained positions are closer to the <em>approximate</em> initialisation in
+  four of the five arms. Training is not walking toward the better theory; it is
+  staying in the basin its initialisation put it in.
+</div>
+<div class="note">
+  <b>One row to discount.</b> The σ = 0.05 empirical solve did not converge —
+  8000 steps, final ‖∇u‖ ≈ 1.5 × 10<sup>5</sup>. At that reach the allocation is
+  so peaked that the dynamics are stiff, so its "empirical theory" position is
+  not an equilibrium and the 0.417 in its row should not be read as a distance
+  to one.
+</div>
+<p>
+  At σ = 0.50 the pairs move a mean of <b>0.24</b> in L2 across four splits, with
+  individual pairs between 0.09 and 0.44, in a space whose diagonal is √7 ≈ 2.65. So roughly a
+  tenth of the space — far more than a rounding error, and far less than a
+  wholesale reassignment. Three things about that movement are systematic across
+  every split and every reach we have scored:
+</p>
+<ul>
+  <li>
+    <b>It is inward, always.</b> The mean radius of the configuration about its
+    own centroid shrinks in every run measured — 0.585 → 0.518 at σ = 0.50 and
+    0.510 → 0.357 at σ = 0.70, both on split 0. The theory solve places the pairs
+    <em>more</em> spread out than training sustains.
+  </li>
+  <li>
+    <b>Much of it is retreat along the pair's own dominant axis.</b> Of the 0.24
+    mean displacement at σ = 0.50, −0.06 is the pair backing away from the very
+    coordinate it specialises in; at σ = 0.70 that rises to −0.13 of 0.27, about
+    half the total. Specialists moderate their own extreme rather than sharpening
+    it. This is what the contraction is made of.
+  </li>
+  <li>
+    <b>The direction is consistent across axes.</b> Averaged over four splits at
+    σ = 0.50, injection (+0.013) and policy (+0.004) gain coordinate while harm
+    (−0.028) and hallucination (−0.021) lose it. Every split shows the same
+    signs on harm and injection.
+  </li>
+</ul>
+<p>
+  That last ordering is <em>suggestively</em> the same one as the per-benchmark
+  gains below — the axes pairs drift toward are the axes routing pays on, and the
+  axis they retreat from hardest, harm, is the one that is flat everywhere. The
+  rank correlation over the seven axes is ρ = +0.64, but with seven points that
+  is <b>p = 0.12 and not significant</b>. It is a hypothesis the encoder
+  experiments can test properly, not a result.
+</p>
+<div class="note">
+  <b>Why any of this is interpretable.</b> A pair's position is seven numbers in
+  [0,1] on axes that were <em>named before training started</em> — harm,
+  hallucination, jailbreak, privacy, over-refusal, injection, policy. There is no
+  probing step and no post-hoc labelling of experts: to ask what an expert does,
+  you read its coordinates. That makes two otherwise-invisible things checkable.
+  First, the theory's prediction and the trained outcome live in the same
+  coordinates, so "the solve was wrong about this pair, in this direction, by
+  this much" is a sentence with numbers in it. Second, the drift is a
+  <em>measurement</em> of the landscape: a pair that moves toward injection is
+  reporting that the prompt mass it actually won was more injection-heavy than
+  the lattice model predicted.
+</div>
+<p>
+  One cheap diagnostic falls out of this. Ask whether a pair's <em>argmax</em>
+  axis is still the one the theory assigned it after training. At σ = 0.50 it
+  usually is — 7/7, 7/7, 6/7 and 5/7 across the four splits. At σ = 0.05 it
+  usually is not — 4/7, 5/7, 5/7, 3/7. Short reach does not merely compress the
+  specialists, it <b>reassigns</b> them, which is a sharper statement of the
+  envelope collapse than the NLL table can make. Note that σ = 0.70 retains
+  identity perfectly respectably (4/7, 5/7, 5/7, 6/7) while capturing the least
+  of any setting — exactly the signature of a routing failure rather than a
+  specialisation failure, and an independent confirmation of that split.
+</p>
+{{fig:radar_sigma}}
+<p class="cap">
+  The same seven pairs at three competitive reaches. Pairs are matched across
+  runs by nearest final position rather than by index — pair 3 in one run is not
+  the same specialist as pair 3 in another, and the matching confirms it: the
+  0.05 and 0.70 runs need genuine permutations of the 0.50 ordering, not the
+  identity.
+</p>
+<p>
+  Positions move less with reach than one might expect — a mean of about 0.2 in a
+  space whose diameter is 2.6 — with a couple of pairs moving substantially. The
+  reach mostly changes how sharply the pairs compete for prompts, not where they
+  end up sitting.
+</p>
+</section>
+
+<section id="r-init">
+<h2>Result: naive start vs the game equilibrium</h2>
+<p class="lead">
+  The whole pair-count ablation, rerun from an equilibrium of the influencer
+  game solved against the empirical prompt cloud instead of from the naive
+  uniform prior. One factor moves. Same split, same σ, same twelve rounds, same
+  dense soft routing, same pooled generalist — only where the agents start.
+</p>
+{{fig:naive_vs_theory}}
+<p class="cap">
+  Upper: routing gain under each initialisation, with the oracle ceilings behind
+  in thin blue. Lower: their difference, against the ±2σ band measured from the
+  arms where the two agree. <b>Higher is better in both.</b> Shaded region marks
+  the regime below the original threshold.
+</p>
+<p>
+  The effect is a <b>step function, not a trend</b>. Below the threshold the
+  equilibrium start is worth +0.026, +0.013 and +0.036 nats at K = 2, 3, 4.
+  Above it the five arms scatter around zero — −0.005, +0.001, +0.003, −0.003,
+  +0.004 — with mean −0.000 and SD 0.0039. Those five nulls are what the error
+  band is built from, so they serve as a measured noise floor rather than an
+  assumed one: the three effects below the threshold are <b>6.6σ, 3.3σ and
+  9.2σ</b> against it.
+</p>
+<div class="note">
+  <b>Where the agents start decides what they become — but only when capacity is
+  scarce.</b> With five or more pairs the game reaches equivalent specialisation
+  from either starting point. With four or fewer it does not, and the naive
+  start leaves real performance unclaimed. At K = 2 it is the difference between
+  routing <em>hurting</em> (−0.0011) and helping (+0.0247).
+</div>
+<p>
+  The envelope column says which half of the pipeline is responsible, and it
+  splits the same way. Below the threshold the oracle ceiling itself rises —
+  +0.020, +0.007, +0.018 — so the equilibrium start produces genuinely more
+  separated specialists, not merely better exploitation of the same ones. Above
+  it the ceiling moves by less than 0.001 in either direction. Nothing is
+  created where capacity was already sufficient.
+</p>
+<h3>It also relocates the threshold</h3>
+<p>
+  The original ablation's jump sits between K = 4 (+0.027) and K = 5 (+0.075),
+  which is where the dotted line comes from. Started at the equilibrium, K = 4
+  reaches <b>+0.0635</b> — most of the way to what the naive start needed
+  <em>five</em> pairs to achieve. So part of "you need at least five pairs" was
+  a property of the initialisation rather than of the method.
+</p>
+<h3>The equilibrium is a fixed point, and the agents stay in it</h3>
+<p>
+  The position update never consults an adapter, so its behaviour is checkable
+  directly. Arms started at the equilibrium move a mean of <b>0.013</b> over
+  twelve rounds with straightness 0.12 — <em>below</em> the 0.30 expected of a
+  random walk, meaning consecutive steps are anti-correlated and the agents are
+  jittering in place on batch noise. Step size is flat from round 1 to round 12
+  rather than decaying, which is the signature of a noise floor rather than of
+  convergence. Arms started naively travel <b>0.25</b> with straightness
+  0.66–0.85: directed motion toward somewhere else.
+</p>
+<p>
+  That is the theory's own prediction, confirmed. The update's fixed point,
+  <em>x̂<sub>i</sub> = x<sub>i</sub></em>, is algebraically the condition
+  ∇<sub>x<sub>i</sub></sub>u<sub>i</sub> = 0, so an agent placed at an
+  equilibrium has no reason to move and demonstrably does not.
+</p>
+
+<h3>The same contrast across competitive reach</h3>
+<p>
+  The pair-count ablation above moves capacity. This moves reach instead: all
+  ten σ settings, each trained from both starting points. It is the one
+  comparison in the study that is <b>genuinely paired</b> — every arm on both
+  sides scores the identical 5,671-prompt test partition against the identical
+  pooled generalist at 2.0152 nats, verified cell by cell. The usual "absolute
+  NLL is not comparable" caveat does not apply, and the difference column is a
+  within-prompt contrast rather than a cross-split one.
+</p>
+{{fig:sigma_init_table}}
+<p class="cap">
+  Left block: expected NLL, the cost of committing to one expert. Right block:
+  sequence-level mixture. <b>Higher is better everywhere</b>; difference is
+  equilibrium − naive, so green favours the equilibrium and red the naive start.
+</p>
+<p>
+  The headline is that <b>the equilibrium does not raise the mean</b>. Across
+  the ten reaches the mean difference on the expected metric is <b>+0.0007</b>.
+  It wins at eight of ten, but the two it loses include the largest single
+  difference in the sweep — <b>−0.0215 at σ = 0.20</b> — and that one cell
+  cancels the other eight. The median is +0.0027.
+</p>
+<h4 style="font-family:var(--font-display);font-size:15px;margin:18px 0 2px">
+  Reach 0.20 is not an outlier, and that matters</h4>
+<p>
+  The tempting move is to call σ = 0.20 a fluke of seed 0 and quote the median.
+  The replicate data says otherwise. The naive reach sweep has four data splits,
+  and σ = 0.20 beats its <em>own split's</em> mean in <b>all four</b>:
+</p>
+<div class="table-wrap"><table>
+  <tr><th>naive split</th><th class="num">σ = 0.20 gain</th>
+      <th class="num">rank of 9</th><th class="num">z vs own split</th>
+      <th class="num">excess over split mean</th></tr>
+  <tr><td>seed 0</td><td class="num">+0.0917</td><td class="num">1</td>
+      <td class="num">+2.47</td><td class="num">+0.0220</td></tr>
+  <tr><td>dseed1</td><td class="num">+0.0846</td><td class="num">3</td>
+      <td class="num">+0.72</td><td class="num">+0.0069</td></tr>
+  <tr><td>dseed2</td><td class="num">+0.0823</td><td class="num">2</td>
+      <td class="num">+0.87</td><td class="num">+0.0075</td></tr>
+  <tr><td>dseed3</td><td class="num">+0.0789</td><td class="num">3</td>
+      <td class="num">+0.35</td><td class="num">+0.0042</td></tr>
+</table></div>
+<p>
+  So <b>the naive start really is good at this reach</b> — the sign replicates
+  four times out of four. What fails to replicate is the <em>size</em>: seed 0's
+  excess is roughly three times the other three splits'. And the equilibrium arm
+  at σ = 0.20 sits essentially at its own sweep mean (+0.0702 against +0.0705),
+  so the entire −0.0215 is a naive bump, not an equilibrium dip.
+</p>
+<p>
+  The consequence is a correction to the obvious reading of the table. On a
+  typical split the difference at σ = 0.20 would be nearer <b>−0.008</b> than
+  −0.0215, which would put the mean difference around +0.002 — close to the
+  median. The median is the better summary of that column, but <em>not</em>
+  because σ = 0.20 is noise to be discarded. It is because seed 0 happens to
+  sample the high tail of a real effect. Discarding the cell would overstate the
+  equilibrium; taking seed 0's version of it at face value understates it.
+</p>
+<div class="note">
+  <b>The advantage is specific to committing to one expert.</b> Under
+  sequence-level mixing the equilibrium is ahead at only <b>four of ten</b>
+  reaches, with mean difference <b>−0.0019</b>. Mixing already recovers most of
+  what a mis-placed specialist costs, so a better starting geometry buys least
+  exactly where the combination rule is most forgiving. Reported as a single
+  number over both metrics, this result would disappear.
+</div>
+
+<h3>What changes is the shape of the reach response, not its level</h3>
+<p>
+  The reproducible difference is not where the curves sit but how they move.
+  The natural summary — standard deviation across reach — gets this wrong, and
+  it is worth seeing why, because it is the kind of error that survives review.
+  The mixture gain <em>genuinely trends upward</em> with reach under both
+  starting points: softer allocation mixes better even as it selects worse. SD
+  charges both curves for that real trend, lands at ≈0.0156 either way, and
+  reports no difference at all.
+</p>
+<p>
+  The second difference annihilates any straight line, so mean |second
+  difference| along the reach axis measures zigzag rather than spread. On that
+  statistic the two families separate on <em>both</em> metrics (σ = 0.70
+  excluded throughout — its equilibrium is degenerate):
+</p>
+<div class="table-wrap"><table>
+  <tr><th>curve, nine reaches</th><th class="num">SD</th>
+      <th class="num">roughness</th><th class="num">steps rising with reach</th></tr>
+  <tr><td>naive, expected</td><td class="num">0.0089</td>
+      <td class="num">0.01643</td><td class="num">3 / 8</td></tr>
+  <tr><td>equilibrium, expected</td><td class="num">0.0027</td>
+      <td class="num"><b>0.00211</b></td><td class="num">3 / 8</td></tr>
+  <tr><td>naive, mixture</td><td class="num">0.0155</td>
+      <td class="num">0.01597</td><td class="num">4 / 8</td></tr>
+  <tr><td>equilibrium, mixture</td><td class="num">0.0158</td>
+      <td class="num"><b>0.00358</b></td><td class="num">7 / 8</td></tr>
+</table></div>
+<p>
+  <b>7.8× smoother on expected, 4.5× on mixture</b>, and the equilibrium's
+  mixture curve climbs almost monotonically with reach (7 of 8 steps) where the
+  naive one wanders (4 of 8). Note the two SD columns: on the expected metric SD
+  and roughness agree, on the mixture metric SD says nothing and roughness says
+  4.5×. That is the whole argument for not using SD here.
+</p>
+
+<h3>Why I do not yet attribute that smoothness to the equilibrium</h3>
+<p>
+  There is a second explanation for the same numbers, and the current data
+  cannot rule it out. The two sweeps <b>do not start from comparable places</b>.
+  Every naive arm uses <code>init_mode: theory_gradient_paired</code>, which
+  re-solves the theory initialisation from a fresh random start at each σ
+  against the near-uniform reward; the equilibrium arms use
+  <code>init_mode: given</code> with positions solved against the empirical
+  reward. Measuring how far the <em>initial</em> pair positions move between
+  adjacent reaches — Hungarian-matched, mean L2 in the 7-D unit box:
+</p>
+<div class="table-wrap"><table>
+  <tr><th>initial positions, adjacent reaches</th><th class="num">median step</th>
+      <th class="num">max</th><th class="num">steps under 0.05</th></tr>
+  <tr><td>naive</td><td class="num">0.302</td><td class="num">0.460</td>
+      <td class="num">0 of 9</td></tr>
+  <tr><td>equilibrium</td><td class="num"><b>0.014</b></td><td class="num">0.178</td>
+      <td class="num">7 of 9</td></tr>
+</table></div>
+<p>
+  A ~20× difference, and the configurations differ in kind, not only in
+  distance. Counting the set of trait axes the pairs occupy at initialisation,
+  the naive sweep produces <b>six distinct axis-sets across ten arms</b> —
+  σ = 0.05 covers privacy and over-refusal but not jailbreak or policy, σ = 0.10
+  swaps those, σ = 0.30 carries both jailbreak and privacy but drops
+  over-refusal. The equilibrium sweep produces <b>four</b>, and eight of the ten
+  share a single set, with σ = 0.10 through 0.55 identical. The naive sweep is
+  not one configuration observed at ten reaches; it is ten configurations
+  indexed by reach.
+</p>
+<p>
+  So the smooth-family reading is at least as well supported as the
+  equilibrium reading, and the obvious bridge between them <em>fails</em>: if
+  basin-hopping drove the zigzag, larger position steps should produce larger
+  gain changes, and within the naive family they do not. Spearman ρ =
+  <b>−0.40</b> (p = 0.29, n = 9) — the wrong sign. Within the equilibrium family
+  ρ = +0.67 (p = 0.050); pooled across both, ρ = +0.39 (p = 0.11). A family-level
+  association with n = 2 families and no within-family dose-response is not a
+  mechanism.
+</p>
+<div class="note warn">
+  <b>The roughness ratio may be a fact about how the two sweeps were built
+  rather than about equilibrium.</b> One family is a smooth one-parameter family
+  by construction; the other re-solves independently at every reach. The control
+  that separates them is cheap to state and has not been run: repeat the naive
+  sweep holding positions fixed across σ — take one naive solve and reuse it at
+  all ten reaches, changing only σ. If the naive curve smooths, the result is
+  about construction. If it stays rough, it is about equilibrium. Until then the
+  roughness numbers stand as measured and the causal reading does not.
+  <br><br>
+  A related gap: there are <b>no run-seed replicates anywhere</b> in the study —
+  no arm has been retrained at a second run seed on the same split. So
+  training-run noise at fixed (σ, initialisation) is unmeasured, and the +0.0027
+  median sits on top of an unknown. Two arms at σ = 0.50, run seed 1, would size
+  it, and would test the mechanism directly besides: the run seed moves the
+  naive positions but leaves the equilibrium positions pinned, so the two
+  families should respond to it very differently if the mechanism is real.
+</div>
+<p>
+  One observation survives all of that caveating, because it does not depend on
+  which family is smoother. <b>Neither initialisation ever occupies all seven
+  axes</b>, both always cover harm, hallucination, injection and policy, and
+  <b>privacy is the axis most often left empty</b> — the naive sweep places a
+  specialist there at three of ten reaches, the equilibrium sweep at two. That
+  is the same benchmark that carries a negative gain everywhere in the
+  per-benchmark breakdown below. The game declines to specialise on privacy, and
+  on the rare occasions it does, that benchmark still loses.
+</p>
+
+<div class="note warn">
+  <b>Every point here is one data split, and ±0.004 overstates the precision.</b>
+  That figure is the spread of Δ across the arms where the two initialisations
+  agree — it measures how closely two runs that landed in similar places track
+  each other, and it is <em>not</em> a general bound on how far a Δ could move on
+  a different split. A paired comparison cancels luck the two arms share (same
+  test pool, same generalist) but not luck that depends on where the specialists
+  ended up, and the two initialisations produce different specialists.
+  <br><br>
+  The size of that residual is measurable, because the naive reach sweep has
+  three replicate splits. Seed 0's gain deviates from its own replicate mean by
+  <b>−0.016 to +0.013</b> depending on σ, with no consistent sign — and the
+  replicate means are a flat plateau from σ = 0.20 to 0.50, meaning most of the
+  structure in the seed-0 reach curve is split noise rather than signal.
+  <br><br>
+  So: <b>the below-threshold pair-count effects (+0.013 to +0.036) survive even
+  that larger uncertainty and I would defend them.</b> Anything at the ±0.01
+  level on a single split — including the above-threshold nulls, and any
+  individual σ comparison — is not resolved. A second data split is the cheap
+  fix, and it is what the replicate machinery already exists to do.
+  <br><br>
+  <b>That second split is now running.</b> The ten naive dseed1 reach arms
+  already existed, so only the equilibrium side needed training. The first arm
+  to land, σ = 0.05, gives +0.0761 against its naive dseed1 counterpart's
+  +0.0570 — a difference of +0.0191, where the same comparison on seed 0 gave
+  +0.0029. But read that carefully rather than as a win: the equilibrium value
+  sits essentially <em>at</em> the naive dseed1 mean of +0.0777, and the gap
+  opens because naive σ = 0.05 was the weakest arm on that split, 0.021 below
+  its own split's mean. One point, carried by the naive side. The claim to test
+  as the remaining nine land is the smoothness one, and it is pre-registered
+  here: <b>roughness below 0.006 and SD below 0.004</b> for the equilibrium
+  dseed1 curve, against 0.00813 and 0.0095 for the naive dseed1 curve that is
+  already complete.
+</div>
+<div class="note warn">
+  <b>The σ = 0.70 equilibrium is degenerate.</b> Two pairs merge exactly, leaving
+  five distinct positions for seven pairs. Co-located distinct pairs receive
+  identical allocations, hence identical updates, so the degeneracy is a fixed
+  point — measured to hold at distance 0.000000 at every one of the twelve
+  rounds. That arm is a five-expert ensemble carrying seven adapters and must be
+  read as such.
+</div>
+</section>
+
+<section id="r-bench">
+<h2>Result: which axes pay</h2>
+{{fig:per_benchmark}}
+<p class="cap">
+  The headline gain is an average over seven very different behaviours. <b>Nearly
+  all of it comes from injection, jailbreak and policy</b>; harm is flat
+  everywhere; and <b>privacy is negative in every single cell</b> — routing
+  reliably makes it worse.
+</p>
+<p>
+  The pair-count panel shows the threshold again from a different angle: injection
+  roughly doubles from +0.11 at four pairs to +0.22 at five, and privacy's penalty
+  halves. Whatever changes at five pairs changes it per-axis, not uniformly.
+</p>
+<p>
+  The persistent privacy penalty is worth a follow-up on its own. Privacy is also
+  the axis that no pair claimed at seven pairs, and its benchmark is scored by a
+  density measure rather than a binary label — either could explain it, and the
+  data here cannot separate them.
+</p>
+</section>
+
+<section id="r-models">
+<h2>Result: base models</h2>
+{{fig:model_families}}
+<p class="cap">
+  Five base models at the standard configuration, each with its own generalist.
+  <b>Only the shaded ratio columns compare across families.</b> Per-token NLL
+  does not: the tokenizers differ by a factor of two in vocabulary size (Qwen
+  ~152k, Llama 128k, Gemma 262k), so the raw columns are meaningful within a row
+  and misleading between rows.
+</p>
+<p>
+  Within the Qwen ladder, capture falls slightly as the model grows — 53.5%,
+  51.9%, 50.1% from 1.5B to 7B — even as every absolute NLL improves. A stronger
+  base model leaves proportionally less for routing to recover, which is what one
+  would expect and is worth stating rather than burying.
+</p>
+<p>
+  Oracle agreement is remarkably flat across all five models at 68.9–70.9%,
+  including Gemma. Whatever the router is doing, it does it about equally well
+  regardless of the base.
+</p>
+</section>
+
+<section id="ensemble">
+<h2>The ensemble number we should be reporting</h2>
+<p>
+  Every "router" number above is <em>Σ<sub>p</sub> G<sub>p</sub> ·
+  NLL<sub>p</sub></em> — the expected loss of <b>sampling one expert</b>. That is
+  the right metric for a system that must commit to a single adapter, and it is
+  what the code has always reported. But it is not an ensemble, and if the method
+  is described as one, the mixture is the number a reader will ask for:
+</p>
+<div class="eq">mixture_i = −(1/n_i) · logsumexp_p ( log w_p − n_i · NLL_{p,i} )</div>
+<p>
+  By Jensen's inequality the mixture is never worse, so the ordering
+  <em>oracle ≤ mixture ≤ expected</em> holds by construction. Reporting the
+  expected value understates the method.
+</p>
+<p>
+  The machinery for this is now in place — the evaluator computes both the
+  share-weighted mixture and a <b>uniform-weight control</b>, and persists the
+  per-prompt matrix so any future weighting is an offline recomputation rather
+  than another pass over every adapter.
+</p>
+{{fig:ensemble}}
+<p class="cap">
+  Every panel is plotted as improvement over that arm's own pooled generalist,
+  <b>higher is better</b>, and the oracle line is the ceiling. This is mandatory
+  for panels (d) and (e), which span three tokenizers whose per-token NLL cannot
+  be compared at all. The shaded band between the expected and mixture series is
+  the Jensen gap. Panels marked <em>pending re-score</em> are waiting on GPU time
+  — the expected and oracle series in them are final, and only the two mixture
+  series are missing.
+</p>
+<p>
+  The re-score is queued across both cards behind the running replicates. It is
+  inference only, roughly 17 minutes per arm, and does not retrain anything: the
+  adapters are unchanged and only the scoring pass is repeated with the matrix
+  persisted this time.
+</p>
+<div class="note warn">
+  <b>A prediction this section got wrong.</b> An earlier version argued that
+  because the weights enter the mixture only as <em>−log w / n</em>, and the mean
+  sequence is 67 tokens, uniform and share-weighted mixing would land close
+  together — making sequence-level mixture a <em>weak</em> test of routing. That
+  is refuted. Uniform is worse in every arm scored, by 0.011 to 0.045 nats, and
+  at seven and eight pairs it is worse than even the expected metric. The
+  approximation from mean sequence length was too crude; the logsumexp is not as
+  dominated by the best expert as it implied. Sequence-level mixture turns out to
+  be a <em>sharp</em> test, and the router passes it.
+</div>
+<h3>What the mixture actually shows</h3>
+<div class="table-wrap"><table>
+  <tr><th>arm (equilibrium start)</th><th class="num">expected</th>
+      <th class="num">mixture</th><th class="num">uniform</th>
+      <th class="num">oracle</th><th class="num">mixture captures</th></tr>
+  <tr><td>2 pairs</td><td class="num">+0.0247</td><td class="num">+0.0440</td><td class="num">+0.0328</td><td class="num">+0.0544</td><td class="num">80.8%</td></tr>
+  <tr><td>4 pairs</td><td class="num">+0.0635</td><td class="num">+0.0869</td><td class="num">+0.0550</td><td class="num">+0.1002</td><td class="num">86.7%</td></tr>
+  <tr><td>7 pairs</td><td class="num">+0.0726</td><td class="num">+0.1092</td><td class="num">+0.0653</td><td class="num">+0.1290</td><td class="num">84.7%</td></tr>
+  <tr><td>9 pairs</td><td class="num">+0.0816</td><td class="num">+0.1228</td><td class="num">+0.0742</td><td class="num">+0.1447</td><td class="num">84.9%</td></tr>
+</table></div>
+<p>
+  Reporting the mixture raises the headline by roughly <b>50%</b> — at seven
+  pairs, +0.0726 becomes +0.1092, and capture goes from 56% to <b>85% of the
+  envelope</b>. The ordering <em>oracle ≤ mixture ≤ expected</em> holds on every
+  run scored, which is the theorem check that the implementation is right.
+</p>
+<div class="note">
+  <b>The naive start is also where the router's weights stop mattering.</b> At
+  K = 2 from a naive start, mixture (+0.0157) and uniform (+0.0149) are
+  indistinguishable — G-weighting contributes 0.0008, essentially nothing. From
+  the equilibrium start the same comparison opens to 0.0112. So badly-placed
+  specialists are no better weighted by <em>G</em> than averaged uniformly;
+  well-placed ones are. That is the uniform control doing exactly the job it was
+  added for.
+</div>
+<h3>It also changes where the reach sweep peaks</h3>
+<p>
+  Under the expected metric the σ sweep peaks at 0.20 and collapses at long
+  reach (+0.0371 at σ = 0.70). Under the mixture it peaks at <b>σ = 0.60</b>
+  (+0.1139) and 0.70 does not collapse at all — +0.1021, 82% capture. The reason
+  is geometric: minimum pair separation falls monotonically with reach, from
+  0.600 at σ = 0.05 to 0.172 at 0.60 and <b>0.000 at 0.70</b>, where two pairs
+  merge exactly. Identical positions give identical <em>G</em>, so committing to
+  one expert becomes a coin flip between duplicates — while averaging over them
+  costs nothing. The capture collapse, the mixture's immunity to it, and the
+  equilibrium degeneracy are one phenomenon, not three.
+</p>
+</section>
+
+<section id="caveats">
+<h2>Caveats</h2>
+<p>Everything here is subject to the following, in rough order of how much they matter.</p>
+<div class="table-wrap"><table>
+  <tr><th>Caveat</th><th>Detail</th></tr>
+  <tr><td>Pair count is one split</td>
+      <td>The threshold and the seven-pair dip both rest on seed 0. Given that the
+          σ argmax moved across every replicate, the fine structure here should be
+          expected to move too. The threshold is a large enough effect to survive.</td></tr>
+  <tr><td>Replication is four of ten</td>
+      <td>Six further data splits are queued. At n = 10 the standard deviations
+          tighten by roughly a third, which is what would be needed to separate
+          neighbouring σ values.</td></tr>
+  <tr><td>Gemma-3-1B is flagged</td>
+      <td>Its generalist had not converged at twelve rounds, so its 86% capture is
+          inflated. It is excluded from the shading scale and from any scaling trend.</td></tr>
+  <tr><td>Jailbreak is a small axis</td>
+      <td>JBB-Behaviors contributes only 40 test prompts against 1,000 for most
+          benchmarks, so its per-benchmark cell is far noisier than it looks.</td></tr>
+  <tr><td>The oracle is conditional</td>
+      <td>It is the best achievable routing <em>of those adapters</em>, not an
+          absolute bound. Capture measures the router against what its own
+          ensemble made possible.</td></tr>
+  <tr><td>σ₀* uses N = 14</td>
+      <td>The threshold is computed for fourteen clones, but the initialised
+          configuration has only seven distinct positions. Treating clones as
+          competitors is deliberate, but it is a modelling choice.</td></tr>
+  <tr><td>Two axes are fit on responses</td>
+      <td>The harm and hallucination directions are learned from response
+          embeddings and then applied to prompt embeddings at routing time.</td></tr>
+  <tr><td>One superseded arm is excluded</td>
+      <td>An earlier <code>pair_merge_split</code> run is omitted throughout: it
+          used hand-named merge groups, a different centroid rule and a stale
+          manifest with a different test pool, so its numbers are not comparable.</td></tr>
+</table></div>
+</section>
+
+<footer>
+  Base model Qwen2.5-1.5B-Instruct unless stated; 14 clones in 7 co-located pairs;
+  soft routing, fully dense; 12 closed-loop rounds × 1,654 prompts; evaluated at
+  round 11 on the 5,671-prompt held-out partition.<br>
+  Every figure regenerated by <code>python make_figures.py</code> from the run
+  outputs. Built {{build:stamp}}.
+</footer>
+
+</div>

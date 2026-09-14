@@ -1,0 +1,72 @@
+{
+  "seven_axis_sigma005_full": {
+    "run": "seven_axis_sigma005_full",
+    "label": "reach 0.05",
+    "sigma": 0.020488479946652656,
+    "blend": 0.5,
+    "rounds_used": 100,
+    "converged": true,
+    "last_step": 9.423062330427001e-11,
+    "moved_from_trained": 0.041522347127262944,
+    "trained_to_empirical": 0.41672268518047906,
+    "continued_to_empirical": 0.413957959016238,
+    "trained_to_approx": 0.5089203004300963,
+    "continued_to_approx": 0.5257881293776271
+  },
+  "seven_axis_soft_full_pairs": {
+    "run": "seven_axis_soft_full_pairs",
+    "label": "reach 0.50",
+    "sigma": 0.20488479946652655,
+    "blend": 0.5,
+    "rounds_used": 125,
+    "converged": true,
+    "last_step": 9.00266527992244e-11,
+    "moved_from_trained": 0.03191062015432818,
+    "trained_to_empirical": 0.3501504903956426,
+    "continued_to_empirical": 0.3443523468240966,
+    "trained_to_approx": 0.4321848589686222,
+    "continued_to_approx": 0.43620407958374435
+  },
+  "seven_axis_sigma07_full": {
+    "run": "seven_axis_sigma07_full",
+    "label": "reach 0.70",
+    "sigma": 0.28683871925313714,
+    "blend": 0.5,
+    "rounds_used": 400,
+    "converged": false,
+    "last_step": 5.07533570726082e-09,
+    "moved_from_trained": 0.06717618161798712,
+    "trained_to_empirical": 0.20867632783063886,
+    "continued_to_empirical": 0.1773595807448687,
+    "trained_to_approx": 0.3732296350603447,
+    "continued_to_approx": 0.39586546951578916
+  },
+  "seven_axis_2pair_sigma05": {
+    "run": "seven_axis_2pair_sigma05",
+    "label": "2 pairs",
+    "sigma": 0.17411859841972724,
+    "blend": 0.5,
+    "rounds_used": 145,
+    "converged": true,
+    "last_step": 9.080536322869648e-11,
+    "moved_from_trained": 0.037998586781096605,
+    "trained_to_empirical": 0.29394475492751526,
+    "continued_to_empirical": 0.2938509953837365,
+    "trained_to_approx": 0.33334693079175004,
+    "continued_to_approx": 0.340254736413955
+  },
+  "seven_axis_5pair_sigma05": {
+    "run": "seven_axis_5pair_sigma05",
+    "label": "5 pairs",
+    "sigma": 0.20105483933709975,
+    "blend": 0.5,
+    "rounds_used": 261,
+    "converged": true,
+    "last_step": 9.185907590136821e-11,
+    "moved_from_trained": 0.1145137235427817,
+    "trained_to_empirical": 0.3950280204587159,
+    "continued_to_empirical": 0.38950332907813606,
+    "trained_to_approx": 0.42893397341257744,
+    "continued_to_approx": 0.4600428896886369
+  }
+}

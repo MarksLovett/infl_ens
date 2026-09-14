@@ -1,0 +1,25 @@
+# SEED REPLICATE: fully distributed soft routing (k = 7, share-weighted) at
+# sigma_fraction = 0.05, seed 1.
+#
+# Replicate of the seed-0 arm in seven_axis_sigma005_full/seed0. The run seed selects
+# the random start of the grid-Nash gradient ascent, which is non-convex, so
+# it selects the equilibrium BASIN -- measured at sigma 0.5, the radius is
+# seed-invariant to 0.5% but the axis each pair occupies is not, and coverage
+# gaps land straight on oracle NLL. Replicates separate a real sigma effect
+# from basin selection.
+#
+# `data_split.seed` is pinned to 0 in configs/data/seven_axis_safety.yaml and
+# takes precedence over this seed, so the round batches are unchanged and the
+# existing pooled generalist stays data-matched.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_sigma005_full/seed1
+
+seed: 1
+sigma_fraction: 0.05
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

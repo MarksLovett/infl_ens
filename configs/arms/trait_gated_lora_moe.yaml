@@ -1,0 +1,10 @@
+# Prompt-level trait-gated top-3 LoRA mixture; MoLoRA-inspired, not token-level Switch.
+includes:
+  - ewora_dense.yaml
+
+output_dir: results/seven_axis_trait_gated_lora_moe/seed0
+
+mixture_lora:
+  mode: topk
+  top_k: 3
+  load_balance_coefficient: 0.01

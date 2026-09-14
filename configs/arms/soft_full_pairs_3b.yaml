@@ -1,0 +1,21 @@
+# MODEL SCALE: the standard fully distributed soft arm (k = 7, share-weighted,
+# sigma_fraction 0.5) on a 3B base instead of 1.5B.
+#
+# Everything except the base model matches soft_full_pairs.yaml, so this is a
+# clean model-scale comparison against results/seven_axis_soft_full_pairs/seed0.
+# The `sft` block below overrides the 1.5B block that _closed_loop_base.yaml
+# pulls in; `benchmarks` and `trait_space` are untouched, so the arm reuses
+# trait-space cache 3b42c68a8dd334c5 and forces no re-encode.
+includes:
+  - _closed_loop_base.yaml
+  - ../models/qwen2_5_3b_instruct.yaml
+
+output_dir: results/seven_axis_soft_full_3b/seed0
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

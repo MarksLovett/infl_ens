@@ -1,0 +1,23 @@
+# SIGMA SWEEP: fully distributed soft routing (k = 7, share-weighted) at
+# sigma_fraction = 0.05 -- the short-reach end of the series.
+#
+# Identical to soft_full_pairs.yaml except the competitive reach.
+# `sigma_mode: stability_fraction` means sigma = 0.05 * sigma_0*, a FRACTION
+# of the Gaussian stability threshold, so this is 5% of the value at which
+# the co-located configuration loses stability: the most strongly spreading
+# arm of the series by a wide margin.
+#
+# The `benchmarks` and `trait_space` blocks are untouched, so this arm
+# resolves to the same trait-space cache (3b42c68a8dd334c5) as the rest of
+# the seven-axis work and re-uses the Qwen3-Embedding-8B encode.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_sigma005_full/seed0
+
+sigma_fraction: 0.05
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

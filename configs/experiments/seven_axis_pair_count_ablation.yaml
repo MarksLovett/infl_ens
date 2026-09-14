@@ -1,0 +1,123 @@
+# Pair-count ablation at seed 0: how much does the number of routing pairs buy?
+#
+# One factor moves -- the number of co-located routing pairs. Every specialist
+# arm is fully dense soft routing (soft_top_k == n_pairs) at sigma_fraction 0.50
+# on the identical seed-0 split, so all three are scored on the same test pool
+# and differ only in pair count.
+#
+#   arm      pairs  clones  soft_top_k  sigma_0*   sigma      run dir
+#   2pair    2      4       2           0.348237   0.174119   results/seven_axis_2pair_sigma05/seed0
+#   3pair    3      6       3           0.381475   0.190737   results/seven_axis_3pair_sigma05/seed0
+#   4pair    4      8       4           0.394864   0.197432   results/seven_axis_4pair_sigma05/seed0
+#   5pair    5      10      5           0.402110   0.201055   results/seven_axis_5pair_sigma05/seed0
+#   6pair    6      12      6           0.406653   0.203327   results/seven_axis_6pair_sigma05/seed0
+#   7pair    7      14      7           0.409770   0.204885   results/seven_axis_soft_full_pairs/seed0
+#   8pair    8      16      8           0.412040   0.206020   results/seven_axis_8pair_sigma05/seed0
+#   9pair    9      18      9           0.413767   0.206884   results/seven_axis_9pair_sigma05/seed0
+#
+# sigma is FRACTION-matched: sigma_0* is computed from N, so each arm sits at the
+# same relative depth below its own bifurcation threshold. sigma_0* is strongly
+# concave in N -- it climbs 0.348 -> 0.395 over 2 -> 4 pairs, then only
+# 0.395 -> 0.410 over 4 -> 7. So from 4 pairs upward the arms have nearly the
+# same absolute reach and the comparison is close to a pure pair-count contrast;
+# the 2-pair arm is the one whose absolute sigma is meaningfully shorter (~15%).
+#
+# The 8- and 9-pair arms exceed the axis count L = 7. Nothing in the code forbids
+# it -- pairing and merge groups never consult L -- and they are the interesting
+# end of the curve: more routing units than axes. Whether the extra pairs find
+# distinct positions in a 7-dimensional space or crowd together is the thing to
+# read off the pair-position and within-pair diagnostics;
+# `closed_loop.theory_gradient.min_pairwise: 0.2` is the constraint most likely
+# to bind first. They also carry the most resident LoRA adapters at routing-eval
+# time, so keep them on the 80GB A100 rather than a 46GB card.
+#
+# ONLY THE ARMS THAT ARE MISSING TRAIN. `train` skips any arm whose run
+# directory is already complete, so re-running this after the 2-pair arm
+# finishes trains only the 4-pair arm. The pooled generalist is NEVER retrained:
+# round batches come from the manifest and data_split.seed (unchanged), and
+# under fully dense soft routing the pooled per-round batch is the whole round
+# batch regardless of how many pairs it is shared out to, so the existing
+# seed-0 replay stays data-matched at every pair count.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_pair_count_ablation.yaml
+name: seven_axis_pair_count_ablation
+results_dir: results/seven_axis_pair_count_ablation
+figures_dir: figures/seven_axis_pair_count_ablation
+
+arms:
+  - name: 2pair
+    label: "2 pairs"
+    title: "Fully distributed, 2 pairs (4 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_2pair_sigma05_seed0.yaml
+  - name: 3pair
+    label: "3 pairs"
+    title: "Fully distributed, 3 pairs (6 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_3pair_sigma05_seed0.yaml
+  - name: 4pair
+    label: "4 pairs"
+    title: "Fully distributed, 4 pairs (8 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_4pair_sigma05_seed0.yaml
+  - name: 5pair
+    label: "5 pairs"
+    title: "Fully distributed, 5 pairs (10 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_5pair_sigma05_seed0.yaml
+  - name: 6pair
+    label: "6 pairs"
+    title: "Fully distributed, 6 pairs (12 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_6pair_sigma05_seed0.yaml
+  - name: 7pair
+    label: "7 pairs"
+    title: "Fully distributed, 7 pairs (14 clones), sigma_fraction 0.50"
+    role: specialist
+    config: ../arms/soft_full_pairs.yaml
+  - name: 8pair
+    label: "8 pairs"
+    title: "Fully distributed, 8 pairs (16 clones), more pairs than axes"
+    role: specialist
+    config: ../arms/soft_8pair_sigma05_seed0.yaml
+  - name: 9pair
+    label: "9 pairs"
+    title: "Fully distributed, 9 pairs (18 clones), more pairs than axes"
+    role: specialist
+    config: ../arms/soft_9pair_sigma05_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing seed-0 replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+  arms: [4pair]
+  output_root: results/_smoke_4pair
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

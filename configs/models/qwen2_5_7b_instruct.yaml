@@ -1,0 +1,24 @@
+# Base language model + LoRA hyperparameters for the SFT trainer.
+#
+# Same LoRA geometry and optimiser settings as the 1.5B config so a model-scale
+# comparison changes only the base model. Measured on an A40 at these exact
+# settings (bf16, r=16, grad-ckpt, batch 8 x 1024, grad_accum 2):
+#   1.5B  peak allocated 20.10 GB   4.967 s/optim-step
+#   7B    peak allocated 32.75 GB  13.633 s/optim-step
+# Both fit the A100 80GB with room to spare; the non-weight overhead is
+# dominated by the 151,936-token vocab logits and is nearly size-independent.
+sft:
+  base_model: Qwen/Qwen2.5-7B-Instruct
+  max_seq_length: 1024
+  per_device_batch_size: 8
+  gradient_accumulation_steps: 2
+  num_train_epochs: 1.0
+  learning_rate: 2.0e-4
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 1
+  cumulative_lora: true
+  seed: 0

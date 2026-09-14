@@ -1,0 +1,21 @@
+# MODEL FAMILY: the standard fully distributed soft arm (k = 7, share-weighted,
+# sigma_fraction 0.5) on Gemma-3-1B-IT.
+#
+# Everything except the base model matches soft_full_pairs.yaml. With the Llama
+# and Qwen arms at the same settings this gives three model FAMILIES at roughly
+# 1-1.5B, alongside the Qwen 1.5B/3B/7B size ladder. `benchmarks` and
+# `trait_space` are untouched, so the arm reuses trait-space cache
+# 3b42c68a8dd334c5 and forces no re-encode.
+includes:
+  - _closed_loop_base.yaml
+  - ../models/gemma_3_1b_it.yaml
+
+output_dir: results/seven_axis_soft_full_gemma3_1b/seed0
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

@@ -1,0 +1,122 @@
+# NOTE: every closed-loop arm here starts from the CONVERGED seven-pair theory
+# equilibrium (_theory_eq_init_7pair.yaml, positions sha be21721a9ab5c9b2), not
+# the 8000-step approximate lattice solve, which does not converge at N = 14.
+# The shared arm configs (soft_full_pairs.yaml, soft_topk3_pairs.yaml) are left
+# untouched because the pair-count ablation and both sigma sweeps depend on them.
+# External ensemble baselines for the seven-axis routing method.
+name: seven_axis_baselines
+results_dir: results/seven_axis_baselines
+figures_dir: figures/seven_axis_baselines
+
+arms:
+  - name: game
+    label: "Game top-3"
+    title: "Seven-axis game router (top-3)"
+    role: specialist
+    config: ../arms/soft_theory_eq_soft_topk3_seed0.yaml
+  - name: soft_full
+    label: "Game dense"
+    title: "Seven-axis game router (dense)"
+    role: specialist
+    config: ../arms/soft_theory_eq_seed0.yaml
+  - name: generalist_r16
+    label: "Pooled r16"
+    title: "Pooled generalist (rank 16)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+  - name: generalist_r112
+    label: "Pooled r112"
+    title: "Stored-parameter-matched pooled generalist (rank 112)"
+    role: generalist
+    config: ../arms/generalist_r112.yaml
+  - name: online_soft_kmeans
+    label: "Online soft k-means"
+    title: "Damped online soft k-means positioning"
+    role: specialist
+    config: ../arms/theory_eq_naive_centroid_seed0.yaml
+  - name: label_experts
+    label: "Label experts"
+    title: "Benchmark-partitioned domain experts"
+    role: specialist
+    config: ../arms/experts_label.yaml
+  - name: kmeans_experts
+    label: "Hard k-means"
+    title: "Hard k-means partitioned experts"
+    role: specialist
+    config: ../arms/experts_kmeans.yaml
+  - name: random_experts
+    label: "Random shards"
+    title: "Balanced random-shard experts"
+    role: specialist
+    config: ../arms/experts_random.yaml
+  - name: balanced_assignment
+    label: "Balanced OT"
+    title: "BASE-style optimal-transport allocation"
+    role: specialist
+    config: ../arms/theory_eq_balanced_assignment_seed0.yaml
+  - name: expert_choice
+    label: "Expert Choice"
+    title: "Prompt-level Expert-Choice allocation ablation"
+    role: specialist
+    config: ../arms/theory_eq_expert_choice_seed0.yaml
+  - name: ewora_dense
+    label: "EWoRA-style dense"
+    title: "Dense learned LoRA mixture"
+    role: specialist
+    config: ../arms/ewora_dense.yaml
+  - name: trait_gated_moe
+    label: "Trait-gated top-3"
+    title: "Trait-gated top-3 LoRA-MoE"
+    role: specialist
+    config: ../arms/trait_gated_lora_moe.yaml
+  - name: adapter_merges
+    label: "Merged adapters"
+    title: "Router-free domain-adapter merges"
+    role: specialist
+    config: ../arms/domain_adapter_merges.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include: [oracle_routing, arm_comparison, pair_positions, within_pair, cross_arm_report]
+
+smoke:
+  tests:
+    - tests/test_routers.py
+    - tests/test_nll_artifact.py
+    - tests/test_fixed_partition.py
+    - tests/test_adapter_merge.py
+    - tests/test_mixture_lora_model.py
+    - tests/test_soft_pairs.py
+    - tests/test_routing_eval.py
+    - tests/test_config.py
+    - tests/test_config_fingerprint.py
+  arms:
+    - game
+    - generalist_r16
+    - generalist_r112
+    - online_soft_kmeans
+    - label_experts
+    - kmeans_experts
+    - random_experts
+    - balanced_assignment
+    - expert_choice
+    - ewora_dense
+    - trait_gated_moe
+    - adapter_merges
+  output_root: results/_smoke_baselines
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

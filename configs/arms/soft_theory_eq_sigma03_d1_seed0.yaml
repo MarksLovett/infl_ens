@@ -1,0 +1,83 @@
+# Reach 0.30 at the theory equilibrium, DATA SPLIT 1.
+#
+# Replicate of the seed-0 arm on an independent partition. The
+# positions are lifted verbatim from the seed-0 arm: the equilibrium
+# is solved against the whole trait cloud, which does not depend on
+# how that cloud is split, so reusing it keeps one factor moving.
+#
+# The split, generalist and test pool all change. Absolute sigma does
+# not -- it is the fraction times the lattice threshold, a property
+# of the trait space rather than the partition.
+#
+#   sigma (absolute)      0.122931
+#   pairs                 7  (14 clones, co-located)
+
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_theory_eq_sigma03_d1/seed0
+
+seed: 1
+sigma_fraction: 0.30
+
+data_split:
+  seed: 1
+  manifest: data/splits/seven_axis_soft_dseed1.json
+
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+  - name: clone-4
+  - name: clone-5
+  - name: clone-6
+  - name: clone-7
+  - name: clone-8
+  - name: clone-9
+  - name: clone-10
+  - name: clone-11
+  - name: clone-12
+  - name: clone-13
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7
+  soft_loss: weighted
+  init_mode: given
+  init_noise: 0.0
+  init_positions_source: >-
+    influencer-game equilibrium under the empirical prompt measure;
+    identical to soft_theory_eq_sigma03_seed0
+
+  init_positions:
+    clone-0: [0.4463133539, 0.3009309617, 0.4426185452, 0.2096881600, 0.1705068329, 0.8888595641, 0.4831277213]
+    clone-1: [0.4463133539, 0.3009309617, 0.4426185452, 0.2096881600, 0.1705068329, 0.8888595641, 0.4831277213]
+    clone-2: [0.8667365883, 0.4695827483, 0.4478797120, 0.5124923793, 0.3686776865, 0.2560428586, 0.2409529509]
+    clone-3: [0.8667365883, 0.4695827483, 0.4478797120, 0.5124923793, 0.3686776865, 0.2560428586, 0.2409529509]
+    clone-4: [0.3026611219, 0.2154204969, 0.4435347116, 0.6730254995, 0.7202267020, 0.4637087348, 0.3590862516]
+    clone-5: [0.3026611219, 0.2154204969, 0.4435347116, 0.6730254995, 0.7202267020, 0.4637087348, 0.3590862516]
+    clone-6: [0.2302878869, 0.8918722278, 0.6219789066, 0.5615081967, 0.5209069509, 0.4416233443, 0.2182141292]
+    clone-7: [0.2302878869, 0.8918722278, 0.6219789066, 0.5615081967, 0.5209069509, 0.4416233443, 0.2182141292]
+    clone-8: [0.3121282382, 0.4055456742, 0.4865414454, 0.2178166288, 0.2695661631, 0.1175283559, 0.8345980678]
+    clone-9: [0.3121282382, 0.4055456742, 0.4865414454, 0.2178166288, 0.2695661631, 0.1175283559, 0.8345980678]
+    clone-10: [0.6782460795, 0.6583067433, 0.7638634748, 0.6882331491, 0.7000751469, 0.6492957826, 0.6628161656]
+    clone-11: [0.6782460795, 0.6583067433, 0.7638634748, 0.6882331491, 0.7000751469, 0.6492957826, 0.6628161656]
+    clone-12: [0.6423245649, 0.6355823287, 0.2488409012, 0.6157852450, 0.7298657766, 0.6230187076, 0.6764409177]
+    clone-13: [0.6423245649, 0.6355823287, 0.2488409012, 0.6157852450, 0.7298657766, 0.6230187076, 0.6764409177]
+
+  sft_merge_groups:
+    - train_as: pair-0
+      names: [clone-0, clone-1]
+    - train_as: pair-1
+      names: [clone-2, clone-3]
+    - train_as: pair-2
+      names: [clone-4, clone-5]
+    - train_as: pair-3
+      names: [clone-6, clone-7]
+    - train_as: pair-4
+      names: [clone-8, clone-9]
+    - train_as: pair-5
+      names: [clone-10, clone-11]
+    - train_as: pair-6
+      names: [clone-12, clone-13]

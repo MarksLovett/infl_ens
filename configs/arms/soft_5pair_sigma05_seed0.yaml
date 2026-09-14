@@ -1,0 +1,47 @@
+# ABLATION: 5 pairs (10 clones), one point of the pair-count series.
+#
+# Pair count is the ONLY thing that moves. Same 7-axis trait space, same base
+# model, same seed 0 and the same pinned seed-0 split, so every pair count is
+# scored on one test pool and compares directly against the 7-pair arm in
+# results/seven_axis_soft_full_pairs/seed0.
+#
+# The trait-space fingerprint (3b42c68a8dd334c5) hashes `benchmarks` and
+# `trait_space` only -- `agents` is not an input -- so the cached Qwen3-8B
+# encode is reused and no re-encode is triggered.
+#
+# THE GENERALIST IS NOT RETRAINED: round batches come from the manifest and
+# data_split.seed (both unchanged), and under fully dense soft routing the
+# pooled per-round batch is the whole round batch at any pair count, so the
+# existing seed-0 replay stays data-matched.
+#
+# SIGMA IS FRACTION-MATCHED. sigma_0* = sqrt((N-2)/(N-1) * Lambda_max) with
+# Lambda_max = 0.18190372 fixed by the benchmark space:
+#     N = 10  ->  sigma_0* = 0.402110  ->  sigma = 0.50 * sigma_0* = 0.201055
+# so this arm sits at the same relative depth below its own bifurcation
+# threshold as every other arm in the series.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_5pair_sigma05/seed0
+
+sigma_fraction: 0.50
+
+# Explicit list replaces the base's `agents: {pairs_from_axes: true}` mapping,
+# which would expand to N = 2L = 14. `theory_gradient_paired` pairs any even N
+# by position order and never consults the axis count.
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+  - name: clone-4
+  - name: clone-5
+  - name: clone-6
+  - name: clone-7
+  - name: clone-8
+  - name: clone-9
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 5                     # == number of pairs: fully dense
+  soft_loss: weighted

@@ -1,0 +1,16 @@
+# Damped online soft k-means positioning, started at the theory equilibrium.
+# Control for `position_update`: identical to the dense soft arm except the
+# centroid step is the naive one rather than the G(1-G)-matched step.
+#
+# Starts from the SAME equilibrium as every other seven-pair theory_eq arm
+# (see _theory_eq_init_7pair.yaml), so this is a one-factor comparison.
+
+includes:
+  - _closed_loop_base.yaml
+  - _theory_eq_init_7pair.yaml
+
+output_dir: results/seven_axis_theory_eq_naive_centroid/seed0
+
+closed_loop:
+  position_update: naive
+  blend: 0.5

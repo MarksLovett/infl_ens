@@ -1,0 +1,24 @@
+# Reach 0.20 at the theory equilibrium. Seed 0.
+#
+# One-factor contrast against the corresponding approximate-init arm:
+# only the starting positions differ. Same split, same test pool, and
+# the existing generalist (generalist_replay.yaml) is reused, NOT retrained.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_sigma02.yaml
+name: seven_axis_theory_eq_sigma02
+results_dir: results/seven_axis_theory_eq_sigma02
+figures_dir: figures/seven_axis_theory_eq_sigma02
+
+arms:
+  - name: theory_eq_sigma02
+    label: "Reach 0.20"
+    title: "Reach 0.20, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_sigma02_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]

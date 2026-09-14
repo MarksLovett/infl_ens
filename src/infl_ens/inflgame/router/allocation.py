@@ -308,6 +308,123 @@ def sampled_top_k_mask(
     return _top_k_keep_mask(keys, top_k)
 
 
+def _rotating_quotas(total: int, n_agents: int, round_idx: int) -> np.ndarray:
+    """Split an integer capacity while rotating remainder ownership."""
+    if total < 0 or n_agents < 1:
+        raise ValueError("total must be nonnegative and n_agents positive")
+    base, remainder = divmod(total, n_agents)
+    quotas = np.full(n_agents, base, dtype=int)
+    for offset in range(remainder):
+        quotas[(round_idx + offset) % n_agents] += 1
+    return quotas
+
+
+def balanced_assignment_mask(
+    G: np.ndarray,
+    *,
+    round_idx: int = 0,
+) -> np.ndarray:
+    """Maximum-affinity assignment with one prompt and balanced capacity.
+
+    This is a BASE-style optimal-transport control rather than an exact
+    reproduction of the learned auction algorithm.  The transportation LP
+    is totally unimodular, so HiGHS returns an integral extreme point up to
+    floating-point tolerance.
+
+    :param G: Affinity/allocation matrix, shape ``(N, M)``.
+    :type G: numpy.ndarray
+    :param round_idx: Round used to rotate remainder capacity.
+    :type round_idx: int
+    :returns: Boolean assignment mask, shape ``(N, M)``.
+    :rtype: numpy.ndarray
+    :raises ImportError: If SciPy is unavailable.
+    :raises RuntimeError: If HiGHS fails or returns a fractional solution.
+    """
+    affinity = np.asarray(G, dtype=float)
+    if (
+        affinity.ndim != 2
+        or not np.isfinite(affinity).all()
+        or np.any(affinity < 0)
+        or np.any(affinity.sum(axis=0) <= 0)
+    ):
+        raise ValueError("G must be finite, nonnegative, 2-D, and positive per prompt")
+    n_agents, n_prompts = affinity.shape
+    quotas = _rotating_quotas(n_prompts, n_agents, round_idx)
+    try:
+        from scipy.optimize import linprog
+        from scipy.sparse import lil_matrix
+    except ImportError as exc:  # pragma: no cover - environment-level
+        raise ImportError(
+            "balanced_assignment_mask requires scipy; install infl_ens[ml]"
+        ) from exc
+
+    # Variables use row-major (agent, prompt) order.
+    constraints = lil_matrix((n_prompts + n_agents, n_agents * n_prompts))
+    for prompt in range(n_prompts):
+        constraints[prompt, prompt::n_prompts] = 1.0
+    for agent in range(n_agents):
+        start = agent * n_prompts
+        constraints[n_prompts + agent, start:start + n_prompts] = 1.0
+    rhs = np.concatenate([np.ones(n_prompts), quotas.astype(float)])
+    # ``log(G)`` differs from the underlying Gaussian log affinity only by
+    # a prompt-specific constant, which cancels because each prompt is
+    # assigned exactly once.
+    log_affinity = np.log(np.clip(affinity, np.finfo(float).tiny, None))
+    result = linprog(
+        -log_affinity.reshape(-1),
+        A_eq=constraints.tocsr(),
+        b_eq=rhs,
+        bounds=(0.0, 1.0),
+        method="highs",
+    )
+    if not result.success:
+        raise RuntimeError(f"balanced assignment failed: {result.message}")
+    solution = result.x.reshape(n_agents, n_prompts)
+    mask = solution > 0.5
+    if not np.allclose(solution, mask.astype(float), atol=1e-7):
+        raise RuntimeError("balanced assignment returned a fractional solution")
+    if not np.all(mask.sum(axis=0) == 1) or not np.array_equal(mask.sum(axis=1), quotas):
+        raise RuntimeError("balanced assignment violated prompt or capacity constraints")
+    return mask
+
+
+def expert_choice_mask(
+    G: np.ndarray,
+    *,
+    capacity_factor: float = 3.0,
+    round_idx: int = 0,
+) -> np.ndarray:
+    """Let each expert independently select its highest-affinity prompts.
+
+    The total integer capacity is ``round(capacity_factor * M)`` capped at
+    ``N*M`` and divided across experts with rotating remainder ownership.
+    Consequently prompts may be selected by multiple experts or by none.
+
+    :param G: Affinity/allocation matrix, shape ``(N, M)``.
+    :type G: numpy.ndarray
+    :param capacity_factor: Total selections relative to prompt count.
+    :type capacity_factor: float
+    :param round_idx: Round used to rotate remainder capacity.
+    :type round_idx: int
+    :returns: Boolean selection mask, shape ``(N, M)``.
+    :rtype: numpy.ndarray
+    """
+    affinity = np.asarray(G, dtype=float)
+    if affinity.ndim != 2 or not np.isfinite(affinity).all():
+        raise ValueError("G must be a finite 2-D matrix")
+    if capacity_factor <= 0:
+        raise ValueError("capacity_factor must be positive")
+    n_agents, n_prompts = affinity.shape
+    total = min(n_agents * n_prompts, int(round(capacity_factor * n_prompts)))
+    quotas = _rotating_quotas(total, n_agents, round_idx)
+    mask = np.zeros_like(affinity, dtype=bool)
+    for agent, quota in enumerate(quotas):
+        if quota:
+            order = np.argsort(-affinity[agent], kind="stable")[: int(quota)]
+            mask[agent, order] = True
+    return mask
+
+
 def matched_centroid_mass(G: np.ndarray) -> np.ndarray:
     """Gradient-matched centroid mass :math:`G_i(1 - G_i)`, dense over every query.
 

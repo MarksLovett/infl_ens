@@ -1,0 +1,42 @@
+{
+  "assignment": {
+    "0.05": [
+      0,
+      5,
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "0.50": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "0.70": [
+      0,
+      4,
+      3,
+      2,
+      5,
+      1,
+      6
+    ]
+  },
+  "assignment_cost": {
+    "0.05": 1.3129264928059616,
+    "0.50": 0.0,
+    "0.70": 1.4826908338032112
+  },
+  "figure": "pair positions vs competitive reach",
+  "generated": "2026-09-11T20:22:14+00:00",
+  "matched_by": "nearest final position (Hungarian)",
+  "reference": "sigma 0.50",
+  "seed": "seed0",
+  "sigma0_note": "quoted against the approximate sigma_0* = 0.40977; the empirical measure gives 0.36905"
+}

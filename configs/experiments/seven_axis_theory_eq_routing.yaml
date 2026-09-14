@@ -1,0 +1,43 @@
+# The routing ladder, started at the theory equilibrium instead of the
+# approximate lattice solve.
+#
+# Compare each arm against its counterpart in seven_axis_3arm (same
+# routing design, approximate init). The dense soft arm is already done
+# as seven_axis_theory_eq, so it is not repeated here.
+#
+# All four share one equilibrium and one test pool, and reuse the
+# existing seed-0 generalist, which is NOT retrained.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_routing.yaml
+name: seven_axis_theory_eq_routing
+results_dir: results/seven_axis_theory_eq_routing
+figures_dir: figures/seven_axis_theory_eq_routing
+
+arms:
+  - name: theory_eq_soft_topk3
+    label: "Soft top-3, share-weighted"
+    title: "Soft top-3, share-weighted, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_soft_topk3_seed0.yaml
+  - name: theory_eq_topk3_unit
+    label: "Soft top-3, unit loss"
+    title: "Soft top-3, unit loss, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_topk3_unit_seed0.yaml
+  - name: theory_eq_hard_topk3
+    label: "Sampled top-3, unit loss"
+    title: "Sampled top-3, unit loss, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_hard_topk3_seed0.yaml
+  - name: theory_eq_hard_matched
+    label: "Hard k=1 (one categorical draw)"
+    title: "Hard k=1 (one categorical draw), started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_hard_matched_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing seed-0 replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]

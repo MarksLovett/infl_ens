@@ -1,0 +1,55 @@
+# ABLATION: 4 pairs (8 clones), the midpoint between the 2-pair and 7-pair arms.
+#
+# Pair count is the ONLY thing that moves. Same 7-axis trait space, same base
+# model, same seed 0 and the same pinned seed-0 split
+# (data/splits/seven_axis_soft_seed0.json, inherited from
+# configs/data/seven_axis_safety.yaml), so all three pair counts are scored on
+# one test pool and compare directly.
+#
+# The trait-space fingerprint (3b42c68a8dd334c5) hashes `benchmarks` and
+# `trait_space` only -- `agents` is not an input -- so the cached Qwen3-8B
+# encode is reused and no re-encode is triggered.
+#
+# THE GENERALIST IS NOT RETRAINED. Round batches come from the manifest and
+# data_split.seed, both unchanged, and under fully dense soft routing the pooled
+# per-round batch is the whole round batch at any pair count. The existing
+# pooled replay in results/seven_axis_3arm_generalist/seed0 stays data-matched.
+#
+# SIGMA IS FRACTION-MATCHED. sigma_0* = sqrt((N-2)/(N-1) * Lambda_max) with
+# Lambda_max = 0.18190372 fixed by the benchmark space, so the threshold rises
+# with agent count and the series is:
+#
+#   pairs  N   sigma_0*   sigma @ fraction 0.50
+#   2      4   0.348237   0.174119
+#   4      8   0.394864   0.197432   <- this arm
+#   7     14   0.409770   0.204885
+#
+# Each arm therefore sits at the same RELATIVE depth below its own bifurcation
+# threshold. Note the threshold is strongly concave in N: going 2 -> 4 pairs
+# moves sigma_0* by 0.047, while 4 -> 7 moves it only 0.015, so the absolute
+# reach of the 4-pair and 7-pair arms is already close.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_4pair_sigma05/seed0
+
+sigma_fraction: 0.50
+
+# Explicit list replaces the base's `agents: {pairs_from_axes: true}` mapping,
+# which would expand to N = 2L = 14. `theory_gradient_paired` pairs any even N
+# by position order and never consults the axis count, so N = 8 initializes as
+# 4 co-located pairs (pair-0 .. pair-3).
+agents:
+  - name: clone-0
+  - name: clone-1
+  - name: clone-2
+  - name: clone-3
+  - name: clone-4
+  - name: clone-5
+  - name: clone-6
+  - name: clone-7
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 4                     # == number of pairs: fully dense over 4
+  soft_loss: weighted

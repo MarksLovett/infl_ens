@@ -1,0 +1,706 @@
+{
+  "seven_axis_2pair_sigma05": {
+    "label": "2 pairs, naive",
+    "pairs": 2,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 2.0162591864339956,
+        "mixture": 1.9990421108080574,
+        "gain_expected": -0.0010914281159077888,
+        "gain_mixture": 0.016125647510030428
+      },
+      "stacking": {
+        "expected": 2.06860980854933,
+        "mixture": 1.9998990631130857,
+        "gain_expected": -0.053442050231242266,
+        "gain_mixture": 0.01526869520500207
+      },
+      "best-single": {
+        "expected": 2.0639999731363514,
+        "mixture": 2.0639999731363514,
+        "gain_expected": -0.04883221481826361,
+        "gain_mixture": -0.04883221481826361
+      },
+      "val-permutation": {
+        "expected": 2.0162591864339956,
+        "mixture": 1.9990421108080574,
+        "gain_expected": -0.0010914281159077888,
+        "gain_mixture": 0.016125647510030428
+      },
+      "uniform": {
+        "expected": 2.06864109890231,
+        "mixture": 1.9999016915829109,
+        "gain_expected": -0.05347334058422204,
+        "gain_mixture": 0.015266066735176942
+      },
+      "oracle": {
+        "expected": 1.9806524904668488,
+        "mixture": 1.9806524904668488,
+        "gain_expected": 0.03451526785123904,
+        "gain_mixture": 0.03451526785123904
+      },
+      "stacking_weights": [
+        0.5034,
+        0.4966
+      ],
+      "best_single_expert": 0
+    }
+  },
+  "seven_axis_theory_eq_2pair": {
+    "label": "2 pairs, equilibrium",
+    "pairs": 2,
+    "pooled": 2.014995598494534,
+    "combiners": {
+      "game": {
+        "expected": 1.9902905867821052,
+        "mixture": 1.970992191559587,
+        "gain_expected": 0.02470501171242856,
+        "gain_mixture": 0.044003406934946865
+      },
+      "stacking": {
+        "expected": 2.124891654472593,
+        "mixture": 1.9819757244079192,
+        "gain_expected": -0.10989605597805907,
+        "gain_mixture": 0.033019874086614553
+      },
+      "best-single": {
+        "expected": 2.1198607774202083,
+        "mixture": 2.1198607774202083,
+        "gain_expected": -0.10486517892567448,
+        "gain_mixture": -0.10486517892567448
+      },
+      "val-permutation": {
+        "expected": 1.9902905867821052,
+        "mixture": 1.970992191559587,
+        "gain_expected": 0.02470501171242856,
+        "gain_mixture": 0.044003406934946865
+      },
+      "uniform": {
+        "expected": 2.124349116185968,
+        "mixture": 1.9821967772923677,
+        "gain_expected": -0.1093535176914342,
+        "gain_mixture": 0.03279882120216615
+      },
+      "oracle": {
+        "expected": 1.960548407605581,
+        "mixture": 1.960548407605581,
+        "gain_expected": 0.05444719088895278,
+        "gain_mixture": 0.05444719088895278
+      },
+      "stacking_weights": [
+        0.5604,
+        0.4396
+      ],
+      "best_single_expert": 1
+    }
+  },
+  "seven_axis_3pair_sigma05": {
+    "label": "3 pairs, naive",
+    "pairs": 3,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9979037112588796,
+        "mixture": 1.9720479263864896,
+        "gain_expected": 0.017264047059208254,
+        "gain_mixture": 0.043119831931598185
+      },
+      "stacking": {
+        "expected": 2.131535634858336,
+        "mixture": 1.9852146222447589,
+        "gain_expected": -0.11636787654024827,
+        "gain_mixture": 0.029953136073328945
+      },
+      "best-single": {
+        "expected": 2.1164803488967996,
+        "mixture": 2.1164803488967996,
+        "gain_expected": -0.10131259057871178,
+        "gain_mixture": -0.10131259057871178
+      },
+      "val-permutation": {
+        "expected": 1.9979037112588796,
+        "mixture": 1.9720479263864896,
+        "gain_expected": 0.017264047059208254,
+        "gain_mixture": 0.043119831931598185
+      },
+      "uniform": {
+        "expected": 2.134407945279896,
+        "mixture": 1.9864232693928283,
+        "gain_expected": -0.11924018696180827,
+        "gain_mixture": 0.028744488925259493
+      },
+      "oracle": {
+        "expected": 1.9538634489755995,
+        "mixture": 1.9538634489755995,
+        "gain_expected": 0.06130430934248832,
+        "gain_mixture": 0.06130430934248832
+      },
+      "stacking_weights": [
+        0.2395,
+        0.4708,
+        0.2897
+      ],
+      "best_single_expert": 2
+    }
+  },
+  "seven_axis_theory_eq_3pair": {
+    "label": "3 pairs, equilibrium",
+    "pairs": 3,
+    "pooled": 2.014995598494534,
+    "combiners": {
+      "game": {
+        "expected": 1.9847158688862885,
+        "mixture": 1.961781289650649,
+        "gain_expected": 0.03027972960824532,
+        "gain_mixture": 0.05321430884388478
+      },
+      "stacking": {
+        "expected": 2.236061213529274,
+        "mixture": 1.9787841889611857,
+        "gain_expected": -0.22106561503474031,
+        "gain_mixture": 0.036211409533348116
+      },
+      "best-single": {
+        "expected": 2.1295768079924176,
+        "mixture": 2.1295768079924176,
+        "gain_expected": -0.11458120949788375,
+        "gain_mixture": -0.11458120949788375
+      },
+      "val-permutation": {
+        "expected": 1.9847158688862885,
+        "mixture": 1.961781289650649,
+        "gain_expected": 0.03027972960824532,
+        "gain_mixture": 0.05321430884388478
+      },
+      "uniform": {
+        "expected": 2.221356742534661,
+        "mixture": 1.9803973280860634,
+        "gain_expected": -0.20636114404012718,
+        "gain_mixture": 0.03459827040847041
+      },
+      "oracle": {
+        "expected": 1.9464469510103488,
+        "mixture": 1.9464469510103488,
+        "gain_expected": 0.06854864748418499,
+        "gain_mixture": 0.06854864748418499
+      },
+      "stacking_weights": [
+        0.4956,
+        0.2335,
+        0.2709
+      ],
+      "best_single_expert": 2
+    }
+  },
+  "seven_axis_4pair_sigma05": {
+    "label": "4 pairs, naive",
+    "pairs": 4,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9879429961245114,
+        "mixture": 1.952943723489755,
+        "gain_expected": 0.02722476219357639,
+        "gain_mixture": 0.06222403482833272
+      },
+      "stacking": {
+        "expected": 2.1995859090571446,
+        "mixture": 1.9726774406365961,
+        "gain_expected": -0.18441815073905676,
+        "gain_mixture": 0.042490317681491696
+      },
+      "best-single": {
+        "expected": 2.1407656897482807,
+        "mixture": 2.1407656897482807,
+        "gain_expected": -0.12559793143019293,
+        "gain_mixture": -0.12559793143019293
+      },
+      "val-permutation": {
+        "expected": 1.9879429961245114,
+        "mixture": 1.952943723489755,
+        "gain_expected": 0.02722476219357639,
+        "gain_mixture": 0.06222403482833272
+      },
+      "uniform": {
+        "expected": 2.2175234796466534,
+        "mixture": 1.974838931049889,
+        "gain_expected": -0.2023557213285656,
+        "gain_mixture": 0.04032882726819875
+      },
+      "oracle": {
+        "expected": 1.9324657996481551,
+        "mixture": 1.9324657996481551,
+        "gain_expected": 0.08270195866993268,
+        "gain_mixture": 0.08270195866993268
+      },
+      "stacking_weights": [
+        0.1251,
+        0.4063,
+        0.2572,
+        0.2114
+      ],
+      "best_single_expert": 2
+    }
+  },
+  "seven_axis_theory_eq_4pair": {
+    "label": "4 pairs, equilibrium",
+    "pairs": 4,
+    "pooled": 2.014995598494534,
+    "combiners": {
+      "game": {
+        "expected": 1.9514637333104858,
+        "mixture": 1.9281276202014601,
+        "gain_expected": 0.06353186518404796,
+        "gain_mixture": 0.08686797829307369
+      },
+      "stacking": {
+        "expected": 2.392817404154351,
+        "mixture": 1.9597257628213587,
+        "gain_expected": -0.37782180565981704,
+        "gain_mixture": 0.055269835673175116
+      },
+      "best-single": {
+        "expected": 2.1768358204020455,
+        "mixture": 2.1768358204020455,
+        "gain_expected": -0.16184022190751168,
+        "gain_mixture": -0.16184022190751168
+      },
+      "val-permutation": {
+        "expected": 1.9514637333104858,
+        "mixture": 1.9281276202014601,
+        "gain_expected": 0.06353186518404796,
+        "gain_mixture": 0.08686797829307369
+      },
+      "uniform": {
+        "expected": 2.383380026860204,
+        "mixture": 1.959976808532894,
+        "gain_expected": -0.3683844283656703,
+        "gain_mixture": 0.05501878996163989
+      },
+      "oracle": {
+        "expected": 1.91475763995272,
+        "mixture": 1.91475763995272,
+        "gain_expected": 0.10023795854181383,
+        "gain_mixture": 0.10023795854181383
+      },
+      "stacking_weights": [
+        0.2352,
+        0.2136,
+        0.2485,
+        0.3027
+      ],
+      "best_single_expert": 2
+    }
+  },
+  "seven_axis_5pair_sigma05": {
+    "label": "5 pairs, naive",
+    "pairs": 5,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.939804107887629,
+        "mixture": 1.9073545673974373,
+        "gain_expected": 0.0753636504304589,
+        "gain_mixture": 0.10781319092065056
+      },
+      "stacking": {
+        "expected": 2.407081007514228,
+        "mixture": 1.945011364521409,
+        "gain_expected": -0.39191324919614035,
+        "gain_mixture": 0.0701563937966787
+      },
+      "best-single": {
+        "expected": 2.1830135985165757,
+        "mixture": 2.1830135985165757,
+        "gain_expected": -0.16784584019848792,
+        "gain_mixture": -0.16784584019848792
+      },
+      "val-permutation": {
+        "expected": 1.939804107887629,
+        "mixture": 1.9073545673974373,
+        "gain_expected": 0.0753636504304589,
+        "gain_mixture": 0.10781319092065056
+      },
+      "uniform": {
+        "expected": 2.3990420612408525,
+        "mixture": 1.9470777067379363,
+        "gain_expected": -0.3838743029227647,
+        "gain_mixture": 0.06809005158015147
+      },
+      "oracle": {
+        "expected": 1.894221413978465,
+        "mixture": 1.894221413978465,
+        "gain_expected": 0.12094634433962281,
+        "gain_mixture": 0.12094634433962281
+      },
+      "stacking_weights": [
+        0.1055,
+        0.1323,
+        0.2358,
+        0.324,
+        0.2023
+      ],
+      "best_single_expert": 4
+    }
+  },
+  "seven_axis_theory_eq_5pair": {
+    "label": "5 pairs, equilibrium",
+    "pairs": 5,
+    "pooled": 2.014995598494534,
+    "combiners": {
+      "game": {
+        "expected": 1.9450450372109185,
+        "mixture": 1.9162869164004097,
+        "gain_expected": 0.06995056128361532,
+        "gain_mixture": 0.09870868209412409
+      },
+      "stacking": {
+        "expected": 2.431536251689011,
+        "mixture": 1.9529678173467753,
+        "gain_expected": -0.4165406531944771,
+        "gain_mixture": 0.06202778114775853
+      },
+      "best-single": {
+        "expected": 2.1757034143008287,
+        "mixture": 2.1757034143008287,
+        "gain_expected": -0.1607078158062949,
+        "gain_mixture": -0.1607078158062949
+      },
+      "val-permutation": {
+        "expected": 1.9450450372109185,
+        "mixture": 1.9162869164004097,
+        "gain_expected": 0.06995056128361532,
+        "gain_mixture": 0.09870868209412409
+      },
+      "uniform": {
+        "expected": 2.407532717685098,
+        "mixture": 1.9543287319735143,
+        "gain_expected": -0.392537119190564,
+        "gain_mixture": 0.06066686652101949
+      },
+      "oracle": {
+        "expected": 1.90163898821168,
+        "mixture": 1.90163898821168,
+        "gain_expected": 0.11335661028285382,
+        "gain_mixture": 0.11335661028285382
+      },
+      "stacking_weights": [
+        0.2335,
+        0.1657,
+        0.1945,
+        0.2914,
+        0.1151
+      ],
+      "best_single_expert": 2
+    }
+  },
+  "seven_axis_6pair_sigma05": {
+    "label": "6 pairs, naive",
+    "pairs": 6,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9333468675991532,
+        "mixture": 1.9015976591302441,
+        "gain_expected": 0.08182089071893461,
+        "gain_mixture": 0.11357009918784366
+      },
+      "stacking": {
+        "expected": 2.4824879787807745,
+        "mixture": 1.943632591308363,
+        "gain_expected": -0.46732022046268673,
+        "gain_mixture": 0.07153516700972484
+      },
+      "best-single": {
+        "expected": 2.184808296872245,
+        "mixture": 2.184808296872245,
+        "gain_expected": -0.16964053855415706,
+        "gain_mixture": -0.16964053855415706
+      },
+      "val-permutation": {
+        "expected": 1.9333468675991532,
+        "mixture": 1.9015976591302441,
+        "gain_expected": 0.08182089071893461,
+        "gain_mixture": 0.11357009918784366
+      },
+      "uniform": {
+        "expected": 2.456282400688306,
+        "mixture": 1.9462378301076082,
+        "gain_expected": -0.44111464237021814,
+        "gain_mixture": 0.06892992821047961
+      },
+      "oracle": {
+        "expected": 1.8867308257265583,
+        "mixture": 1.8867308257265583,
+        "gain_expected": 0.12843693259152955,
+        "gain_mixture": 0.12843693259152955
+      },
+      "stacking_weights": [
+        0.1042,
+        0.1428,
+        0.2322,
+        0.2887,
+        0.1439,
+        0.0883
+      ],
+      "best_single_expert": 4
+    }
+  },
+  "seven_axis_theory_eq_6pair": {
+    "label": "6 pairs, equilibrium",
+    "pairs": 6,
+    "pooled": 2.014995598494534,
+    "combiners": {
+      "game": {
+        "expected": 1.9320018712190812,
+        "mixture": 1.9005395915560646,
+        "gain_expected": 0.08299372727545262,
+        "gain_mixture": 0.11445600693846925
+      },
+      "stacking": {
+        "expected": 2.486731946459628,
+        "mixture": 1.9427453448008452,
+        "gain_expected": -0.471736347965094,
+        "gain_mixture": 0.07225025369368865
+      },
+      "best-single": {
+        "expected": 2.179050521568066,
+        "mixture": 2.179050521568066,
+        "gain_expected": -0.16405492307353198,
+        "gain_mixture": -0.16405492307353198
+      },
+      "val-permutation": {
+        "expected": 1.9320018712190812,
+        "mixture": 1.9005395915560646,
+        "gain_expected": 0.08299372727545262,
+        "gain_mixture": 0.11445600693846925
+      },
+      "uniform": {
+        "expected": 2.455714371569719,
+        "mixture": 1.9451978940258294,
+        "gain_expected": -0.44071877307518514,
+        "gain_mixture": 0.06979770446870437
+      },
+      "oracle": {
+        "expected": 1.8856789029437049,
+        "mixture": 1.8856789029437049,
+        "gain_expected": 0.12931669555082892,
+        "gain_mixture": 0.12931669555082892
+      },
+      "stacking_weights": [
+        0.2338,
+        0.0921,
+        0.1075,
+        0.139,
+        0.2839,
+        0.1437
+      ],
+      "best_single_expert": 5
+    }
+  },
+  "seven_axis_soft_full_pairs": {
+    "label": "7 pairs, naive",
+    "pairs": 7,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9458916745645012,
+        "mixture": 1.9056770065431439,
+        "gain_expected": 0.06927608375358663,
+        "gain_mixture": 0.10949075177494394
+      },
+      "stacking": {
+        "expected": 2.4709866659040522,
+        "mixture": 1.9459223146641913,
+        "gain_expected": -0.45581890758596444,
+        "gain_mixture": 0.06924544365389651
+      },
+      "best-single": {
+        "expected": 2.2110508094912715,
+        "mixture": 2.2110508094912715,
+        "gain_expected": -0.19588305117318372,
+        "gain_mixture": -0.19588305117318372
+      },
+      "val-permutation": {
+        "expected": 1.9458916745645012,
+        "mixture": 1.9056770065431439,
+        "gain_expected": 0.06927608375358663,
+        "gain_mixture": 0.10949075177494394
+      },
+      "uniform": {
+        "expected": 2.4294809857030284,
+        "mixture": 1.94904809571554,
+        "gain_expected": -0.4143132273849406,
+        "gain_mixture": 0.06611966260254776
+      },
+      "oracle": {
+        "expected": 1.8857193275684403,
+        "mixture": 1.8857193275684403,
+        "gain_expected": 0.12944843074964751,
+        "gain_mixture": 0.12944843074964751
+      },
+      "stacking_weights": [
+        0.0982,
+        0.2627,
+        0.1304,
+        0.2288,
+        0.0996,
+        0.1027,
+        0.0775
+      ],
+      "best_single_expert": 4
+    }
+  },
+  "seven_axis_theory_eq": {
+    "label": "7 pairs, equilibrium",
+    "pairs": 7,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9426131105305544,
+        "mixture": 1.9059358708441605,
+        "gain_expected": 0.0725546477875334,
+        "gain_mixture": 0.10923188747392731
+      },
+      "stacking": {
+        "expected": 2.502933829929753,
+        "mixture": 1.9465073945314295,
+        "gain_expected": -0.4877660716116652,
+        "gain_mixture": 0.0686603637866583
+      },
+      "best-single": {
+        "expected": 2.198210674374008,
+        "mixture": 2.198210674374008,
+        "gain_expected": -0.18304291605592038,
+        "gain_mixture": -0.18304291605592038
+      },
+      "val-permutation": {
+        "expected": 1.9426131105305544,
+        "mixture": 1.9059358708441605,
+        "gain_expected": 0.0725546477875334,
+        "gain_mixture": 0.10923188747392731
+      },
+      "uniform": {
+        "expected": 2.448444089219982,
+        "mixture": 1.949876213726596,
+        "gain_expected": -0.4332763309018941,
+        "gain_mixture": 0.06529154459149189
+      },
+      "oracle": {
+        "expected": 1.8861577560863383,
+        "mixture": 1.8861577560863383,
+        "gain_expected": 0.12901000223174952,
+        "gain_mixture": 0.12901000223174952
+      },
+      "stacking_weights": [
+        0.2291,
+        0.1002,
+        0.0864,
+        0.1202,
+        0.2689,
+        0.1022,
+        0.093
+      ],
+      "best_single_expert": 5
+    }
+  },
+  "seven_axis_9pair_sigma05": {
+    "label": "9 pairs, naive",
+    "pairs": 9,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9370509728975718,
+        "mixture": 1.8947835188851099,
+        "gain_expected": 0.07811678542051603,
+        "gain_mixture": 0.12038423943297794
+      },
+      "stacking": {
+        "expected": 2.51476566903713,
+        "mixture": 1.9390188510146096,
+        "gain_expected": -0.499597910719042,
+        "gain_mixture": 0.07614890730347823
+      },
+      "best-single": {
+        "expected": 2.202210430534738,
+        "mixture": 2.202210430534738,
+        "gain_expected": -0.18704267221665027,
+        "gain_mixture": -0.18704267221665027
+      },
+      "uniform": {
+        "expected": 2.4548307101286824,
+        "mixture": 1.94426353717395,
+        "gain_expected": -0.43966295181059456,
+        "gain_mixture": 0.07090422114413775
+      },
+      "oracle": {
+        "expected": 1.8735145995318838,
+        "mixture": 1.8735145995318838,
+        "gain_expected": 0.141653158786204,
+        "gain_mixture": 0.141653158786204
+      },
+      "stacking_weights": [
+        0.2463,
+        0.0736,
+        0.0434,
+        0.0582,
+        0.2274,
+        0.0782,
+        0.0726,
+        0.13,
+        0.0702
+      ],
+      "best_single_expert": 6
+    }
+  },
+  "seven_axis_theory_eq_9pair": {
+    "label": "9 pairs, equilibrium",
+    "pairs": 9,
+    "pooled": 2.015167758318088,
+    "combiners": {
+      "game": {
+        "expected": 1.9335476341970734,
+        "mixture": 1.8923960842755712,
+        "gain_expected": 0.08162012412101438,
+        "gain_mixture": 0.12277167404251665
+      },
+      "stacking": {
+        "expected": 2.539947123271904,
+        "mixture": 1.9387436092963417,
+        "gain_expected": -0.5247793649538162,
+        "gain_mixture": 0.0764241490217461
+      },
+      "best-single": {
+        "expected": 2.2539122771005995,
+        "mixture": 2.2539122771005995,
+        "gain_expected": -0.23874451878251168,
+        "gain_mixture": -0.23874451878251168
+      },
+      "uniform": {
+        "expected": 2.50242286334883,
+        "mixture": 1.942035810648029,
+        "gain_expected": -0.4872551050307421,
+        "gain_mixture": 0.0731319476700587
+      },
+      "oracle": {
+        "expected": 1.8704837858939671,
+        "mixture": 1.8704837858939671,
+        "gain_expected": 0.14468397242412068,
+        "gain_mixture": 0.14468397242412068
+      },
+      "stacking_weights": [
+        0.1526,
+        0.0772,
+        0.0903,
+        0.0971,
+        0.0567,
+        0.2563,
+        0.1063,
+        0.0805,
+        0.083
+      ],
+      "best_single_expert": 8
+    }
+  }
+}

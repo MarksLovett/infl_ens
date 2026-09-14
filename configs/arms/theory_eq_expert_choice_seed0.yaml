@@ -1,0 +1,19 @@
+# Prompt-level Expert-Choice allocation, started at the theory equilibrium.
+# Control for the allocation rule: experts select prompts under a fixed
+# total capacity rather than prompts selecting experts.
+#
+# Starts from the SAME equilibrium as every other seven-pair theory_eq arm
+# (see _theory_eq_init_7pair.yaml), so this is a one-factor comparison.
+
+includes:
+  - _closed_loop_base.yaml
+  - _theory_eq_init_7pair.yaml
+
+output_dir: results/seven_axis_theory_eq_expert_choice/seed0
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 3
+  soft_loss: unit
+  soft_select: expert_choice
+  capacity_factor: 3.0

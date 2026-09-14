@@ -1,0 +1,28 @@
+# DOUBLE SEED: fully distributed soft routing (k = 7, share-weighted) at
+# sigma_fraction = 0.50, run seed 2 AND data-split seed 2.
+#
+# Both seeds move together. The run seed picks the random start of the
+# non-convex grid-Nash ascent (so it selects the equilibrium basin); the
+# data-split seed rebuilds the 70/10/20 partition, so the round batches AND
+# the held-out test pool differ from the seed-0 work.
+#
+# CONSEQUENCE: absolute NLL is NOT comparable across data seeds -- each is
+# measured on a different test pool. Only within-split contrasts
+# (learned - pooled, oracle - learned, intra vs inter) carry across, which is
+# why each data seed trains its own generalist.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_sigma05_full/dseed2
+
+seed: 2
+sigma_fraction: 0.50
+
+data_split:
+  seed: 2
+  manifest: data/splits/seven_axis_soft_dseed2.json
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

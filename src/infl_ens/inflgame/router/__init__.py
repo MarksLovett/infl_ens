@@ -32,8 +32,10 @@ from __future__ import annotations
 from infl_ens.inflgame.router.agents import RouterAgent
 from infl_ens.inflgame.router.allocation import (
     allocation_weights,
+    balanced_assignment_mask,
     empirical_utility,
     expected_utilities,
+    expert_choice_mask,
     group_allocation_weights,
     matched_centroid_mass,
     sampled_top_k_mask,
@@ -47,8 +49,10 @@ __all__ = [
     "InfluencerRouter",
     "RouterAgent",
     "allocation_weights",
+    "balanced_assignment_mask",
     "empirical_utility",
     "expected_utilities",
+    "expert_choice_mask",
     "group_allocation_weights",
     "strategic_routing_weights",
     "top_k_allocation_weights",

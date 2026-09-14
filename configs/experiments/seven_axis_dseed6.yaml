@@ -1,0 +1,100 @@
+# Replicate 6 of the full ten-point sigma sweep.
+#
+# Run seed and data-split seed are both 6. Together with seed0, dseed1 and
+# dseed2 this builds toward ten independent replicates per sigma, enough to
+# quote a standard deviation to about +/-24% rather than the +/-50% that n=3
+# supports.
+#
+# The generalist is trained at THIS split and runs after the sigma 0.70 arm,
+# whose logged batches it replays. Sharing a generalist across splits would
+# score specialists against a baseline fitted to different data.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_dseed6.yaml
+name: seven_axis_dseed6
+results_dir: results/seven_axis_dseed6
+figures_dir: figures/seven_axis_dseed6
+
+arms:
+  - name: s07_d6
+    label: "sigma 0.70 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.70, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma07_d6.yaml
+  - name: s06_d6
+    label: "sigma 0.60 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.60, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma06_d6.yaml
+  - name: s055_d6
+    label: "sigma 0.55 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.55, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma055_d6.yaml
+  - name: s05_d6
+    label: "sigma 0.50 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.50, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma05_d6.yaml
+  - name: s045_d6
+    label: "sigma 0.45 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.45, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma045_d6.yaml
+  - name: s04_d6
+    label: "sigma 0.40 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.40, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma04_d6.yaml
+  - name: s03_d6
+    label: "sigma 0.30 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.30, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma03_d6.yaml
+  - name: s02_d6
+    label: "sigma 0.20 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.20, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma02_d6.yaml
+  - name: s01_d6
+    label: "sigma 0.10 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.10, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma01_d6.yaml
+  - name: s005_d6
+    label: "sigma 0.05 / dseed 6"
+    title: "Fully distributed, sigma_fraction 0.05, both seeds 6"
+    role: specialist
+    config: ../arms/soft_full_sigma005_d6.yaml
+  - name: generalist
+    label: "Pooled generalist (dseed 6)"
+    title: "Pooled generalist, data-split seed 6"
+    role: generalist
+    config: ../arms/generalist_replay_dseed6.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - arm_comparison
+    - cross_arm_report
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+  arms: [s07_d6]
+  output_root: results/_smoke_d6
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

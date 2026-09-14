@@ -1,0 +1,43 @@
+{
+  "caveat": "per-token NLL not comparable across tokenizers",
+  "figure": "base model sweep",
+  "generated": "2026-09-11T20:22:02+00:00",
+  "models": [
+    {
+      "capture": 0.5351635655403668,
+      "family": "Qwen2.5",
+      "gain": 0.06927608375358663,
+      "label": "Qwen2.5-1.5B",
+      "params_b": 1.5
+    },
+    {
+      "capture": 0.5186260008469318,
+      "family": "Qwen2.5",
+      "gain": 0.06287786679126661,
+      "label": "Qwen2.5-3B",
+      "params_b": 3.0
+    },
+    {
+      "capture": 0.5011986334577446,
+      "family": "Qwen2.5",
+      "gain": 0.05583024715420959,
+      "label": "Qwen2.5-7B",
+      "params_b": 7.0
+    },
+    {
+      "capture": 0.4495964251277161,
+      "family": "Llama-3.2",
+      "gain": 0.03791953144018345,
+      "label": "Llama-3.2-1B",
+      "params_b": 1.2
+    },
+    {
+      "capture": 0.8612531994298147,
+      "family": "Gemma-3",
+      "gain": 0.3005706487387245,
+      "label": "Gemma-3-1B",
+      "params_b": 1.0
+    }
+  ],
+  "seed": "seed0"
+}

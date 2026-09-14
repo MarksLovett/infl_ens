@@ -162,6 +162,9 @@ def render_pair_positions(exp: ExperimentConfig, out: Path) -> list[Path]:
     for arm in exp.specialists:
         records = _history(arm)
         groups = _merge_groups(arm, records)
+        if not groups or any(len(members) != 2 for _name, members in groups):
+            log.info("pair_positions: %s has no two-member pair groups; skipping", arm.name)
+            continue
         fig = plot_final_positions(
             records[-1], groups, axis_labels=_axis_labels(exp), title=arm.title,
         )
@@ -178,6 +181,9 @@ def render_within_pair(exp: ExperimentConfig, out: Path) -> list[Path]:
     for arm in exp.specialists:
         records = _history(arm)
         groups = _merge_groups(arm, records)
+        if not groups or any(len(members) != 2 for _name, members in groups):
+            log.info("within_pair: %s has no two-member pair groups; skipping", arm.name)
+            continue
         fig = plot_within_pair(records, groups, title=arm.title)
         written += _save(fig, out / f"{arm.name}_within_pair", exp)
     return written
@@ -192,6 +198,9 @@ def render_closed_loop_history(exp: ExperimentConfig, out: Path) -> list[Path]:
     labels = _axis_labels(exp) or ("axis 0", "axis 1")
     for arm in exp.specialists:
         records = _history(arm)
+        if "u_grid" not in records[-1]:
+            log.info("closed_loop_history: %s lacks game utility history; skipping", arm.name)
+            continue
         fig = plot_history(records, axis_labels=labels, title=arm.title)
         written += _save(fig, out / f"{arm.name}_history", exp)
     return written
@@ -202,8 +211,8 @@ def render_cross_arm_report(exp: ExperimentConfig, out: Path) -> list[Path]:
     from infl_ens.figures.cross_arm_report import write_cross_arm_report
 
     arms = [(arm.label, arm.run_dir) for arm in exp.specialists]
-    gen = exp.generalist
-    return write_cross_arm_report(arms, out, generalist_run_dir=gen.run_dir if gen else None)
+    generalists = [(arm.label, arm.run_dir) for arm in exp.generalists]
+    return write_cross_arm_report(arms, out, generalist_runs=generalists)
 
 
 def render_per_round_tables(exp: ExperimentConfig, out: Path) -> list[Path]:

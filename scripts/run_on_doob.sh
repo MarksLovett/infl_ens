@@ -73,7 +73,8 @@ if [[ "${MODE}" == "status" ]]; then
     ssh "${REMOTE}" "cd ${REMOTE_REPO} && cat ${RESULT_DIR}/stage_status.json 2>/dev/null || echo 'no status yet'"
     echo
     echo "[status] GPU"
-    ssh "${REMOTE}" "nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used --format=csv,noheader"
+    ssh "${REMOTE}" \
+        "nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used --format=csv,noheader 2>/dev/null || echo 'GPU status unavailable (NVML failed)'"
     echo
     echo "  WATCH LIVE: ssh -t ${REMOTE} 'tmux attach -t ${TMUX_SESSION}'"
     exit 0
@@ -125,6 +126,9 @@ if [[ "${SKIP_SYNC:-0}" != "1" ]]; then
     scp -q -r src     "${REMOTE}:${REMOTE_REPO}/"
     scp -q -r configs "${REMOTE}:${REMOTE_REPO}/"
     scp -q -r tests   "${REMOTE}:${REMOTE_REPO}/"
+    # paper/ carries the figure pipeline; figures themselves are regenerated,
+    # so only the code and template are worth shipping.
+    scp -q paper/*.py paper/*.html "${REMOTE}:${REMOTE_REPO}/paper/" 2>/dev/null || true
     scp -q    pyproject.toml AGENTS.md structure.md scripts/run_on_doob.sh "${REMOTE}:${REMOTE_REPO}/"
     ssh "${REMOTE}" "cd ${REMOTE_REPO} && mv -f run_on_doob.sh scripts/run_on_doob.sh"
     echo "[sync] done"
@@ -155,11 +159,20 @@ if tmux has-session -t ${TMUX_SESSION} 2>/dev/null; then
     exit 0
 fi
 
-BUSY="\$(nvidia-smi --id=${GPU} --query-compute-apps=pid --format=csv,noheader | wc -l)"
-if [ "\${BUSY}" != "0" ] && [ "${FORCE_GPU:-0}" != "1" ]; then
-    echo "[remote] GPU ${GPU} already has \${BUSY} compute process(es); refusing (FORCE_GPU=1 to override)."
-    nvidia-smi --id=${GPU} --query-compute-apps=pid,process_name,used_memory --format=csv
-    exit 1
+if ! GPU_PROCESSES="\$(nvidia-smi --id=${GPU} --query-compute-apps=pid --format=csv,noheader 2>/dev/null)"; then
+    echo "[remote] GPU ${GPU} status unavailable (NVML failed)."
+    if [ "${FORCE_GPU:-0}" != "1" ]; then
+        echo "[remote] refusing because occupancy cannot be verified (inspect processes, then set FORCE_GPU=1)."
+        exit 1
+    fi
+    echo "[remote] FORCE_GPU=1: continuing after external process inspection."
+else
+    BUSY="\$(printf '%s\n' "\${GPU_PROCESSES}" | sed '/^[[:space:]]*$/d' | wc -l)"
+    if [ "\${BUSY}" != "0" ] && [ "${FORCE_GPU:-0}" != "1" ]; then
+        echo "[remote] GPU ${GPU} already has \${BUSY} compute process(es); refusing (FORCE_GPU=1 to override)."
+        nvidia-smi --id=${GPU} --query-compute-apps=pid,process_name,used_memory --format=csv
+        exit 1
+    fi
 fi
 
 tmux new-session -d -s ${TMUX_SESSION} -n job \

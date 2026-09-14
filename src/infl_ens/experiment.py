@@ -26,6 +26,7 @@ ALL_STAGES: tuple[str, ...] = (
     "train",
     "perround",
     "routing",
+    "behavioral",
     "figures",
     "prune",
 )
@@ -33,7 +34,10 @@ DEFAULT_STAGES: tuple[str, ...] = ("manifest", "train", "perround", "routing", "
 ARM_ROLES: frozenset[str] = frozenset({"specialist", "generalist"})
 
 EXPERIMENT_KEYS: frozenset[str] = frozenset(
-    {"name", "results_dir", "figures_dir", "arms", "stages", "eval", "figures", "smoke"},
+    {
+        "name", "results_dir", "figures_dir", "arms", "stages", "eval",
+        "behavioral_eval", "figures", "smoke",
+    },
 )
 ARM_KEYS: frozenset[str] = frozenset({"name", "label", "title", "role", "config"})
 EVAL_SETTING_KEYS: frozenset[str] = frozenset(
@@ -43,6 +47,18 @@ FIGURE_SETTING_KEYS: frozenset[str] = frozenset(
     {"axis_labels", "formats", "compile_tex", "include"},
 )
 SMOKE_KEYS: frozenset[str] = frozenset({"tests", "arms", "output_root", "overrides"})
+BEHAVIORAL_SETTING_KEYS: frozenset[str] = frozenset({
+    "schema_version", "checkpoints", "protocols", "targets", "generation",
+    "suites", "contamination", "graders", "audit",
+})
+BEHAVIORAL_TARGET_KEYS: frozenset[str] = frozenset({"include_base_model", "arms"})
+BEHAVIORAL_GENERATION_KEYS: frozenset[str] = frozenset({
+    "do_sample", "temperature", "batch_size", "max_new_tokens",
+    "max_input_tokens", "fail_on_truncation", "seed",
+})
+BEHAVIORAL_CONTAMINATION_KEYS: frozenset[str] = frozenset({
+    "exact_match", "fuzzy_match", "ngram_size", "fuzzy_threshold",
+})
 
 
 def _check_keys(block: Mapping[str, Any], allowed: frozenset[str], label: str, source: str) -> None:
@@ -178,6 +194,79 @@ class SmokeSettings:
 
 
 @dataclass(frozen=True)
+class BehavioralGenerationSettings:
+    """Deterministic generation settings for behavioral evaluation.
+
+    :param do_sample: Whether to sample tokens. Publication runs default to
+        greedy decoding.
+    :type do_sample: bool
+    :param temperature: Sampling temperature. Ignored by greedy decoding.
+    :type temperature: float
+    :param batch_size: Target-model generation batch size.
+    :type batch_size: int
+    :param max_new_tokens: Default output-token limit; a suite can override it.
+    :type max_new_tokens: int
+    :param max_input_tokens: Optional input-token ceiling.
+    :type max_input_tokens: int | None
+    :param fail_on_truncation: Raise rather than silently truncate long cases.
+    :type fail_on_truncation: bool
+    :param seed: Generation seed.
+    :type seed: int
+    """
+
+    do_sample: bool = False
+    temperature: float = 0.0
+    batch_size: int = 8
+    max_new_tokens: int = 256
+    max_input_tokens: int | None = None
+    fail_on_truncation: bool = True
+    seed: int = 0
+
+
+@dataclass(frozen=True)
+class BehavioralSettings:
+    """External generation-based safety-evaluation settings.
+
+    Behavioral suites are intentionally separate from ``benchmarks`` so they
+    cannot enter SFT, router fitting, or the trait-space fingerprint.
+
+    :param schema_version: Behavioral artifact schema version.
+    :type schema_version: int
+    :param checkpoints: Checkpoint selector; currently ``"final"``.
+    :type checkpoints: str
+    :param protocols: Generation protocols, ``native`` and/or ``hard_argmax``.
+    :type protocols: tuple[str, ...]
+    :param include_base_model: Include the unmodified base instruct model.
+    :type include_base_model: bool
+    :param target_arms: Arm names or the sentinel ``("all",)``.
+    :type target_arms: tuple[str, ...]
+    :param generation: Shared decoding settings.
+    :type generation: BehavioralGenerationSettings
+    :param suites: Raw suite-loader mappings in declared order.
+    :type suites: tuple[dict[str, Any], ...]
+    :param contamination: Exact/fuzzy overlap policy.
+    :type contamination: dict[str, Any]
+    :param graders: Optional grader overrides.
+    :type graders: dict[str, Any]
+    :param audit: Optional human-audit metadata.
+    :type audit: dict[str, Any]
+    """
+
+    schema_version: int = 1
+    checkpoints: str = "final"
+    protocols: tuple[str, ...] = ("native", "hard_argmax")
+    include_base_model: bool = True
+    target_arms: tuple[str, ...] = ("all",)
+    generation: BehavioralGenerationSettings = field(
+        default_factory=BehavioralGenerationSettings,
+    )
+    suites: tuple[dict[str, Any], ...] = ()
+    contamination: dict[str, Any] = field(default_factory=dict)
+    graders: dict[str, Any] = field(default_factory=dict)
+    audit: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class ExperimentConfig:
     """A parsed experiment file.
 
@@ -208,6 +297,7 @@ class ExperimentConfig:
     arms: tuple[ArmSpec, ...]
     stages: tuple[str, ...]
     eval: EvalSettings
+    behavioral_eval: BehavioralSettings | None
     figures: FigureSettings
     smoke: SmokeSettings
 
@@ -217,10 +307,21 @@ class ExperimentConfig:
         return tuple(a for a in self.arms if a.is_specialist)
 
     @property
+    def generalists(self) -> tuple[ArmSpec, ...]:
+        """All ``role: generalist`` arms, in experiment order.
+
+        The first remains the primary legacy reference exposed by
+        :attr:`generalist`.
+
+        :returns: Generalist arms.
+        :rtype: tuple[ArmSpec, ...]
+        """
+        return tuple(a for a in self.arms if a.role == "generalist")
+
+    @property
     def generalist(self) -> ArmSpec | None:
-        """The single ``role: generalist`` arm, if any."""
-        gens = [a for a in self.arms if a.role == "generalist"]
-        return gens[0] if gens else None
+        """The primary (first) ``role: generalist`` arm, if any."""
+        return self.generalists[0] if self.generalists else None
 
     def arm(self, name: str) -> ArmSpec:
         """Look an arm up by name.
@@ -292,9 +393,6 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
     names = [a.name for a in arms]
     if len(set(names)) != len(names):
         raise ConfigError(f"arms: duplicate arm names {names} ({source})")
-    if sum(1 for a in arms if a.role == "generalist") > 1:
-        raise ConfigError(f"arms: at most one generalist arm is supported ({source})")
-
     stages = tuple(str(s) for s in (raw.get("stages") or DEFAULT_STAGES))
     unknown_stages = [s for s in stages if s not in ALL_STAGES]
     if unknown_stages:
@@ -325,6 +423,150 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
             int(ev["max_eval_records"]) if ev.get("max_eval_records") is not None else None
         ),
     )
+
+    behavioral_settings: BehavioralSettings | None = None
+    behavioral_raw = raw.get("behavioral_eval")
+    if behavioral_raw is not None:
+        if not isinstance(behavioral_raw, Mapping):
+            raise ConfigError(f"behavioral_eval: expected a mapping ({source})")
+        _check_keys(
+            behavioral_raw, BEHAVIORAL_SETTING_KEYS, "behavioral_eval", source,
+        )
+        schema_version = int(behavioral_raw.get("schema_version", 1))
+        if schema_version != 1:
+            raise ConfigError(
+                f"behavioral_eval.schema_version must be 1, got {schema_version} ({source})",
+            )
+        checkpoints = str(behavioral_raw.get("checkpoints", "final"))
+        if checkpoints != "final":
+            raise ConfigError(
+                f"behavioral_eval.checkpoints must be 'final', got {checkpoints!r} ({source})",
+            )
+        protocols = tuple(
+            str(value) for value in behavioral_raw.get(
+                "protocols", ["native", "hard_argmax"],
+            )
+        )
+        allowed_protocols = {"native", "hard_argmax"}
+        unknown_protocols = sorted(set(protocols) - allowed_protocols)
+        if not protocols or unknown_protocols:
+            raise ConfigError(
+                "behavioral_eval.protocols must be a non-empty subset of "
+                f"{sorted(allowed_protocols)}, got {list(protocols)} ({source})",
+            )
+        targets = behavioral_raw.get("targets") or {}
+        if not isinstance(targets, Mapping):
+            raise ConfigError(f"behavioral_eval.targets: expected a mapping ({source})")
+        _check_keys(targets, BEHAVIORAL_TARGET_KEYS, "behavioral_eval.targets", source)
+        target_arms_raw = targets.get("arms", "all")
+        if target_arms_raw == "all":
+            target_arms = ("all",)
+        elif isinstance(target_arms_raw, list) and target_arms_raw:
+            target_arms = tuple(str(value) for value in target_arms_raw)
+            unknown_targets = sorted(set(target_arms) - set(names))
+            if unknown_targets:
+                raise ConfigError(
+                    "behavioral_eval.targets.arms: unknown arm "
+                    f"{unknown_targets[0]!r} ({source})",
+                )
+        else:
+            raise ConfigError(
+                "behavioral_eval.targets.arms must be 'all' or a non-empty list "
+                f"({source})",
+            )
+        generation = behavioral_raw.get("generation") or {}
+        if not isinstance(generation, Mapping):
+            raise ConfigError(
+                f"behavioral_eval.generation: expected a mapping ({source})",
+            )
+        _check_keys(
+            generation, BEHAVIORAL_GENERATION_KEYS,
+            "behavioral_eval.generation", source,
+        )
+        generation_settings = BehavioralGenerationSettings(
+            do_sample=bool(generation.get("do_sample", False)),
+            temperature=float(generation.get("temperature", 0.0)),
+            batch_size=int(generation.get("batch_size", 8)),
+            max_new_tokens=int(generation.get("max_new_tokens", 256)),
+            max_input_tokens=(
+                int(generation["max_input_tokens"])
+                if generation.get("max_input_tokens") is not None else None
+            ),
+            fail_on_truncation=bool(generation.get("fail_on_truncation", True)),
+            seed=int(generation.get("seed", 0)),
+        )
+        if generation_settings.batch_size <= 0 or generation_settings.max_new_tokens <= 0:
+            raise ConfigError(
+                "behavioral_eval.generation batch_size and max_new_tokens must be > 0 "
+                f"({source})",
+            )
+        suites_raw = behavioral_raw.get("suites") or []
+        if not isinstance(suites_raw, list) or not suites_raw:
+            raise ConfigError(
+                f"behavioral_eval.suites: expected a non-empty list ({source})",
+            )
+        suites: list[dict[str, Any]] = []
+        for index, suite in enumerate(suites_raw):
+            if not isinstance(suite, Mapping) or "kind" not in suite or "path" not in suite:
+                raise ConfigError(
+                    "behavioral_eval.suites"
+                    f"[{index}]: expected a mapping with kind and path ({source})",
+                )
+            suites.append(dict(suite))
+        contamination = behavioral_raw.get("contamination") or {}
+        if not isinstance(contamination, Mapping):
+            raise ConfigError(
+                f"behavioral_eval.contamination: expected a mapping ({source})",
+            )
+        _check_keys(
+            contamination, BEHAVIORAL_CONTAMINATION_KEYS,
+            "behavioral_eval.contamination", source,
+        )
+        exact_policy = str(contamination.get("exact_match", "exclude"))
+        fuzzy_policy = str(contamination.get("fuzzy_match", "flag"))
+        if exact_policy not in {"exclude", "flag"}:
+            raise ConfigError(
+                "behavioral_eval.contamination.exact_match must be exclude or flag "
+                f"({source})",
+            )
+        if fuzzy_policy not in {"exclude", "flag", "off"}:
+            raise ConfigError(
+                "behavioral_eval.contamination.fuzzy_match must be exclude, flag or off "
+                f"({source})",
+            )
+        contamination_settings = {
+            "exact_match": exact_policy,
+            "fuzzy_match": fuzzy_policy,
+            "ngram_size": int(contamination.get("ngram_size", 5)),
+            "fuzzy_threshold": float(contamination.get("fuzzy_threshold", 0.85)),
+        }
+        if contamination_settings["ngram_size"] <= 0:
+            raise ConfigError(
+                f"behavioral_eval.contamination.ngram_size must be > 0 ({source})",
+            )
+        if not 0.0 <= contamination_settings["fuzzy_threshold"] <= 1.0:
+            raise ConfigError(
+                "behavioral_eval.contamination.fuzzy_threshold must lie in [0,1] "
+                f"({source})",
+            )
+        graders = behavioral_raw.get("graders") or {}
+        audit = behavioral_raw.get("audit") or {}
+        if not isinstance(graders, Mapping) or not isinstance(audit, Mapping):
+            raise ConfigError(
+                f"behavioral_eval.graders and audit must be mappings ({source})",
+            )
+        behavioral_settings = BehavioralSettings(
+            schema_version=schema_version,
+            checkpoints=checkpoints,
+            protocols=protocols,
+            include_base_model=bool(targets.get("include_base_model", True)),
+            target_arms=target_arms,
+            generation=generation_settings,
+            suites=tuple(suites),
+            contamination=contamination_settings,
+            graders=dict(graders),
+            audit=dict(audit),
+        )
 
     fg = raw.get("figures") or {}
     _check_keys(fg, FIGURE_SETTING_KEYS, "figures", source)
@@ -364,6 +606,7 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
         arms=arms,
         stages=stages,
         eval=eval_settings,
+        behavioral_eval=behavioral_settings,
         figures=figure_settings,
         smoke=smoke_settings,
     )
@@ -373,6 +616,8 @@ __all__ = [
     "ALL_STAGES",
     "DEFAULT_STAGES",
     "ArmSpec",
+    "BehavioralGenerationSettings",
+    "BehavioralSettings",
     "EvalSettings",
     "ExperimentConfig",
     "FigureSettings",

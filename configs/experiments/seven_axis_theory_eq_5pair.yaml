@@ -1,0 +1,28 @@
+# Does starting at the theory equilibrium change the outcome?
+#
+# The specialist arm is identical to seven_axis_5pair_sigma05/seed0 except for
+# its starting positions, which are an equilibrium of the game under the
+# empirical prompt measure. Compare its routing NLL against:
+#   - the pooled generalist (role: generalist below, NOT retrained)
+#   - seven_axis_5pair_sigma05/seed0, the same arm started from the
+#     approximate lattice solve
+# All three share the seed-0 split and the 5,671-prompt test pool.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_5pair.yaml
+name: seven_axis_theory_eq_5pair
+results_dir: results/seven_axis_theory_eq_5pair
+figures_dir: figures/seven_axis_theory_eq_5pair
+
+arms:
+  - name: theory_eq_5pair
+    label: "Theory equilibrium start"
+    title: "Soft dense routing, 5 pairs, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_5pair_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing seed-0 replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]

@@ -1,0 +1,26 @@
+# Routing ladder at the theory equilibrium: Sampled top-3, unit loss. Seed 0.
+#
+# One-factor contrast against its approximate-init counterpart in
+# seven_axis_3arm. Starting positions are byte-identical to every other
+# arm in the ladder (and to seven_axis_theory_eq), so only the routing
+# rule moves. Same seed-0 split and test pool; the generalist is reused,
+# NOT retrained.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_hard_topk3.yaml
+name: seven_axis_theory_eq_hard_topk3
+results_dir: results/seven_axis_theory_eq_hard_topk3
+figures_dir: figures/seven_axis_theory_eq_hard_topk3
+
+arms:
+  - name: theory_eq_hard_topk3
+    label: "Sampled top-3, unit loss"
+    title: "Sampled top-3, unit loss, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_hard_topk3_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing seed-0 replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, train, perround, routing, figures]

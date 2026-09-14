@@ -34,7 +34,9 @@ from typing import Any, Mapping, Sequence
 INCLUDES_KEY = "includes"
 
 #: Tasks accepted by ``python -m infl_ens.training``.
-KNOWN_TASKS: frozenset[str] = frozenset({"closed_loop", "baseline_replay"})
+KNOWN_TASKS: frozenset[str] = frozenset(
+    {"closed_loop", "baseline_replay", "partition_replay", "mixture_lora", "adapter_merge"}
+)
 
 #: Keys allowed at the top level of a run config.
 TOP_LEVEL_KEYS: frozenset[str] = frozenset(
@@ -57,6 +59,9 @@ TOP_LEVEL_KEYS: frozenset[str] = frozenset(
         "sft",
         "eval",
         "baseline_replay",
+        "partition_replay",
+        "mixture_lora",
+        "adapter_merge",
     },
 )
 
@@ -137,6 +142,11 @@ CLOSED_LOOP_KEYS: frozenset[str] = frozenset(
     {
         "init_mode",
         "init_noise",
+        # Only read when init_mode == "given": an explicit {agent: [coords]}
+        # mapping, so a solve run offline can be pinned as the starting state
+        # and stays visible in the resolved config.
+        "init_positions",
+        "init_positions_source",
         "theory_gradient",
         "snap_collapsed_pairs",
         "collapse_merge_threshold",
@@ -144,6 +154,7 @@ CLOSED_LOOP_KEYS: frozenset[str] = frozenset(
         "soft_top_k",
         "soft_loss",
         "soft_select",
+        "capacity_factor",
         "routing_weight",
         "loss_reweight",
         "position_update",
@@ -209,6 +220,35 @@ EVAL_KEYS: frozenset[str] = frozenset(
 
 BASELINE_REPLAY_KEYS: frozenset[str] = frozenset(
     {"agent_name", "save_per_round", "rounds"},
+)
+
+PARTITION_REPLAY_KEYS: frozenset[str] = frozenset(
+    {"mode", "n_experts", "seed", "n_init", "max_iter", "tol"},
+)
+
+MIXTURE_LORA_KEYS: frozenset[str] = frozenset(
+    {
+        "mode",
+        "n_experts",
+        "expert_rank",
+        "top_k",
+        "load_balance_coefficient",
+        "gate_learning_rate",
+    },
+)
+
+ADAPTER_MERGE_KEYS: frozenset[str] = frozenset(
+    {
+        "source_run_dir",
+        "source_experts",
+        "methods",
+        "task_arithmetic_scales",
+        "ties_densities",
+        "dare_drop_rates",
+        "serving_ranks",
+        "alignment_rank",
+        "seed",
+    },
 )
 
 
@@ -463,6 +503,9 @@ def validate_config(cfg: Mapping[str, Any], *, source: str = "<config>") -> None
         ("sft", SFT_KEYS),
         ("eval", EVAL_KEYS),
         ("baseline_replay", BASELINE_REPLAY_KEYS),
+        ("partition_replay", PARTITION_REPLAY_KEYS),
+        ("mixture_lora", MIXTURE_LORA_KEYS),
+        ("adapter_merge", ADAPTER_MERGE_KEYS),
     )
     for name, allowed in simple_blocks:
         block = cfg.get(name)
@@ -545,6 +588,7 @@ def resolve_sft_block(cfg: Mapping[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "BASELINE_REPLAY_KEYS",
+    "ADAPTER_MERGE_KEYS",
     "BENCHMARK_ENTRY_KEYS",
     "CLOSED_LOOP_KEYS",
     "ConfigError",
@@ -552,6 +596,8 @@ __all__ = [
     "ENCODER_KEYS",
     "EVAL_KEYS",
     "KNOWN_TASKS",
+    "MIXTURE_LORA_KEYS",
+    "PARTITION_REPLAY_KEYS",
     "SFT_KEYS",
     "THEORY_GRADIENT_KEYS",
     "TOP_LEVEL_KEYS",

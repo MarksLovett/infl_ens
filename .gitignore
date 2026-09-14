@@ -29,3 +29,14 @@ docs/api/_autosummary/
 # Editor / OS noise
 .DS_Store
 *.swp
+
+# Local secrets (HF tokens etc). Never commit.
+.env
+.env.*
+!.env.example
+
+# Local agent-to-agent implementation handovers
+/HANDOVER_EXTERNAL_BASELINES.md
+
+# Discovery staging bundle (unproven; fold into scripts/ once validated)
+/discovery/

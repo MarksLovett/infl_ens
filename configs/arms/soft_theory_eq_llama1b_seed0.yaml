@@ -1,0 +1,63 @@
+# Llama-3.2-1B at the theory equilibrium. Seed 0.
+#
+# The trait space is built by the Qwen3-Embedding-8B encoder
+# regardless of which model is fine-tuned, and every model arm is
+# N = 14 at sigma_fraction 0.50 -- so they all share ONE
+# equilibrium, lifted verbatim from soft_theory_eq_seed0.yaml.
+# Identical start points mean the model comparison cannot be
+# confounded by differing initial geometry.
+#
+#   sigma (absolute)      0.204885
+#   pairs                 7  (14 clones, co-located)
+
+includes:
+  - _closed_loop_base.yaml
+  - ../models/llama_3_2_1b_instruct.yaml
+
+output_dir: results/seven_axis_theory_eq_llama1b/seed0
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7
+  soft_loss: weighted
+  init_mode: given
+  init_noise: 0.0
+  init_positions_source: >-
+    influencer-game equilibrium under the empirical prompt measure;
+    identical to seven_axis_theory_eq/seed0
+
+  init_positions:
+    clone-0: [0.4487929395, 0.3058468903, 0.4422183696, 0.2139622766, 0.1784189242, 0.8817263399, 0.4873681887]
+    clone-1: [0.4487929395, 0.3058468903, 0.4422183696, 0.2139622766, 0.1784189242, 0.8817263399, 0.4873681887]
+    clone-2: [0.2456187425, 0.8759990358, 0.6231543632, 0.5655192227, 0.5310583966, 0.4506202445, 0.2361941837]
+    clone-3: [0.2456187425, 0.8759990358, 0.6231543632, 0.5655192227, 0.5310583966, 0.4506202445, 0.2361941837]
+    clone-4: [0.8489977773, 0.4755101499, 0.4511701802, 0.5197666826, 0.3885359044, 0.2728255063, 0.2697286643]
+    clone-5: [0.8489977773, 0.4755101499, 0.4511701802, 0.5197666826, 0.3885359044, 0.2728255063, 0.2697286643]
+    clone-6: [0.3197037577, 0.2358387874, 0.4425039151, 0.6619255227, 0.7229742543, 0.4724425240, 0.3782577297]
+    clone-7: [0.3197037577, 0.2358387874, 0.4425039151, 0.6619255227, 0.7229742543, 0.4724425240, 0.3782577297]
+    clone-8: [0.3187945471, 0.4071695558, 0.4830482607, 0.2216694527, 0.2794049860, 0.1253712634, 0.8251148744]
+    clone-9: [0.3187945471, 0.4071695558, 0.4830482607, 0.2216694527, 0.2794049860, 0.1253712634, 0.8251148744]
+    clone-10: [0.6395491778, 0.6326997591, 0.3217751313, 0.6272518744, 0.7083169680, 0.6177418402, 0.6597355017]
+    clone-11: [0.6395491778, 0.6326997591, 0.3217751313, 0.6272518744, 0.7083169680, 0.6177418402, 0.6597355017]
+    clone-12: [0.6625026416, 0.6505388567, 0.7251431725, 0.6812474315, 0.6896606418, 0.6403524447, 0.6496044748]
+    clone-13: [0.6625026416, 0.6505388567, 0.7251431725, 0.6812474315, 0.6896606418, 0.6403524447, 0.6496044748]
+
+  # Pinned to match the co-location above, since no solve runs to infer it.
+  sft_merge_groups:
+    - train_as: pair-0
+      names: [clone-0, clone-1]
+    - train_as: pair-1
+      names: [clone-2, clone-3]
+    - train_as: pair-2
+      names: [clone-4, clone-5]
+    - train_as: pair-3
+      names: [clone-6, clone-7]
+    - train_as: pair-4
+      names: [clone-8, clone-9]
+    - train_as: pair-5
+      names: [clone-10, clone-11]
+    - train_as: pair-6
+      names: [clone-12, clone-13]

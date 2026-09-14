@@ -1,0 +1,47 @@
+{
+  "arms": [
+    {
+      "capture": 0.5351635655403668,
+      "gain": 0.06927608375358663,
+      "k": 7,
+      "label": "Soft $k{=}7$, weighted",
+      "loss": "share",
+      "selection": "argmax (all)"
+    },
+    {
+      "capture": 0.39797768090738095,
+      "gain": 0.041290438651201855,
+      "k": 3,
+      "label": "Soft $k{=}3$, weighted",
+      "loss": "share",
+      "selection": "argmax top-3"
+    },
+    {
+      "capture": 0.40627354504667845,
+      "gain": 0.031336854035838746,
+      "k": 3,
+      "label": "Soft $k{=}3$, unit",
+      "loss": "unit",
+      "selection": "argmax top-3"
+    },
+    {
+      "capture": 0.39450584748849854,
+      "gain": 0.02812582023184662,
+      "k": 3,
+      "label": "Sampled $k{=}3$, unit",
+      "loss": "unit",
+      "selection": "sampled"
+    },
+    {
+      "capture": -0.28449451189126457,
+      "gain": -0.015674873286450453,
+      "k": 1,
+      "label": "Hard $k{=}1$ (SFT)",
+      "loss": "unit",
+      "selection": "sampled winner"
+    }
+  ],
+  "figure": "routing design: gain and capture",
+  "generated": "2026-09-11T20:22:15+00:00",
+  "seed": "seed0"
+}

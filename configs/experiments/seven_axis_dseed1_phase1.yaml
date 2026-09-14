@@ -1,0 +1,73 @@
+# Double-seed replicate, data-split seed 1, phase1.
+#
+# Both the run seed and the data-split seed are set to 1, so this measures
+# initialisation variance AND data variance together -- the bound a reviewer
+# means by "error bars", unlike a run-seed-only replicate which only bounds
+# retraining reproducibility.
+#
+# The test pool differs from the seed-0 work, so absolute NLL is not
+# comparable across data seeds. Compare `learned - pooled`, `oracle - learned`
+# and the intra/inter split, all of which are within-split contrasts.
+#
+# The generalist is trained at THIS data seed; sharing one across splits would
+# score specialists against a baseline fitted to different data.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_dseed1_phase1.yaml
+name: seven_axis_dseed1_phase1
+results_dir: results/seven_axis_dseed1_phase1
+figures_dir: figures/seven_axis_dseed1_phase1
+
+arms:
+  - name: s07_d1
+    label: "sigma 0.70 / dseed 1"
+    title: "Fully distributed, sigma_fraction 0.70, both seeds 1"
+    role: specialist
+    config: ../arms/soft_full_sigma07_d1.yaml
+  - name: s05_d1
+    label: "sigma 0.50 / dseed 1"
+    title: "Fully distributed, sigma_fraction 0.50, both seeds 1"
+    role: specialist
+    config: ../arms/soft_full_sigma05_d1.yaml
+  - name: s045_d1
+    label: "sigma 0.45 / dseed 1"
+    title: "Fully distributed, sigma_fraction 0.45, both seeds 1"
+    role: specialist
+    config: ../arms/soft_full_sigma045_d1.yaml
+  - name: s02_d1
+    label: "sigma 0.20 / dseed 1"
+    title: "Fully distributed, sigma_fraction 0.20, both seeds 1"
+    role: specialist
+    config: ../arms/soft_full_sigma02_d1.yaml
+  - name: generalist
+    label: "Pooled generalist (dseed 1)"
+    title: "Pooled generalist, data-split seed 1"
+    role: generalist
+    config: ../arms/generalist_replay_dseed1.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - arm_comparison
+    - cross_arm_report
+
+smoke:
+  tests:
+    - tests/test_soft_pairs.py
+  arms: [s07_d1]
+  output_root: results/_smoke_d1_phase1
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 500

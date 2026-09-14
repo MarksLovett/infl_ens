@@ -1,0 +1,212 @@
+{
+  "seven_axis_2pair_sigma05": {
+    "label": "2 pairs, naive",
+    "pairs": 2,
+    "pooled": 2.015167758318088,
+    "gates": {
+      "game": {
+        "gain_expected": -0.001256526803664837,
+        "gain_mixture": 0.015881732062008602
+      },
+      "linear-cla": {
+        "gain_expected": -0.017866112896494535,
+        "gain_mixture": 0.0203802967721729
+      },
+      "linear-sof": {
+        "gain_expected": -0.02157113283975365,
+        "gain_mixture": 0.020057826895580888
+      },
+      "linear-reg": {
+        "gain_expected": -0.046472524413612604,
+        "gain_mixture": 0.01646947531679932
+      },
+      "stacking": {
+        "gain_expected": -0.05342541165549042,
+        "gain_mixture": 0.01506300588622711
+      },
+      "uniform": {
+        "gain_expected": -0.053444539653499934,
+        "gain_mixture": 0.015061363204243783
+      },
+      "oracle": {
+        "gain_expected": 0.034292006824744536,
+        "gain_mixture": 0.034292006824744536
+      }
+    }
+  },
+  "seven_axis_theory_eq_2pair": {
+    "label": "2 pairs, equilibrium",
+    "pairs": 2,
+    "pooled": 2.014995598494534,
+    "gates": {
+      "game": {
+        "gain_expected": 0.02470501171242856,
+        "gain_mixture": 0.044003406934946865
+      },
+      "linear-cla": {
+        "gain_expected": 0.01779665886593662,
+        "gain_mixture": 0.04653835033012399
+      },
+      "linear-sof": {
+        "gain_expected": -0.08166806480277877,
+        "gain_mixture": 0.03647571608842415
+      },
+      "linear-reg": {
+        "gain_expected": -0.0792870690505687,
+        "gain_mixture": 0.03674067696798633
+      },
+      "stacking": {
+        "gain_expected": -0.10990225829087885,
+        "gain_mixture": 0.033019963568748256
+      },
+      "uniform": {
+        "gain_expected": -0.1093535176914342,
+        "gain_mixture": 0.03279882120216615
+      },
+      "oracle": {
+        "gain_expected": 0.05444719088895278,
+        "gain_mixture": 0.05444719088895278
+      }
+    }
+  },
+  "seven_axis_soft_full_pairs": {
+    "label": "7 pairs, naive",
+    "pairs": 7,
+    "pooled": 2.015167758318088,
+    "gates": {
+      "game": {
+        "gain_expected": 0.0691253242547345,
+        "gain_mixture": 0.10931586986990549
+      },
+      "linear-cla": {
+        "gain_expected": 0.019884764877685868,
+        "gain_mixture": 0.11169345511197726
+      },
+      "linear-sof": {
+        "gain_expected": -0.03216270903518037,
+        "gain_mixture": 0.10713043024448199
+      },
+      "linear-reg": {
+        "gain_expected": -0.2990940701781013,
+        "gain_mixture": 0.07948027302142435
+      },
+      "stacking": {
+        "gain_expected": -0.4562762368688258,
+        "gain_mixture": 0.06913811690386518
+      },
+      "uniform": {
+        "gain_expected": -0.4144053282472142,
+        "gain_mixture": 0.06600704066849317
+      },
+      "oracle": {
+        "gain_expected": 0.1293208499451708,
+        "gain_mixture": 0.1293208499451708
+      }
+    }
+  },
+  "seven_axis_theory_eq": {
+    "label": "7 pairs, equilibrium",
+    "pairs": 7,
+    "pooled": 2.015167758318088,
+    "gates": {
+      "game": {
+        "gain_expected": 0.07244030950664926,
+        "gain_mixture": 0.10910560667299518
+      },
+      "linear-cla": {
+        "gain_expected": 0.016318876423697892,
+        "gain_mixture": 0.11162172033374573
+      },
+      "linear-sof": {
+        "gain_expected": -0.03635647106904516,
+        "gain_mixture": 0.1065590034098145
+      },
+      "linear-reg": {
+        "gain_expected": -0.3043045956191772,
+        "gain_mixture": 0.07887806506633077
+      },
+      "stacking": {
+        "gain_expected": -0.4879111470470243,
+        "gain_mixture": 0.06859697001282039
+      },
+      "uniform": {
+        "gain_expected": -0.4331330734857559,
+        "gain_mixture": 0.06522894531210799
+      },
+      "oracle": {
+        "gain_expected": 0.12891966029883406,
+        "gain_mixture": 0.12891966029883406
+      }
+    }
+  },
+  "seven_axis_9pair_sigma05": {
+    "label": "9 pairs, naive",
+    "pairs": 9,
+    "pooled": 2.015167758318088,
+    "gates": {
+      "game": {
+        "gain_expected": 0.07830211545713262,
+        "gain_mixture": 0.12059419091755941
+      },
+      "linear-cla": {
+        "gain_expected": 0.01598899908250151,
+        "gain_mixture": 0.12144154769537407
+      },
+      "linear-sof": {
+        "gain_expected": 0.00806554634461154,
+        "gain_mixture": 0.12077758714445452
+      },
+      "linear-reg": {
+        "gain_expected": -0.32562771286590886,
+        "gain_mixture": 0.08499009135448343
+      },
+      "stacking": {
+        "gain_expected": -0.4992399945716728,
+        "gain_mixture": 0.07632774212991
+      },
+      "uniform": {
+        "gain_expected": -0.439611953451037,
+        "gain_mixture": 0.0710604899596563
+      },
+      "oracle": {
+        "gain_expected": 0.14182645945380012,
+        "gain_mixture": 0.14182645945380012
+      }
+    }
+  },
+  "seven_axis_theory_eq_9pair": {
+    "label": "9 pairs, equilibrium",
+    "pairs": 9,
+    "pooled": 2.015167758318088,
+    "gates": {
+      "game": {
+        "gain_expected": 0.08155484147128789,
+        "gain_mixture": 0.12261490599470415
+      },
+      "linear-cla": {
+        "gain_expected": 0.004652874501667625,
+        "gain_mixture": 0.12387402689543037
+      },
+      "linear-sof": {
+        "gain_expected": -0.0531863302466129,
+        "gain_mixture": 0.1187131887673174
+      },
+      "linear-reg": {
+        "gain_expected": -0.3539577624285273,
+        "gain_mixture": 0.0874601614393733
+      },
+      "stacking": {
+        "gain_expected": -0.5250377079300965,
+        "gain_mixture": 0.07633489286897621
+      },
+      "uniform": {
+        "gain_expected": -0.48724982414259754,
+        "gain_mixture": 0.07305447844169422
+      },
+      "oracle": {
+        "gain_expected": 0.14465926131166262,
+        "gain_mixture": 0.14465926131166262
+      }
+    }
+  }
+}

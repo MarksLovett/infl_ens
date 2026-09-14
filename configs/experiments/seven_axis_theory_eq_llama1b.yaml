@@ -1,0 +1,24 @@
+# Llama-3.2-1B at the theory equilibrium. Seed 0.
+#
+# One-factor contrast against the corresponding approximate-init arm:
+# only the starting positions differ. Same split, same test pool, and
+# the existing generalist (generalist_replay_llama1b.yaml) is reused, NOT retrained.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_llama1b.yaml
+name: seven_axis_theory_eq_llama1b
+results_dir: results/seven_axis_theory_eq_llama1b
+figures_dir: figures/seven_axis_theory_eq_llama1b
+
+arms:
+  - name: theory_eq_llama1b
+    label: "Llama-3.2-1B"
+    title: "Llama-3.2-1B, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_llama1b_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay_llama1b.yaml
+
+stages: [manifest, train, perround, routing, figures]

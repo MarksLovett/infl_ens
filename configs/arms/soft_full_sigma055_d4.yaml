@@ -1,0 +1,26 @@
+# REPLICATE 4: fully distributed soft routing (k = 7, share-weighted) at
+# sigma_fraction = 0.55, run seed 4 AND data-split seed 4.
+#
+# Both seeds move together, so this measures initialisation variance and data
+# variance jointly -- the bound that supports a generalisation claim, unlike a
+# run-seed-only replicate which only bounds retraining reproducibility.
+#
+# Absolute NLL is NOT comparable across data seeds (each has its own test
+# pool). Compare within-split contrasts: learned - pooled, oracle - learned,
+# and the intra/inter split.
+includes:
+  - _closed_loop_base.yaml
+
+output_dir: results/seven_axis_sigma055_full/dseed4
+
+seed: 4
+sigma_fraction: 0.55
+
+data_split:
+  seed: 4
+  manifest: data/splits/seven_axis_soft_dseed4.json
+
+closed_loop:
+  routing_mode: soft
+  soft_top_k: 7                     # == number of pairs: fully dense
+  soft_loss: weighted

@@ -144,11 +144,39 @@ if TYPE_CHECKING:  # pragma: no cover - import-time only for type checkers / IDE
 
 #: Names that are resolved through :func:`__getattr__` on first access.
 _LAZY_SFT_NAMES: frozenset[str] = frozenset({"SFTTrainingConfig", "sft_train_agent"})
+_LAZY_MODULE_EXPORTS: dict[str, str] = {
+    "PartitionPlan": "fixed_partition",
+    "build_partition_plan": "fixed_partition",
+    "hard_kmeans_partition": "fixed_partition",
+    "run_partition_replay": "fixed_partition",
+    "build_mixture_lora_model": "mixture_lora",
+    "gate_weights": "mixture_lora",
+    "mixture_lora_delta": "mixture_lora",
+    "run_mixture_lora": "mixture_lora",
+    "merge_delta_family": "adapter_merge",
+    "knots_merge": "adapter_merge",
+    "reconstruct_delta": "adapter_merge",
+    "run_adapter_merge": "adapter_merge",
+    "svd_refactor": "adapter_merge",
+}
 
 __all__ = [
     "RouterTrainingConfig",
+    "PartitionPlan",
     "SFTTrainingConfig",
     "sft_train_agent",
+    "build_mixture_lora_model",
+    "build_partition_plan",
+    "gate_weights",
+    "hard_kmeans_partition",
+    "knots_merge",
+    "merge_delta_family",
+    "mixture_lora_delta",
+    "reconstruct_delta",
+    "run_adapter_merge",
+    "run_mixture_lora",
+    "run_partition_replay",
+    "svd_refactor",
     "train_router_positions",
 ]
 
@@ -168,6 +196,13 @@ def __getattr__(name: str) -> Any:
         value = getattr(sft_training, name)
         globals()[name] = value
         return value
+    if name in _LAZY_MODULE_EXPORTS:
+        from importlib import import_module
+
+        module = import_module(f"infl_ens.training.{_LAZY_MODULE_EXPORTS[name]}")
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -177,4 +212,4 @@ def __dir__() -> list[str]:
     :returns: Sorted list of public attribute names.
     :rtype: list[str]
     """
-    return sorted(set(globals()) | _LAZY_SFT_NAMES)
+    return sorted(set(globals()) | _LAZY_SFT_NAMES | set(_LAZY_MODULE_EXPORTS))

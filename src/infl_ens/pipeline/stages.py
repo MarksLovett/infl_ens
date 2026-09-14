@@ -145,7 +145,7 @@ def expected_rounds(arm: ArmSpec, cfg: dict[str, Any]) -> Optional[int]:
                 return int(meta["n_rounds"])
         except (OSError, ValueError):
             pass
-    if cfg.get("task") == "baseline_replay":
+    if cfg.get("task") in {"baseline_replay", "adapter_merge"}:
         return None
     if not cfg.get("data_split"):
         return int((cfg.get("closed_loop") or {}).get("n_rounds", 5))
@@ -167,6 +167,8 @@ def run_is_complete(arm: ArmSpec, cfg: dict[str, Any]) -> bool:
         return False
     if cfg.get("task") == "baseline_replay":
         return (arm.run_dir / "replay_summary.json").is_file()
+    if cfg.get("task") == "adapter_merge":
+        return (arm.run_dir / "merge_summary.json").is_file()
     try:
         records = json.loads(history.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -195,6 +197,33 @@ def smoke_config(arm: ArmSpec, exp: ExperimentConfig) -> dict[str, Any]:
     if (cfg.get("closed_loop") or {}).get("sft") is not None:
         overrides["closed_loop.sft.output_dir"] = str(out / "agents")
     apply_overrides(cfg, overrides)
+    run_to_smoke = {
+        arm_spec.run_dir.as_posix().rstrip("/"): (
+            Path(exp.smoke.output_root) / arm_spec.name / "seed0"
+        )
+        for arm_spec in exp.arms
+    }
+    history_path = cfg.get("history_path")
+    if history_path:
+        source = Path(str(history_path))
+        source_run = source.parent if source.name == "history.json" else source
+        replacement = run_to_smoke.get(source_run.as_posix().rstrip("/"))
+        if replacement is not None:
+            cfg["history_path"] = str(replacement / "history.json")
+    merge_block = cfg.get("adapter_merge")
+    if isinstance(merge_block, dict):
+        source_run = Path(str(merge_block.get("source_run_dir", "")))
+        replacement = run_to_smoke.get(source_run.as_posix().rstrip("/"))
+        if replacement is not None:
+            merge_block["source_run_dir"] = str(replacement)
+        merge_block.update({
+            "methods": ["linear"],
+            "task_arithmetic_scales": [1.0],
+            "ties_densities": [0.5],
+            "dare_drop_rates": [0.5],
+            "serving_ranks": [16],
+        })
+        cfg["eval"] = {"max_eval_records": 4, "forward_batch_size": 2}
     return cfg
 
 
@@ -268,6 +297,9 @@ def stage_perround(ctx: PipelineContext) -> None:
     settings = ctx.exp.eval
     partition = settings.perround_partition
     for arm in ctx.arms(specialists_only=True):
+        if resolved_run_config(arm).get("task") == "mixture_lora":
+            log.info("perround: %s uses learned-mixture routing evaluation; skipping", arm.name)
+            continue
         last = final_round(arm)
         rounds = settings.resolve_rounds(last)
         eval_dir = arm.run_dir / f"eval_{partition}"
@@ -294,23 +326,39 @@ def stage_perround(ctx: PipelineContext) -> None:
 
 
 def stage_routing(ctx: PipelineContext) -> None:
-    """Route-then-score each specialist arm against the generalist replay."""
+    """Score each expert family once, then compare validation-fitted routers."""
     from infl_ens.config import resolve_sft_block
+    from infl_ens.evaluation.nll_artifact import (
+        NllMatrixArtifact,
+        checkpoint_sha256,
+        ordered_records_sha256,
+    )
+    from infl_ens.evaluation.routers import build_validation_router_suite
     from infl_ens.evaluation.routing_eval import (
         format_headline_markdown,
+        load_flat_partition_records,
         report_to_dict,
         run_flat_routing_eval,
+        run_mixture_routing_eval,
     )
+    import numpy as np
 
-    gen = ctx.exp.generalist
-    if gen is None:
+    generalists = ctx.exp.generalists
+    if not generalists:
         raise ValueError("routing stage needs a generalist arm (role: generalist)")
+    primary = generalists[0]
+    reference_run_dirs = {arm.name: arm.run_dir for arm in generalists}
+    reference_agent_names = {
+        arm.name: str(
+            (resolved_run_config(arm).get("baseline_replay") or {}).get(
+                "agent_name", "pooled-baseline",
+            )
+        )
+        for arm in generalists
+    }
     settings = ctx.exp.eval
     for arm in ctx.arms(specialists_only=True):
         out_json = arm.run_dir / "routing_ensemble_diagnostics.json"
-        if out_json.is_file() and not ctx.force:
-            log.info("routing: %s already has %s", arm.name, out_json)
-            continue
         resolved = arm.run_dir / "resolved_config.yaml"
         if not resolved.is_file():
             raise FileNotFoundError(f"routing: {arm.name} has no {resolved}; train it first")
@@ -318,23 +366,290 @@ def stage_routing(ctx: PipelineContext) -> None:
         sft = resolve_sft_block(cfg)
         eval_block = cfg.get("eval") or {}
         last = final_round(arm)
+        test_artifact_path = (
+            arm.run_dir / f"nll_{settings.routing_partition}_round{last:02d}.npz"
+        )
+        task = str(cfg.get("task"))
+        if task == "adapter_merge":
+            required_routers = {
+                f"single_{entry['name']}" for entry in cfg.get("agents", [])
+            }
+        else:
+            required_routers = {
+                "uniform",
+                "hindsight_oracle",
+                "fitted_classification",
+                "fitted_soft",
+                "fitted_regression",
+                "simplex_stacking",
+                "validation_selected_permutation",
+            }
+            required_routers.add(
+                "learned_gate" if task == "mixture_lora" else "native"
+            )
+        if task not in {"mixture_lora", "adapter_merge"}:
+            required_routers.update({"centroid_soft", "centroid_hard", "game_g", "strategic"})
+        if out_json.is_file() and test_artifact_path.is_file() and not ctx.force:
+            try:
+                existing = json.loads(out_json.read_text(encoding="utf-8"))
+                artifact = NllMatrixArtifact.load(test_artifact_path)
+                prompts, responses, _labels, record_ids = load_flat_partition_records(
+                    cfg,
+                    repo_root=ctx.repo_root,
+                    partition=settings.routing_partition,
+                    max_eval_records=settings.max_eval_records,
+                    seed=int(cfg.get("seed", 0)),
+                )
+                if task == "mixture_lora":
+                    mix = cfg.get("mixture_lora") or {}
+                    model_name = (
+                        "ewora-dense"
+                        if str(mix.get("mode", "dense")) == "dense"
+                        else "trait-gated-topk"
+                    )
+                    live_experts = {
+                        model_name: checkpoint_sha256(
+                            arm.run_dir / "agents" / model_name / f"round-{last:02d}"
+                        )
+                    }
+                else:
+                    live_experts = {
+                        name: checkpoint_sha256(
+                            arm.run_dir / "agents" / name / f"round-{last:02d}"
+                        )
+                        for name in artifact.expert_names
+                    }
+                live_references = {
+                    name: checkpoint_sha256(
+                        run_dir
+                        / "agents"
+                        / reference_agent_names[name]
+                        / f"round-{last:02d}"
+                    )
+                    for name, run_dir in reference_run_dirs.items()
+                }
+                provenance = artifact.provenance
+                current = (
+                    int(existing.get("schema_version", 0)) == 2
+                    and required_routers <= set(existing.get("routers", {}))
+                    and existing.get("evaluation", {}).get("nll_artifact_digest")
+                    == artifact.digest
+                    and provenance.get("round") == last
+                    and provenance.get("partition") == settings.routing_partition
+                    and provenance.get("max_eval_records") == settings.max_eval_records
+                    and provenance.get("seed") == int(cfg.get("seed", 0))
+                    and provenance.get("base_model") == str(sft.get("base_model"))
+                    and provenance.get("max_seq_length")
+                    == int(sft.get("max_seq_length", 1024))
+                    and provenance.get("forward_batch_size")
+                    == int(eval_block.get("forward_batch_size", 8))
+                    and provenance.get("ordered_records_sha256")
+                    == ordered_records_sha256(record_ids, prompts, responses)
+                    and provenance.get("expert_checkpoints") == live_experts
+                    and provenance.get("reference_checkpoints") == live_references
+                )
+            except (OSError, ValueError, KeyError, json.JSONDecodeError):
+                current = False
+            if current:
+                log.info("routing: %s schema/cache already current", arm.name)
+                continue
         log.info("routing: %s round %d on %s", arm.name, last, settings.routing_partition)
-        report = run_flat_routing_eval(
+        validation_partition = "val"
+        validation_artifact_path = (
+            arm.run_dir / f"nll_{validation_partition}_round{last:02d}.npz"
+        )
+        if task == "mixture_lora":
+            mixture_common = dict(
+                config_path=resolved,
+                run_dir=arm.run_dir,
+                reference_run_dirs=reference_run_dirs,
+                reference_agent_names=reference_agent_names,
+                repo_root=ctx.repo_root,
+                max_eval_records=settings.max_eval_records,
+                seed=int(cfg.get("seed", 0)),
+                round_idx=last,
+                base_model=str(sft.get("base_model")),
+                max_seq_length=int(sft.get("max_seq_length", 1024)),
+                forward_batch_size=int(eval_block.get("forward_batch_size", 8)),
+                force_rescore=ctx.force,
+            )
+            run_mixture_routing_eval(
+                **mixture_common,
+                partition=validation_partition,
+                include_low_support=False,
+            )
+            run_mixture_routing_eval(
+                **mixture_common,
+                partition=settings.routing_partition,
+                include_low_support=False,
+            )
+            validation_artifact = NllMatrixArtifact.load(validation_artifact_path)
+            test_artifact = NllMatrixArtifact.load(test_artifact_path)
+            validation_coords = np.load(
+                arm.run_dir / f"coords_{validation_partition}.npy",
+                allow_pickle=False,
+            )
+            test_coords = np.load(
+                arm.run_dir / f"coords_{settings.routing_partition}.npy",
+                allow_pickle=False,
+            )
+            with np.load(
+                arm.run_dir / f"mixture_predictions_{validation_partition}_round{last:02d}.npz",
+                allow_pickle=False,
+            ) as predictions:
+                validation_native = np.asarray(predictions["native_weights"], dtype=float)
+            with np.load(
+                arm.run_dir
+                / f"mixture_predictions_{settings.routing_partition}_round{last:02d}.npz",
+                allow_pickle=False,
+            ) as predictions:
+                test_native = np.asarray(predictions["native_weights"], dtype=float)
+            fitted_weights, fit_metadata = build_validation_router_suite(
+                validation_coords,
+                validation_artifact.expert_nll,
+                validation_artifact.token_counts,
+                validation_artifact.bench_labels,
+                validation_native,
+                test_coords,
+                test_artifact.bench_labels,
+                test_native,
+                test_artifact.expert_names,
+                seed=int(cfg.get("seed", 0)),
+                include_centroid=False,
+            )
+            payload = run_mixture_routing_eval(
+                **mixture_common,
+                partition=settings.routing_partition,
+                extra_router_weights=fitted_weights,
+                include_low_support=True,
+            )
+            payload["router_fit"] = {
+                "fit_partition": validation_partition,
+                "evaluate_partition": settings.routing_partition,
+                "selection": fit_metadata,
+            }
+            out_json.parent.mkdir(parents=True, exist_ok=True)
+            out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            log.info("routing: wrote learned-mixture report %s", out_json)
+            continue
+        common = dict(
             router_config=resolved,
             history_path=arm.run_dir / "history.json",
             merge_run_dir=arm.run_dir,
-            baseline_run_dir=gen.run_dir,
+            baseline_run_dir=primary.run_dir,
             repo_root=ctx.repo_root,
-            partition=settings.routing_partition,
             max_eval_records=settings.max_eval_records,
             seed=int(cfg.get("seed", 0)),
             round_idx=last,
             base_model=str(sft.get("base_model")),
             max_seq_length=int(sft.get("max_seq_length", 1024)),
             forward_batch_size=int(eval_block.get("forward_batch_size", 8)),
+            save_arrays_dir=arm.run_dir,
+            force_rescore=ctx.force,
+            reference_run_dirs=reference_run_dirs,
+            reference_agent_names=reference_agent_names,
         )
+        run_flat_routing_eval(
+            **common,
+            partition=validation_partition,
+            nll_artifact_path=validation_artifact_path,
+            include_low_support=False,
+        )
+        run_flat_routing_eval(
+            **common,
+            partition=settings.routing_partition,
+            nll_artifact_path=test_artifact_path,
+            include_low_support=False,
+        )
+
+        validation_artifact = NllMatrixArtifact.load(validation_artifact_path)
+        test_artifact = NllMatrixArtifact.load(test_artifact_path)
+        validation_coords = np.load(
+            arm.run_dir / f"coords_{validation_partition}.npy",
+            allow_pickle=False,
+        )
+        test_coords = np.load(
+            arm.run_dir / f"coords_{settings.routing_partition}.npy",
+            allow_pickle=False,
+        )
+        validation_native = np.load(
+            arm.run_dir / f"g_merge_{validation_partition}.npy",
+            allow_pickle=False,
+        ).T
+        test_native = np.load(
+            arm.run_dir / f"g_merge_{settings.routing_partition}.npy",
+            allow_pickle=False,
+        ).T
+        if task == "adapter_merge":
+            single_weights: dict[str, np.ndarray] = {}
+            for index, name in enumerate(test_artifact.expert_names):
+                weights = np.zeros_like(test_artifact.expert_nll, dtype=float)
+                weights[:, index] = 1.0
+                single_weights[f"single_{name}"] = weights
+            report = run_flat_routing_eval(
+                **common,
+                partition=settings.routing_partition,
+                nll_artifact_path=test_artifact_path,
+                extra_router_weights=single_weights,
+                include_low_support=True,
+            )
+            payload = report_to_dict(report)
+            payload["routers"] = {
+                name: values
+                for name, values in payload["routers"].items()
+                if name in single_weights
+            }
+            for slice_payload in payload.get("slices", {}).values():
+                if "routers" in slice_payload:
+                    slice_payload["routers"] = {
+                        name: values
+                        for name, values in slice_payload["routers"].items()
+                        if name in single_weights
+                    }
+            primary_name = next(iter(single_weights))
+            primary_scores = payload["routers"][primary_name]
+            payload["flat"].update({
+                "learned_routing_expected_nll": primary_scores["expected_nll"],
+                "learned_routing_nll": primary_scores["expected_nll"],
+                "learned_routing_argmax_nll": primary_scores["argmax_nll"],
+            })
+            payload["evaluation"]["mixture_semantics"] = "router_free_single_adapter"
+            payload["deployment"] = {
+                "selection_partition": "val",
+                "candidate_routers": list(single_weights),
+                "inference_passes": 1,
+            }
+            out_json.parent.mkdir(parents=True, exist_ok=True)
+            out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            log.info("routing: wrote router-free deployment report %s", out_json)
+            continue
+        fitted_weights, fit_metadata = build_validation_router_suite(
+            validation_coords,
+            validation_artifact.expert_nll,
+            validation_artifact.token_counts,
+            validation_artifact.bench_labels,
+            validation_native,
+            test_coords,
+            test_artifact.bench_labels,
+            test_native,
+            test_artifact.expert_names,
+            seed=int(cfg.get("seed", 0)),
+        )
+        report = run_flat_routing_eval(
+            **common,
+            partition=settings.routing_partition,
+            nll_artifact_path=test_artifact_path,
+            extra_router_weights=fitted_weights,
+            include_low_support=True,
+        )
+        payload = report_to_dict(report)
+        payload["router_fit"] = {
+            "fit_partition": validation_partition,
+            "evaluate_partition": settings.routing_partition,
+            "selection": fit_metadata,
+        }
         out_json.parent.mkdir(parents=True, exist_ok=True)
-        out_json.write_text(json.dumps(report_to_dict(report), indent=2), encoding="utf-8")
+        out_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         log.info("routing: wrote %s\n%s", out_json, format_headline_markdown(report))
 
 

@@ -1,0 +1,159 @@
+\begin{thebibliography}{21}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[{ai4Privacy}(2023)]{ai4privacy2023}
+{ai4Privacy}.
+\newblock {PII}-masking-200k: A dataset of synthetic documents with labelled
+  personally identifiable information.
+\newblock Hugging Face dataset, 2023.
+
+\bibitem[Chao et~al.(2024)Chao, Debenedetti, Robey, Andriushchenko, Croce,
+  Sehwag, Dobriban, Flammarion, Pappas, Tram{\`e}r, Hassani, and
+  Wong]{chao2024jailbreakbench}
+Patrick Chao, Edoardo Debenedetti, Alexander Robey, Maksym Andriushchenko,
+  Francesco Croce, Vikash Sehwag, Edgar Dobriban, Nicolas Flammarion, George~J.
+  Pappas, Florian Tram{\`e}r, Hamed Hassani, and Eric Wong.
+\newblock {JailbreakBench}: An open robustness benchmark for jailbreaking large
+  language models.
+\newblock In \emph{Advances in Neural Information Processing Systems Datasets
+  and Benchmarks Track}, 2024.
+\newblock arXiv:2404.01318.
+
+\bibitem[Cui et~al.(2025)Cui, Chiang, Stoica, and Hsieh]{cui2024orbench}
+Justin Cui, Wei-Lin Chiang, Ion Stoica, and Cho-Jui Hsieh.
+\newblock {OR-Bench}: An over-refusal benchmark for large language models.
+\newblock In \emph{International Conference on Machine Learning}, 2025.
+\newblock arXiv:2405.20947.
+
+\bibitem[Downs(1957)]{downs1957economic}
+Anthony Downs.
+\newblock \emph{An Economic Theory of Democracy}.
+\newblock Harper and Row, New York, 1957.
+
+\bibitem[Eaton and Lipsey(1975)]{eaton1975principle}
+B.~Curtis Eaton and Richard~G. Lipsey.
+\newblock The principle of minimum differentiation reconsidered: Some new
+  developments in the theory of spatial competition.
+\newblock \emph{The Review of Economic Studies}, 42\penalty0 (1):\penalty0
+  27--49, 1975.
+
+\bibitem[Fedus et~al.(2022)Fedus, Zoph, and Shazeer]{fedus2022switch}
+William Fedus, Barret Zoph, and Noam Shazeer.
+\newblock Switch transformers: Scaling to trillion parameter models with simple
+  and efficient sparsity.
+\newblock \emph{Journal of Machine Learning Research}, 23\penalty0
+  (120):\penalty0 1--39, 2022.
+
+\bibitem[Fisher(1936)]{fisher1936lda}
+R.~A. Fisher.
+\newblock The use of multiple measurements in taxonomic problems.
+\newblock \emph{Annals of Eugenics}, 7\penalty0 (2):\penalty0 179--188, 1936.
+
+\bibitem[Hotelling(1929)]{hotelling1929stability}
+Harold Hotelling.
+\newblock Stability in competition.
+\newblock \emph{The Economic Journal}, 39\penalty0 (153):\penalty0 41--57,
+  1929.
+
+\bibitem[Hu et~al.(2022)Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and
+  Chen]{hu2022lora}
+Edward~J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean
+  Wang, Lu~Wang, and Weizhu Chen.
+\newblock {LoRA}: Low-rank adaptation of large language models.
+\newblock In \emph{International Conference on Learning Representations}, 2022.
+
+\bibitem[Huang et~al.(2024)Huang, Liu, Lin, Pang, Du, and
+  Lin]{huang2024lorahub}
+Chengsong Huang, Qian Liu, Bill~Yuchen Lin, Tianyu Pang, Chao Du, and Min Lin.
+\newblock {LoraHub}: Efficient cross-task generalization via dynamic {LoRA}
+  composition.
+\newblock In \emph{Conference on Language Modeling}, 2024.
+\newblock arXiv:2307.13269.
+
+\bibitem[Ilharco et~al.(2023)Ilharco, Ribeiro, Wortsman, Gururangan, Schmidt,
+  Hajishirzi, and Farhadi]{ilharco2023task}
+Gabriel Ilharco, Marco~Tulio Ribeiro, Mitchell Wortsman, Suchin Gururangan,
+  Ludwig Schmidt, Hannaneh Hajishirzi, and Ali Farhadi.
+\newblock Editing models with task arithmetic.
+\newblock In \emph{International Conference on Learning Representations}, 2023.
+
+\bibitem[Ji et~al.(2023)Ji, Liu, Dai, Pan, Zhang, Bian, Sun, Wang, and
+  Yang]{ji2023beavertails}
+Jiaming Ji, Mickel Liu, Juntao Dai, Xuehai Pan, Chi Zhang, Ce~Bian, Ruiyang
+  Sun, Yizhou Wang, and Yaodong Yang.
+\newblock {BeaverTails}: Towards improved safety alignment of {LLM} via a
+  human-preference dataset.
+\newblock In \emph{Advances in Neural Information Processing Systems Datasets
+  and Benchmarks Track}, 2023.
+\newblock arXiv:2307.04657.
+
+\bibitem[Li et~al.(2023)Li, Cheng, Zhao, Nie, and Wen]{li2023halueval}
+Junyi Li, Xiaoxue Cheng, Wayne~Xin Zhao, Jian-Yun Nie, and Ji-Rong Wen.
+\newblock {HaluEval}: A large-scale hallucination evaluation benchmark for
+  large language models.
+\newblock In \emph{Conference on Empirical Methods in Natural Language
+  Processing}, 2023.
+\newblock arXiv:2305.11747.
+
+\bibitem[Lovett and Fu(2026)]{lovett2026influencer}
+Mark Lovett and Feng Fu.
+\newblock Learning dynamics of the influencer's game in resource landscapes.
+\newblock Manuscript in preparation. PLACEHOLDER CITATION --- replace with the
+  published reference when available., 2026.
+
+\bibitem[Salop(1979)]{salop1979monopolistic}
+Steven~C. Salop.
+\newblock Monopolistic competition with outside goods.
+\newblock \emph{The Bell Journal of Economics}, 10\penalty0 (1):\penalty0
+  141--156, 1979.
+
+\bibitem[Shazeer et~al.(2017)Shazeer, Mirhoseini, Maziarz, Davis, Le, Hinton,
+  and Dean]{shazeer2017moe}
+Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le,
+  Geoffrey Hinton, and Jeff Dean.
+\newblock Outrageously large neural networks: The sparsely-gated
+  mixture-of-experts layer.
+\newblock In \emph{International Conference on Learning Representations}, 2017.
+
+\bibitem[Wang et~al.(2023)Wang, Li, Han, Nakov, and
+  Baldwin]{wang2023donotanswer}
+Yuxia Wang, Haonan Li, Xudong Han, Preslav Nakov, and Timothy Baldwin.
+\newblock Do-not-answer: A dataset for evaluating safeguards in {LLMs}.
+\newblock \emph{arXiv preprint arXiv:2308.13387}, 2023.
+
+\bibitem[Yadav et~al.(2024)Yadav, Raffel, Muqeeth, Caccia, Liu, Chen, Bansal,
+  Choshen, and Sordoni]{yadav2024moerging}
+Prateek Yadav, Colin Raffel, Mohammed Muqeeth, Lucas Caccia, Haokun Liu,
+  Tianlong Chen, Mohit Bansal, Leshem Choshen, and Alessandro Sordoni.
+\newblock A survey on model {MoErging}: Recycling and routing among specialized
+  experts for collaborative learning.
+\newblock \emph{arXiv preprint arXiv:2408.07057}, 2024.
+
+\bibitem[Yang et~al.(2024)Yang, Yang, Zhang, Hui, Zheng, Yu, Li, Liu, Huang,
+  Wei, et~al.]{qwen2024qwen25}
+An~Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo~Zheng, Bowen Yu,
+  Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, et~al.
+\newblock Qwen2.5 technical report.
+\newblock \emph{arXiv preprint arXiv:2412.15115}, 2024.
+
+\bibitem[Zhang et~al.(2025)Zhang, Li, Long, Zhang, Lin, Yang, Xie, Yang, Liu,
+  Lin, Huang, and Zhou]{qwen2025embedding}
+Yanzhao Zhang, Mingxin Li, Dingkun Long, Xin Zhang, Huan Lin, Baosong Yang,
+  Pengjun Xie, An~Yang, Dayiheng Liu, Junyang Lin, Fei Huang, and Jingren Zhou.
+\newblock Qwen3 embedding: Advancing text embedding and reranking through
+  foundation models.
+\newblock \emph{arXiv preprint arXiv:2506.05176}, 2025.
+
+\bibitem[Zhou et~al.(2022)Zhou, Lei, Liu, Du, Huang, Zhao, Dai, Chen, Le, and
+  Laudon]{zhou2022expertchoice}
+Yanqi Zhou, Tao Lei, Hanxiao Liu, Nan Du, Yanping Huang, Vincent Zhao, Andrew
+  Dai, Zhifeng Chen, Quoc Le, and James Laudon.
+\newblock Mixture-of-experts with expert choice routing.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2022.
+\newblock arXiv:2202.09368.
+
+\end{thebibliography}

@@ -1,0 +1,24 @@
+# Qwen2.5-7B at the theory equilibrium. Seed 0.
+#
+# One-factor contrast against the corresponding approximate-init arm:
+# only the starting positions differ. Same split, same test pool, and
+# the existing generalist (generalist_replay_7b.yaml) is reused, NOT retrained.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_theory_eq_7b.yaml
+name: seven_axis_theory_eq_7b
+results_dir: results/seven_axis_theory_eq_7b
+figures_dir: figures/seven_axis_theory_eq_7b
+
+arms:
+  - name: theory_eq_7b
+    label: "Qwen2.5-7B"
+    title: "Qwen2.5-7B, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_7b_seed0.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled generalist (existing replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay_7b.yaml
+
+stages: [manifest, train, perround, routing, figures]
