@@ -41,12 +41,15 @@ class FigureSpec:
     :param requires_gpu: Whether the figure needs the encoder (skipped
         unless asked for explicitly).
     :type requires_gpu: bool
+    :param include_by_default: Include in the no-selection CPU figure set.
+    :type include_by_default: bool
     """
 
     name: str
     description: str
     render: RenderFn
     requires_gpu: bool = False
+    include_by_default: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +218,43 @@ def render_cross_arm_report(exp: ExperimentConfig, out: Path) -> list[Path]:
     return write_cross_arm_report(arms, out, generalist_runs=generalists)
 
 
+def render_behavioral_report(exp: ExperimentConfig, out: Path) -> list[Path]:
+    """Render behavioral score tables and a safety-utility plot.
+
+    :param exp: Parsed experiment.
+    :type exp: ExperimentConfig
+    :param out: Figure output directory.
+    :type out: pathlib.Path
+    :returns: Written artifact paths.
+    :rtype: list[pathlib.Path]
+    :raises FileNotFoundError: If the behavioral stage has not completed.
+    """
+    from infl_ens.figures.behavioral_report import (
+        behavioral_csv,
+        behavioral_markdown,
+        behavioral_rows,
+        plot_safety_utility,
+    )
+
+    summary_path = Path(exp.results_dir) / "behavioral" / "behavioral_summary.json"
+    if not summary_path.is_file():
+        raise FileNotFoundError(summary_path)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    rows = behavioral_rows(summary)
+    markdown_path = out / "behavioral_report.md"
+    csv_path = out / "behavioral_scores.csv"
+    markdown_path.write_text(behavioral_markdown(rows), encoding="utf-8")
+    csv_path.write_text(behavioral_csv(rows), encoding="utf-8")
+    written = [markdown_path, csv_path]
+    try:
+        figure = plot_safety_utility(rows)
+    except ValueError as exc:
+        log.info("skipping behavioral safety-utility plot: %s", exc)
+    else:
+        written.extend(_save(figure, out / "behavioral_safety_utility", exp))
+    return written
+
+
 def render_per_round_tables(exp: ExperimentConfig, out: Path) -> list[Path]:
     """Held-out NLL by pair at the evaluation rounds, per specialist arm.
 
@@ -304,7 +344,10 @@ def render_trait_representation(exp: ExperimentConfig, out: Path) -> list[Path]:
     pre = _pre_normalizer_coordinates(emb, artifacts.axes)
     cdf_only = np.clip(artifacts.normalizer.transform(pre), 0.0, 1.0)
     has_stretch = not np.all(artifacts.gammas == 1.0)
-    new = np.clip(1.0 - np.power(1.0 - cdf_only, artifacts.gammas), 0.0, 1.0) if has_stretch else cdf_only
+    new = (
+        np.clip(1.0 - np.power(1.0 - cdf_only, artifacts.gammas), 0.0, 1.0)
+        if has_stretch else cdf_only
+    )
     stats_legacy = representation_stats(legacy, labels)
     stats_new = representation_stats(new, labels)
     stats_cdf = representation_stats(cdf_only, labels) if has_stretch else None
@@ -330,7 +373,11 @@ def render_trait_representation(exp: ExperimentConfig, out: Path) -> list[Path]:
         sub / "trait_pairs_old_vs_new", exp,
     )
     written += _save(
-        plot_dataset_composition(split_ids, split_names, title=f"{exp.name}: sampled prompts per benchmark"),
+        plot_dataset_composition(
+            split_ids,
+            split_names,
+            title=f"{exp.name}: sampled prompts per benchmark",
+        ),
         sub / "dataset_composition", exp,
     )
     summary = {
@@ -388,15 +435,45 @@ def render_benchmark_space(exp: ExperimentConfig, out: Path) -> list[Path]:
 FIGURES: dict[str, FigureSpec] = {
     spec.name: spec
     for spec in (
-        FigureSpec("oracle_routing", "oracle vs pooled vs learned per arm (.tex)", render_oracle_routing),
-        FigureSpec("arm_comparison", "cross-arm oracle/pooled/learned overlay (.tex)", render_arm_comparison),
-        FigureSpec("pair_positions", "final pair positions over every axis pair", render_pair_positions),
+        FigureSpec(
+            "oracle_routing", "oracle vs pooled vs learned per arm (.tex)",
+            render_oracle_routing,
+        ),
+        FigureSpec(
+            "arm_comparison", "cross-arm oracle/pooled/learned overlay (.tex)",
+            render_arm_comparison,
+        ),
+        FigureSpec(
+            "pair_positions", "final pair positions over every axis pair",
+            render_pair_positions,
+        ),
         FigureSpec("within_pair", "within-pair separation over rounds", render_within_pair),
-        FigureSpec("closed_loop_history", "trajectories + utility tracking per arm", render_closed_loop_history),
-        FigureSpec("per_round_tables", "held-out NLL by pair at the eval rounds", render_per_round_tables),
-        FigureSpec("cross_arm_report", "data matching, routing headline, pair stability", render_cross_arm_report),
-        FigureSpec("trait_representation", "clipped vs quantile trait marginals", render_trait_representation, True),
-        FigureSpec("benchmark_space", "resource-density heatmaps with positions", render_benchmark_space, True),
+        FigureSpec(
+            "closed_loop_history", "trajectories + utility tracking per arm",
+            render_closed_loop_history,
+        ),
+        FigureSpec(
+            "per_round_tables", "held-out NLL by pair at the eval rounds",
+            render_per_round_tables,
+        ),
+        FigureSpec(
+            "cross_arm_report", "data matching, routing headline, pair stability",
+            render_cross_arm_report,
+        ),
+        FigureSpec(
+            "behavioral_report",
+            "behavioral safety tables and trade-off plot",
+            render_behavioral_report,
+            include_by_default=False,
+        ),
+        FigureSpec(
+            "trait_representation", "clipped vs quantile trait marginals",
+            render_trait_representation, True,
+        ),
+        FigureSpec(
+            "benchmark_space", "resource-density heatmaps with positions",
+            render_benchmark_space, True,
+        ),
     )
 }
 
@@ -407,7 +484,11 @@ def cpu_figures() -> list[str]:
     :returns: Registry keys in display order.
     :rtype: list[str]
     """
-    return [name for name, spec in FIGURES.items() if not spec.requires_gpu]
+    return [
+        name
+        for name, spec in FIGURES.items()
+        if not spec.requires_gpu and spec.include_by_default
+    ]
 
 
 def render_all(
@@ -466,6 +547,7 @@ __all__ = [
     "render_all",
     "render_arm_comparison",
     "render_benchmark_space",
+    "render_behavioral_report",
     "render_closed_loop_history",
     "render_cross_arm_report",
     "render_oracle_routing",

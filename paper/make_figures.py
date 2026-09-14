@@ -250,33 +250,55 @@ def fig_replication() -> None:
     own generalist -- so the quantity plotted is the within-split margin.
     """
     rows = sigma_contrasts()
-    factors = sorted(rows, reverse=True)
+    # Ascending reach: this panel is a curve now, and a curve needs its x axis
+    # to run the way the quantity does.
+    factors = sorted(rows)
     splits = sorted({r["seed"] for f in factors for r in rows[f]},
                     key=lambda s: (s != "seed0", s))
     by = {f: {r["seed"]: r for r in rows[f]} for f in factors}
 
-    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(TEXT_WIDTH, 2.0),
-                                  gridspec_kw={"width_ratios": [1.25, 1.0],
-                                               "wspace": 0.30})
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(TEXT_WIDTH, 2.15),
+                                  gridspec_kw={"width_ratios": [1.35, 1.0],
+                                               "wspace": 0.34})
 
-    width = 0.8 / max(len(splits), 1)
+    x = np.array(factors)
+    per_split = np.full((len(splits), len(factors)), np.nan)
     for si, split in enumerate(splits):
-        vals = [(-by[f][split]["gain"] if split in by[f] else np.nan)
-                for f in factors]
-        offset = (si - (len(splits) - 1) / 2) * width
-        ax.bar(np.arange(len(factors)) + offset, vals, width,
-               color=SEQ[si % len(SEQ)], label=split)
-    ax.set_xticks(np.arange(len(factors)))
-    ax.set_xticklabels(["{:.2f}".format(f) for f in factors])
+        for fi, f in enumerate(factors):
+            if split in by[f]:
+                per_split[si, fi] = -by[f][split]["gain"]
+
+    # Mean with a +/-1 SD band is the reading; the individual splits go behind
+    # it thin and unlabelled, so the spread is visible without four legend
+    # entries competing with the shape.
+    mean = np.nanmean(per_split, axis=0)
+    sd = np.nanstd(per_split, axis=0, ddof=1)
+    ax.fill_between(x, mean - sd, mean + sd, color=C_ACCENT, alpha=0.16, lw=0)
+    for si in range(len(splits)):
+        ax.plot(x, per_split[si], color=INK_3, lw=0.6, alpha=0.75,
+                zorder=2)
+    ax.plot(x, mean, color=C_ACCENT, lw=1.5, zorder=3,
+            marker="o", ms=2.8, mec="white", mew=0.5)
+
+    # The one setting that is separable from the rest gets said, not implied.
+    worst = int(np.nanargmax(mean))
+    ax.annotate("collapse at {:.2f}".format(x[worst]),
+                xy=(x[worst], mean[worst]), xytext=(-4, 9),
+                textcoords="offset points", ha="right", fontsize=6.0,
+                color=C_WARN)
+
     ax.set_xlabel("competitive reach " + SIGMA_TEX)
     ax.set_ylabel("router $-$ pooled NLL")
     better(ax, "y", "down")
+    # The sweep is denser near 0.5 than a linear axis has room to label, so the
+    # ticks mark every arm and only the uncrowded ones are named.
+    labelled = {0.05, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70}
+    ax.set_xticks(x)
+    ax.set_xticklabels(["{:.2f}".format(f) if f in labelled else ""
+                        for f in x], fontsize=6.0)
     ax.grid(axis="y", zorder=0)
     ax.set_axisbelow(True)
     despine(ax)
-    ax.legend(ncol=min(len(splits), 4), loc="upper center",
-              bbox_to_anchor=(0.5, 1.04), columnspacing=0.9, handlelength=1.1,
-              fontsize=6.0)
 
     base = 0.50
     contrasts = [f for f in factors if f != base]

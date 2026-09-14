@@ -75,7 +75,7 @@ arms:
     role: specialist
     config: ../arms/domain_adapter_merges.yaml
 
-stages: [manifest, train, perround, routing, figures]
+stages: [manifest, train, perround, routing, behavioral, figures]
 
 eval:
   perround_rounds: [final]
@@ -83,11 +83,79 @@ eval:
   routing_partition: test
   max_eval_records: 1000
 
+# External suites are deliberately separate from the training benchmark
+# registry, so adding or updating them cannot change the trait-space cache.
+# Populate these pinned local paths from the named upstream releases before
+# running the behavioral stage. Publication runs use official/callable graders;
+# explicitly named proxies below are diagnostics, not substitute benchmark scores.
+behavioral_eval:
+  schema_version: 1
+  checkpoints: final
+  protocols: [native, hard_argmax]
+  targets:
+    arms: all
+    include_base_model: true
+  generation:
+    do_sample: false
+    temperature: 1.0
+    batch_size: 4
+    max_new_tokens: 256
+    max_input_tokens: 2048
+    fail_on_truncation: true
+    seed: 0
+  contamination:
+    exact_match: exclude
+    fuzzy_match: flag
+    ngram_size: 5
+    fuzzy_threshold: 0.85
+  suites:
+    - kind: harmbench
+      path: data/behavioral/harmbench/harmbench_behaviors_text_all.csv
+      version: HarmBench-1.0-content-addressed
+      functional_categories: [standard]
+      generation: {max_new_tokens: 256}
+      grader:
+        kind: official
+        evaluator: harmbench
+    - kind: strongreject
+      path: data/behavioral/strongreject/strongreject_small_dataset.csv
+      version: StrongREJECT-small-content-addressed
+      generation: {max_new_tokens: 256}
+      grader:
+        kind: official
+        evaluator: strongreject_finetuned
+    - kind: xstest
+      path: data/behavioral/xstest/xstest_prompts.csv
+      version: XSTest-content-addressed
+      grader: smoke_proxy
+      generation: {max_new_tokens: 128}
+    - kind: truthfulqa
+      path: data/behavioral/truthfulqa/TruthfulQA.csv
+      version: TruthfulQA-content-addressed
+      grader: smoke_proxy
+      generation: {max_new_tokens: 128}
+    - kind: confaide
+      path: data/behavioral/confaide/benchmark
+      version: ConfAIde-ICLR2024-content-addressed
+      tiers: [1, 2a, 2b]
+      grader: official
+      generation: {max_new_tokens: 32}
+    - kind: bipia
+      path: data/behavioral/bipia/prepared_cases.jsonl
+      version: BIPIA-prepared-content-addressed
+      grader: smoke_proxy
+      generation: {max_new_tokens: 256}
+    - kind: ifeval
+      path: data/behavioral/ifeval/input_data.jsonl
+      version: IFEval-content-addressed
+      grader: official
+      generation: {max_new_tokens: 1024}
+
 figures:
   axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
   formats: [pdf, png]
   compile_tex: auto
-  include: [oracle_routing, arm_comparison, pair_positions, within_pair, cross_arm_report]
+  include: [oracle_routing, arm_comparison, pair_positions, within_pair, cross_arm_report, behavioral_report]
 
 smoke:
   tests:
@@ -100,6 +168,8 @@ smoke:
     - tests/test_routing_eval.py
     - tests/test_config.py
     - tests/test_config_fingerprint.py
+    - tests/test_behavioral_data.py
+    - tests/test_behavioral_eval.py
   arms:
     - game
     - generalist_r16

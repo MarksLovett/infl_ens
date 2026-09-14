@@ -20,7 +20,15 @@ state, no side effects at import time.
 
 from __future__ import annotations
 
-from infl_ens.data import benchmarks
+from infl_ens.data import behavioral, benchmarks
+from infl_ens.data.behavioral import (
+    BehavioralCase,
+    BehavioralSuite,
+    ChatMessage,
+    audit_contamination,
+    load_behavioral_suite,
+    load_behavioral_suites,
+)
 from infl_ens.data.encoders import HuggingFaceEncoder
 from infl_ens.data.splits import flatten_partition_records
 from infl_ens.data.trait_normalize import QuantileNormalizer
@@ -31,11 +39,18 @@ from infl_ens.data.trait_space import (
 )
 
 __all__ = [
+    "BehavioralCase",
+    "BehavioralSuite",
+    "ChatMessage",
     "HuggingFaceEncoder",
     "QuantileNormalizer",
     "TraitSpace",
+    "audit_contamination",
+    "behavioral",
     "benchmarks",
     "build_trait_space",
     "flatten_partition_records",
+    "load_behavioral_suite",
+    "load_behavioral_suites",
     "position_from_corpus",
 ]

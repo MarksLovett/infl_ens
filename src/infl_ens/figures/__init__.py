@@ -17,6 +17,12 @@ Outputs go to the experiment's ``figures_dir`` (``figures/<experiment>/``).
 
 from __future__ import annotations
 
+from infl_ens.figures.behavioral_report import (
+    behavioral_csv,
+    behavioral_markdown,
+    behavioral_rows,
+    plot_safety_utility,
+)
 from infl_ens.figures.benchmark_nll_bar import plot_benchmark_nll_comparison
 from infl_ens.figures.benchmark_space import plot_pairwise_heatmaps
 from infl_ens.figures.closed_loop import (
@@ -39,6 +45,9 @@ __all__ = [
     "BENCHMARK_ORDER",
     "apply_paper_style",
     "arm_comparison_tex",
+    "behavioral_csv",
+    "behavioral_markdown",
+    "behavioral_rows",
     "oracle_routing_tex",
     "plot_benchmark_nll_comparison",
     "plot_dataset_composition",
@@ -48,6 +57,7 @@ __all__ = [
     "plot_pair_comparison",
     "plot_pairwise_heatmaps",
     "plot_pairwise_position_updates",
+    "plot_safety_utility",
     "plot_trajectory_overlay",
     "plot_within_pair",
     "save_figure",

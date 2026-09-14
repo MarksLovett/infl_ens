@@ -22,6 +22,19 @@ infl_ens/
 │   │   ├── position_blend.py             EMA blend toward corpus centroid (apply_position_update)
 │   │   ├── splits.py                     DataSplitManifest, stratified splits, exact train coverage, build_manifest_from_config
 │   │   ├── download.py                   one downloader per benchmark kind + DOWNLOADERS registry
+│   │   ├── behavioral/
+│   │   │   ├── __init__.py               public behavioral record, loader, and contamination API
+│   │   │   ├── base.py                   immutable chat cases with private grader payloads
+│   │   │   ├── common.py                 deterministic JSON/JSONL/CSV file normalization
+│   │   │   ├── contamination.py          exact-hash and token-ngram training-overlap audit
+│   │   │   ├── loading.py                external behavioral-suite loader registry
+│   │   │   ├── harmbench.py              HarmBench behavior loader
+│   │   │   ├── strongreject.py           StrongREJECT forbidden-prompt loader
+│   │   │   ├── xstest.py                 XSTest safe/unsafe contrast loader
+│   │   │   ├── truthfulqa.py             TruthfulQA generation loader
+│   │   │   ├── confaide.py               ConfAIde contextual-privacy loader
+│   │   │   ├── bipia.py                  prepared BIPIA indirect-injection loader
+│   │   │   └── ifeval.py                 official IFEval input loader
 │   │   └── benchmarks/
 │   │       ├── __init__.py
 │   │       ├── base.py                   BenchmarkSplit container
@@ -67,6 +80,11 @@ infl_ens/
 │   │   ├── routing_eval.py               flat-pool route-then-score: pooled / learned / oracle
 │   │   ├── nll_artifact.py               pickle-free, checkpoint-provenanced expert/reference NLL matrices
 │   │   ├── routers.py                    pure geometric, metadata, null, fitted, stacking, and oracle routers
+│   │   ├── behavioral_artifact.py        content-addressed generation and grader artifact schemas
+│   │   ├── behavioral_eval.py            target × protocol × suite orchestration and cache reuse
+│   │   ├── behavioral_graders.py         official, callable, auxiliary, and explicit smoke graders
+│   │   ├── generation.py                 deterministic single-model and token-probability-mixture decoding
+│   │   ├── model_runners.py              final-checkpoint target resolution and multi-adapter loading
 │   │   ├── adapters.py                   resolve + load saved LoRA checkpoints
 │   │   ├── metrics.py                    mean NLL on chat-formatted splits
 │   │   └── benchmarks.py                 re-export shim of data.benchmarks.loading
@@ -83,11 +101,12 @@ infl_ens/
 │   │   ├── trait_representation.py       clipped-vs-quantile trait marginals / pair densities / stats
 │   │   ├── pgf_tex.py                    oracle_routing_tex, arm_comparison_tex, compile_tex
 │   │   ├── per_round_tables.py           held-out NLL by pair at selected rounds (csv/md/tex/json)
-│   │   └── cross_arm_report.py           data matching, routing headline, pair stability, NLL movement
+│   │   ├── cross_arm_report.py           data matching, routing headline, pair stability, NLL movement
+│   │   └── behavioral_report.py          behavioral score tables and safety-utility plot
 │   ├── pipeline/
 │   │   ├── __init__.py
 │   │   ├── __main__.py                   python -m infl_ens.pipeline --config <experiment> [--stages] [--smoke] [--dry-run]
-│   │   └── stages.py                     download / manifest / train / perround / routing / figures / prune
+│   │   └── stages.py                     download / manifest / train / perround / routing / behavioral / figures / prune
 │   ├── latex/                            derivation notes (TeX + compiled PDFs; not touched by tooling)
 │   │   ├── With canonical routing,.tex
 │   │   ├── kernel_agnostic_gradient_step.tex
@@ -170,6 +189,11 @@ infl_ens/
 | `position_blend.py` | `apply_position_update`, `parse_position_step`, `effective_blend` |
 | `splits.py` | `DataSplitManifest`, `build_split_manifest`, `choose_exact_train_coverage`, `apply_manifest_partition`, `flatten_partition_records`, `build_manifest_from_config` |
 | `download.py` | `download_<kind>` functions, `DOWNLOADERS`, `download_for_entry`, `entry_is_present` |
+| `behavioral/base.py` | immutable `ChatMessage`, `BehavioralCase`, and `BehavioralSuite`; private scoring payloads never enter generation |
+| `behavioral/common.py` | deterministic offline JSON/JSONL/CSV normalization shared by external-suite loaders |
+| `behavioral/loading.py` | `BEHAVIORAL_LOADERS`, `load_behavioral_suite(s)` for seven held-out suites |
+| `behavioral/contamination.py` | normalized exact hashes and token-ngram Jaccard overlap audit against train/validation prompts |
+| `behavioral/{harmbench,strongreject,xstest,truthfulqa,confaide,bipia,ifeval}.py` | one offline loader per external behavioral suite |
 | `benchmarks/loading.py` | `BENCHMARK_KINDS`, `load_benchmark_split(s)`, `load_benchmark_splits_with_partition`, `subsample_split` |
 | `benchmarks/<kind>.py` | one offline loader per benchmark returning a `BenchmarkSplit` |
 | `benchmarks/safety_trait_space.py` | `build_safety_trait_space_bundle` (learned Fisher axes, residualisation, quantile normalisation, KDE grid), `LearnedAxis` |
@@ -213,6 +237,11 @@ infl_ens/
 | `routing_eval.py` | reusable `(M,K)` router scorer, cached standard/mixture evaluation, low-support slice, schema-v2 diagnostics and legacy aliases |
 | `nll_artifact.py` | `NllMatrixArtifact`, checkpoint/ordered-record SHA-256 provenance, pickle-free `.npz` validation |
 | `routers.py` | Gaussian/centroid/metadata/uniform/permutation/oracle routers, validation-CV linear gates and simplex stacking |
+| `behavioral_artifact.py` | content-addressed generation JSONL/manifest and independently cached per-case score artifacts |
+| `behavioral_eval.py` | frozen-trait projection, overlap filtering, target/protocol generation, grading, aggregation, and summary writing |
+| `behavioral_graders.py` | official IFEval/StrongREJECT/HarmBench adapters, custom callable interface, and explicitly low-fidelity proxies |
+| `generation.py` | deterministic Hugging Face decoding, learned-mixture decoding, and exact token-probability ensembling with independent KV caches |
+| `model_runners.py` | final-checkpoint target discovery for base, generalist, routed, learned-mixture, and merged-adapter models |
 | `adapters.py` | `AdapterRef`, `discover_adapters`, `resolve_adapter_dir`, `load_adapter_model` |
 | `metrics.py` | `format_chat_example`, `mean_token_nll`, `split_to_texts` |
 | `benchmarks.py` | re-exports `data.benchmarks.loading` |
@@ -221,7 +250,7 @@ infl_ens/
 
 | File | Role |
 |---|---|
-| `render.py` | `FigureSpec`, `FIGURES` (`oracle_routing`, `arm_comparison`, `pair_positions`, `within_pair`, `closed_loop_history`, `per_round_tables`, `cross_arm_report`, gpu: `trait_representation`, `benchmark_space`), `render_all` |
+| `render.py` | `FigureSpec`, `FIGURES` (including `behavioral_report`; gpu: `trait_representation`, `benchmark_space`), `render_all` |
 | `__main__.py` | CLI over `render_all` |
 | `style.py` | `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`, `PGF_BENCHMARK_ORDER` |
 | `save.py` | `save_figure` |
@@ -233,12 +262,13 @@ infl_ens/
 | `pgf_tex.py` | `oracle_routing_tex`, `arm_comparison_tex`, `compile_tex`, `tex_escape` |
 | `per_round_tables.py` | `load_eval_rows`, `eval_rows_cover`, `pivot_per_round`, `write_per_round_outputs`, `build_per_round_tables` |
 | `cross_arm_report.py` | duplicate-preserving data matching, router/slice headline matrix, pair stability, NLL movement, and resource ledger |
+| `behavioral_report.py` | pure long-form CSV/Markdown builders and safety-utility scatter plot |
 
 ## `src/infl_ens/pipeline/`
 
 | File | Role |
 |---|---|
-| `stages.py` | `PipelineContext`, `STAGES`, `run_pipeline`, `run_smoke`, `run_is_complete`, `smoke_config`, `resolved_run_config` |
+| `stages.py` | `PipelineContext`, `STAGES` (including behavioral generation), `run_pipeline`, `run_smoke`, `run_is_complete`, `smoke_config`, `resolved_run_config` |
 | `__main__.py` | argparse, `--dry-run` planner (`describe`), logging to `<results_dir>/pipeline.log` |
 
 ## `src/infl_ens/utils/`
@@ -267,7 +297,7 @@ infl_ens/
 | `arms/theory_eq_{naive_centroid,balanced_assignment,expert_choice}_seed0.yaml` | the positioning and allocation controls started at the converged equilibrium rather than the 8000-step approximate solve, which does not converge at N = 14 |
 | `arms/ewora_dense.yaml`, `arms/trait_gated_lora_moe.yaml` | joint dense and sparse learned LoRA mixtures |
 | `arms/domain_adapter_merges.yaml` | validation-selected router-free merge suite |
-| `experiments/seven_axis_baselines.yaml` | canonical external-baseline experiment with two generalists and staged smoke dependencies |
+| `experiments/seven_axis_baselines.yaml` | canonical external-baseline experiment plus content-addressed seven-suite behavioral safety evaluation |
 
 Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py`.
 
@@ -290,17 +320,19 @@ Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache 
 | `test_fixed_partition.py` | record-ID audits and deterministic benchmark/k-means/random partitions |
 | `test_mixture_lora_model.py` | gated-component forward equivalence, top-k gating, and load balance |
 | `test_adapter_merge.py` | delta reconstruction, serving-rank SVD, TIES/DARE, and KnOTS alignment |
+| `test_behavioral_data.py` | all behavioral loaders, private grader payloads, duplicate IDs, and contamination policies |
+| `test_behavioral_eval.py` | artifact invalidation, proxy semantics, probability mixtures, experiment/stage wiring, and reports |
 | `test_benchmark_loaders.py`, `test_new_benchmark_loaders.py`, `test_ai4privacy_loader.py`, `test_jbb_behaviors_loader.py` | offline benchmark loaders |
 | `test_safety_trait_space.py`, `test_trait_normalize.py`, `test_trait_space_cache.py` | trait-space construction, quantile normaliser, cache round-trip and fingerprint |
 
 ## Re-exports
 
-- `infl_ens.data`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `flatten_partition_records`, `HuggingFaceEncoder`, `QuantileNormalizer`, `benchmarks`
+- `infl_ens.data`: existing trait/data API plus behavioral records, suite loaders, and contamination helpers
 - `infl_ens.data.benchmarks`: `BenchmarkSplit`, `LearnedAxis`, `build_safety_trait_space`, the seven `load_*` loaders and their constants
 - `infl_ens.inflgame.router`: existing game/router API plus `balanced_assignment_mask` and `expert_choice_mask`
 - `infl_ens.training`: existing router/SFT API plus lazy fixed-partition, learned-mixture, and adapter-merge entry points
-- `infl_ens.evaluation`: existing adapter/eval API plus `NllMatrixArtifact` and the pure/fitted router constructors; lazy chat/NLL metrics
-- `infl_ens.figures`: the pure plot functions, `oracle_routing_tex`, `arm_comparison_tex`, `save_figure`, `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`
+- `infl_ens.evaluation`: existing NLL/router API plus behavioral artifacts, target resolution, grading, probability-mixture math, and orchestration
+- `infl_ens.figures`: existing pure plot/table functions plus behavioral long-form tables and the safety-utility plot
 - `infl_ens.pipeline`: `STAGES`, `PipelineContext`, `run_pipeline`, `run_smoke`
 - `infl_ens.utils`: `weighted_mean`, `weighted_covariance`, `gaussian_stability_threshold`
 

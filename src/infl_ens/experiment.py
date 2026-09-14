@@ -59,6 +59,12 @@ BEHAVIORAL_GENERATION_KEYS: frozenset[str] = frozenset({
 BEHAVIORAL_CONTAMINATION_KEYS: frozenset[str] = frozenset({
     "exact_match", "fuzzy_match", "ngram_size", "fuzzy_threshold",
 })
+BEHAVIORAL_SUITE_KINDS: frozenset[str] = frozenset({
+    "harmbench", "strongreject", "xstest", "truthfulqa", "confaide", "bipia", "ifeval",
+})
+BEHAVIORAL_SUITE_GENERATION_KEYS: frozenset[str] = frozenset({
+    "batch_size", "max_new_tokens", "max_input_tokens",
+})
 
 
 def _check_keys(block: Mapping[str, Any], allowed: frozenset[str], label: str, source: str) -> None:
@@ -284,6 +290,8 @@ class ExperimentConfig:
     :type stages: tuple[str, ...]
     :param eval: Evaluation window.
     :type eval: EvalSettings
+    :param behavioral_eval: Optional generation-based safety evaluation.
+    :type behavioral_eval: BehavioralSettings | None
     :param figures: Figure options.
     :type figures: FigureSettings
     :param smoke: Smoke-gate settings.
@@ -297,9 +305,9 @@ class ExperimentConfig:
     arms: tuple[ArmSpec, ...]
     stages: tuple[str, ...]
     eval: EvalSettings
-    behavioral_eval: BehavioralSettings | None
     figures: FigureSettings
     smoke: SmokeSettings
+    behavioral_eval: BehavioralSettings | None = None
 
     @property
     def specialists(self) -> tuple[ArmSpec, ...]:
@@ -500,19 +508,69 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
                 "behavioral_eval.generation batch_size and max_new_tokens must be > 0 "
                 f"({source})",
             )
+        if (
+            generation_settings.max_input_tokens is not None
+            and generation_settings.max_input_tokens <= 0
+        ):
+            raise ConfigError(
+                "behavioral_eval.generation.max_input_tokens must be > 0 "
+                f"({source})",
+            )
+        if generation_settings.do_sample and generation_settings.temperature <= 0.0:
+            raise ConfigError(
+                "behavioral_eval.generation.temperature must be > 0 when sampling "
+                f"({source})",
+            )
         suites_raw = behavioral_raw.get("suites") or []
         if not isinstance(suites_raw, list) or not suites_raw:
             raise ConfigError(
                 f"behavioral_eval.suites: expected a non-empty list ({source})",
             )
         suites: list[dict[str, Any]] = []
+        suite_names: list[str] = []
         for index, suite in enumerate(suites_raw):
             if not isinstance(suite, Mapping) or "kind" not in suite or "path" not in suite:
                 raise ConfigError(
                     "behavioral_eval.suites"
                     f"[{index}]: expected a mapping with kind and path ({source})",
                 )
+            kind = str(suite["kind"])
+            if kind not in BEHAVIORAL_SUITE_KINDS:
+                raise ConfigError(
+                    "behavioral_eval.suites"
+                    f"[{index}].kind: unknown kind {kind!r}; known: "
+                    f"{sorted(BEHAVIORAL_SUITE_KINDS)} ({source})",
+                )
+            grader = suite.get("grader")
+            if grader is not None and not isinstance(grader, (str, Mapping)):
+                raise ConfigError(
+                    f"behavioral_eval.suites[{index}].grader must be a string or mapping "
+                    f"({source})",
+                )
+            suite_generation = suite.get("generation") or {}
+            if not isinstance(suite_generation, Mapping):
+                raise ConfigError(
+                    f"behavioral_eval.suites[{index}].generation must be a mapping "
+                    f"({source})",
+                )
+            _check_keys(
+                suite_generation,
+                BEHAVIORAL_SUITE_GENERATION_KEYS,
+                f"behavioral_eval.suites[{index}].generation",
+                source,
+            )
+            for key in ("batch_size", "max_new_tokens", "max_input_tokens"):
+                if suite_generation.get(key) is not None and int(suite_generation[key]) <= 0:
+                    raise ConfigError(
+                        f"behavioral_eval.suites[{index}].generation.{key} must be > 0 "
+                        f"({source})",
+                    )
+            suite_names.append(kind)
             suites.append(dict(suite))
+        if len(suite_names) != len(set(suite_names)):
+            raise ConfigError(
+                f"behavioral_eval.suites: duplicate suite kinds {suite_names} ({source})",
+            )
         contamination = behavioral_raw.get("contamination") or {}
         if not isinstance(contamination, Mapping):
             raise ConfigError(

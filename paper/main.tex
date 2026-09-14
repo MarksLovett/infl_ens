@@ -41,22 +41,31 @@ A single parameter, the competitive reach $\sigma$, controls how localised each 
 the router is the same allocation rule evaluated at the positions the pairs converged to.
 On a held-out pool of 5{,}671 prompts the routed ensemble reaches 1.9459 mean NLL against 2.0151 for
 a generalist trained on exactly the same prompts, a 3.4\% reduction, with an oracle floor of 1.8857.
-Three design choices matter and one does not. Training every pair on every prompt in proportion to
-its share beats a top-3 gate by 0.028 NLL, weighting the loss by share beats unit weighting by 0.010,
-and collapsing to a single hard-routed winner is the only configuration that loses to the generalist.
-Unit weighting halves router agreement with the oracle, from 0.705 to 0.540, because it discards the
-signal the router routes on. Sweeping $\sigma$ over a fourteen-fold range moves the oracle by only
-0.022 NLL but the router by 0.055: $\sigma$ governs how much of the available specialisation the
-router can reach, not how much exists. The gain persists from 1.2B to 7B parameters and across three
-model families, and the learned positions are identical across model scales.
+Combining the experts' sequence likelihoods rather than committing to one widens the margin to 0.110,
+a 5.4\% reduction. Three design choices matter and one does not. Training every pair on every prompt
+in proportion to its share beats a top-3 gate by 0.028 NLL, weighting the loss by share beats unit
+weighting by 0.010, and collapsing to a single hard-routed winner is the only configuration that
+loses to the generalist as a selector --- though it wins as a mixture, so that conclusion is
+metric-dependent. Unit weighting halves router agreement with the oracle, from 0.705 to 0.540,
+because it discards the signal the router routes on. Sweeping $\sigma$ over a fourteen-fold range
+moves the oracle by only 0.022 NLL but the router by 0.055: $\sigma$ governs how much of the
+available specialisation the router can reach, not how much exists. Where the pairs \emph{start}
+decides the outcome only when capacity is scarce: initialising at an equilibrium of the game solved
+against the empirical prompt measure is worth 0.013 to 0.036 NLL at four pairs or fewer, enough to
+turn routing from a loss into a gain at two pairs, and nothing at five or more. The gain persists
+from 1.2B to 7B parameters and across three model families, and the learned positions are identical
+across model scales.
 \end{abstract}
 
 \section*{Status of this draft}
-\textbf{This manuscript is an incomplete draft.} Three things are open. The replication in
-Section~\ref{sec:limits} covers three data splits; a ten-split sweep is running and the error bars
-will tighten. The Gemma-3-1B generalist had not converged at the round budget, so its apparent gain
-is inflated and is excluded from the scaling trend. The companion paper that supplies the
-game-theoretic result is unpublished, and \citet{lovett2026influencer} is a placeholder citation.
+\textbf{This manuscript is an incomplete draft.} Four things are open. The replication in
+Section~\ref{sec:limits} covers four data splits; further splits are running and the error bars will
+tighten. The reach sweep at the game equilibrium (Section~\ref{sec:init}) is complete on one split
+and in progress on a second, so its smoothness result is reported as measured but not yet replicated,
+and the control that would establish its cause has not been run. The Gemma-3-1B generalist had not
+converged at the round budget, so its apparent gain is inflated and is excluded from the scaling
+trend. The companion paper that supplies the game-theoretic result is unpublished, and
+\citet{lovett2026influencer} is a placeholder citation.
 
 \section{Introduction}
 A mixture-of-experts model routes each input to a subset of specialised parameters
@@ -83,23 +92,32 @@ symmetric equilibrium is unstable and the players fragment. We run the whole stu
 $\sigma_0^*$ and use $\sigma$ as the dial that sets how finely the partition is drawn. That single
 scalar replaces the entire design decision of how to shard the data.
 
-The result is a mixture of experts in which no partition was ever specified, and we make four claims
+The result is a mixture of experts in which no partition was ever specified, and we make five claims
 about it. First, a competitively positioned ensemble of seven LoRA pairs beats a generalist trained
 on exactly the same prompts, by 0.069 mean NLL on a held-out pool of 5{,}671 safety prompts
 (Section~\ref{sec:routing}); the comparison is prompt-matched round by round, so the generalist sees
-the same data in the same order. Second, the standard sparse-MoE recipe is the wrong one here: dense
+the same data in the same order. Combining the experts rather than selecting one widens that to 0.110
+(Section~\ref{sec:mixture}). Second, the standard sparse-MoE recipe is the wrong one here: dense
 proportional training beats a top-3 gate, share-weighted loss beats unit weighting, and hard
-single-expert routing is the only setting that loses to the generalist. Unit weighting does the most
-damage, cutting router agreement with the oracle from 0.705 to 0.540.
+single-expert routing is the only setting that loses to the generalist --- as a selector. Under the
+mixture the same arm wins, so that particular conclusion depends on which number one reports, and we
+report both. Unit weighting does the most damage, cutting router agreement with the oracle from
+0.705 to 0.540.
 
 Third, sweeping $\sigma$ across ten values separates two effects that are easy to conflate
 (Section~\ref{sec:sigma}). The specialists are about equally good at every $\sigma$, with an oracle
 spread of 0.022 NLL over a fourteen-fold range of reach, while the router moves two and a half times
 as much. Reach controls how much specialisation the router can use, not how much exists, and the arm
-closest to $\sigma_0^*$ gives up more than half of it. Fourth, the effect is not an artefact of one
-base model (Section~\ref{sec:scale}): the gain holds at 1.5B, 3B and 7B parameters and on a second
-model family, decaying slowly with scale. Because positions are learned in the trait space rather
-than in the model, they come out identical across scales.
+closest to $\sigma_0^*$ gives up more than half of it. Fourth, where the pairs begin matters, but only
+when capacity is scarce (Section~\ref{sec:init}). Starting them at an equilibrium of the game solved
+against the empirical prompt measure, rather than at the uninformative start the earlier arms used,
+is worth 0.013 to 0.036 NLL at four pairs or fewer and nothing at five or more; at two pairs it is
+the difference between routing hurting and helping. It also moves the capacity threshold down by one
+pair, so part of what looked like a property of the method was a property of its initialisation.
+Fifth, the effect is not an artefact of one base model (Section~\ref{sec:scale}): the gain holds at
+1.5B, 3B and 7B parameters and on a second model family, decaying slowly with scale. Because
+positions are learned in the trait space rather than in the model, they come out identical across
+scales.
 
 \section{Related work}
 \textbf{Sparse mixtures of experts.} Conditional computation routes each token or example to a few of
@@ -306,20 +324,23 @@ and one set of test prompts, so the columns are directly comparable.
 \begin{table}[t]
 \centering
 \caption{Routing design at $\sigma/\sigma_0^* = 0.50$, round 11, $n=5{,}671$. All five arms share one
-data-matched generalist, so \emph{pooled} is identical. \emph{Own} and \emph{other} are the mean NLL
-on the axis a pair owns under the optimal one-to-one assignment, and on the remaining six.}
+data-matched generalist, so \emph{pooled} is identical at 2.0152. \emph{Expected} commits to one
+expert per prompt in proportion to share; \emph{mixture} combines the experts' sequence likelihoods
+(Section~\ref{sec:mixture}); \emph{uniform} is the same mixture with the router's weights replaced by
+$1/K$, and isolates what the learned weights contribute. All three are margins over pooled, and more
+negative is better.}
 \label{tab:routing}
 \small
-\setlength{\tabcolsep}{4.5pt}
+\setlength{\tabcolsep}{3.8pt}
 \begin{tabular}{llccccccc}
 \toprule
-Arm & Selection & $k$ & Loss & Oracle & Router & Router$-$pooled & Agree. & Own\,/\,other \\
+Arm & Selection & $k$ & Loss & Oracle & Expected & Mixture & Uniform & Agree. \\
 \midrule
-Soft $k{=}7$      & argmax, all    & 7 & share & 1.8857 & 1.9459 & $-0.0692$ & 0.705 & 1.804 / 2.228 \\
-Soft $k{=}3$      & argmax top-3   & 3 & share & 1.9111 & 1.9735 & $-0.0416$ & 0.704 & 1.828 / 2.263 \\
-Soft $k{=}3$ unit & argmax top-3   & 3 & unit  & 1.9379 & 1.9837 & $-0.0314$ & 0.540 & 1.841 / 2.009 \\
-Sampled $k{=}3$   & sampled        & 3 & unit  & 1.9438 & 1.9870 & $-0.0281$ & 0.545 & 1.845 / 1.987 \\
-Hard $k{=}1$      & sampled winner & 1 & unit  & 1.9600 & 2.0308 & $+0.0157$ & 0.707 & 1.858 / 2.299 \\
+Soft $k{=}7$      & argmax, all    & 7 & share & 1.8857 & $-0.0693$ & $\mathbf{-0.1095}$ & $-0.0661$ & 0.705 \\
+Soft $k{=}3$      & argmax top-3   & 3 & share & 1.9112 & $-0.0413$ & $-0.0834$ & $-0.0401$ & 0.700 \\
+Soft $k{=}3$ unit & argmax top-3   & 3 & unit  & 1.9379 & $-0.0313$ & $-0.0505$ & $-0.0225$ & 0.540 \\
+Sampled $k{=}3$   & sampled        & 3 & unit  & 1.9437 & $-0.0282$ & $-0.0450$ & $-0.0167$ & 0.545 \\
+Hard $k{=}1$      & sampled winner & 1 & unit  & 1.9601 & $+0.0156$ & $-0.0341$ & $+0.0090$ & 0.706 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -343,11 +364,24 @@ Share weighting matters more than the gate does. Holding $k=3$ and changing only
 costs 0.010 NLL and drops agreement from 0.704 to 0.540. Unit weighting trains every selected pair
 equally hard on a prompt regardless of how strongly it claimed that prompt, which flattens exactly
 the signal the router later uses. The two unit-weighted arms are also the only ones whose inter-axis
-NLL falls below 2.05, meaning the pairs have become more alike. Hard routing loses outright:
-sampling a single winner per prompt gives each pair one seventh of the data and produces an ensemble
-worse than the generalist by 0.016 NLL. Its agreement stays high at 0.707 because the pairs remain
-distinct, but there is not enough training signal in each. That arm is the compute-matched control
-and the setting closest to standard top-1 MoE.
+NLL falls below 2.05, meaning the pairs have become more alike.
+
+Hard routing loses \emph{as a selector}: sampling a single winner per prompt gives each pair one
+seventh of the data and produces an ensemble worse than the generalist by 0.016 expected NLL. Its
+agreement stays high at 0.706 because the pairs remain distinct, but there is not enough training
+signal in each. That arm is the compute-matched control and the setting closest to standard top-1
+MoE. We previously reported this as the one configuration that loses to the generalist, and that
+statement is metric-dependent: under the sequence-level mixture the same arm \emph{wins}, at
+$-0.0341$. What hard routing damages is each expert's competence, not the ensemble's ability to
+combine them, and a combination rule that can hedge across experts recovers most of the loss. The
+ordering of the five designs is otherwise identical under both metrics, so no other conclusion in
+this section turns on the choice.
+
+The uniform column separates the router's contribution from the ensemble's. Replacing the learned
+weights with $1/K$ costs 0.043 NLL on the dense arm ($-0.1095 \to -0.0661$), so roughly 40\% of the
+mixture margin is attributable to \emph{where} the router places its mass rather than to averaging
+alone. On the hard arm the same substitution flips the sign back to $+0.0090$: with one-seventh-trained
+experts, uniform averaging is worse than the generalist and only the learned weights rescue it.
 
 \section{Trait space}
 \label{sec:trait}
@@ -437,6 +471,148 @@ is flat at 1.79 to 1.82 across the entire sweep while other-axis NLL rises monot
 to 2.39. Shorter reach does not make a pair better on the axis it owns. It makes it worse everywhere
 else, and that is what separates the pairs and what the router exploits.
 
+\section{Where the agents start}
+\label{sec:init}
+Every arm above begins from positions produced by a gradient-ascent solve of the game against the
+resource density $B$. We have since established that the $B$ those solves saw was close to uniform
+over the lattice: the kernel estimate normalised each grid cell by its own nearest-prompt kernel
+value, which flattens the density it was meant to measure. The shipped initialisation is therefore
+best described not as an approximate equilibrium but as an \emph{uninformative start} --- a
+near-uniform prior over the grid rather than a solution to the game on the prompt cloud. Measured on
+the lattice, its coordinate variance is 0.159 with anisotropy 1.29, against 0.084 and 3.10 for the
+actual prompt cloud.
+
+This is correctable offline. Solving the same game against the empirical prompt measure gives the
+equilibrium the theory actually prescribes, and because the equilibrium depends on the trait cloud
+rather than on how it is partitioned, the resulting positions can be dropped into the pipeline with
+one factor moved and everything else --- split, $\sigma$, round budget, routing rule, generalist ---
+held fixed. Table~\ref{tab:init} reports that substitution across pair count.
+
+\begin{table}[t]
+\centering
+\caption{Naive start against the game equilibrium at $\sigma/\sigma_0^*=0.50$, by number of pairs
+$K$. Margins are router $-$ pooled, more negative better; every cell is scored on the same test
+partition against the same generalist, so the difference column is a paired within-prompt contrast.}
+\label{tab:init}
+\small
+\begin{tabular}{lcccccccc}
+\toprule
+$K$ & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 \\
+\midrule
+Naive start   & $+0.0011$ & $-0.0173$ & $-0.0272$ & $-0.0754$ & $-0.0818$ & $-0.0693$ & $-0.0762$ & $-0.0781$ \\
+Equilibrium   & $-0.0247$ & $-0.0303$ & $-0.0635$ & $-0.0700$ & $-0.0830$ & $-0.0726$ & $-0.0734$ & $-0.0816$ \\
+\midrule
+Difference    & $-0.0258$ & $-0.0130$ & $-0.0363$ & $+0.0054$ & $-0.0012$ & $-0.0033$ & $+0.0028$ & $-0.0035$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The effect is a step, not a trend. At $K \le 4$ the equilibrium start is worth 0.013 to 0.036 NLL; at
+$K \ge 5$ the five arms scatter around zero with mean $-0.000$ and SD 0.0039. Those five nulls supply
+a measured noise floor rather than an assumed one, against which the three effects below the step are
+6.6, 3.3 and 9.2 standard deviations. Two consequences follow. First, at $K=2$ the starting positions
+decide whether routing helps at all: the naive start loses to the generalist ($+0.0011$) and the
+equilibrium beats it ($-0.0247$). Second, the capacity threshold itself moves. The naive ablation
+jumps between $K=4$ and $K=5$; started at the equilibrium, $K=4$ already reaches $-0.0635$, most of
+what the naive start needed five pairs to achieve. Part of ``you need at least five pairs'' was a
+property of the initialisation rather than of the method.
+
+\paragraph{The equilibrium is an attractor, not just a better guess.} The position update never
+consults an adapter, so its behaviour is checkable directly, and the check is the strongest
+confirmation of the game model we have. Table~\ref{tab:drift} measures, at every reach, how far the
+pairs travel and where they end up relative to the equilibrium. Arms started \emph{at} the
+equilibrium barely move: a mean of 0.0153 over twelve rounds, within a narrow 0.0108--0.0183 across
+the whole sweep, with straightness 0.12 --- below the 0.30 expected of a random walk, so consecutive
+steps are anti-correlated and the pairs are jittering in place on batch noise rather than going
+anywhere. That is the theory's own prediction, since $\hat{x}_i = x_i$ is algebraically
+$\nabla_{x_i} u_i = 0$.
+
+The naively started arms are the more informative half. They begin a mean of 0.330 away from the
+equilibrium in matched $L_2$, travel 0.291 during training, and finish 0.090 away --- closing
+\textbf{73\% of the distance to an equilibrium they were never given}, and moving closer in
+\textbf{ten arms out of ten}. The competition finds the game's solution on its own, from an
+uninformative start, using only gradient information from the prompts it wins. Training moves the
+pairs about nineteen times as far when they start away from the equilibrium as when they start on it,
+which is what an attractor looks like.
+
+\begin{table}[t]
+\centering
+\caption{Position drift over twelve rounds, by reach, seed 0. Distances are mean matched $L_2$ in the
+seven-dimensional unit box. ``To equilibrium'' is measured against the solve on the empirical prompt
+measure; pair index is not an identity across two separate solves, so pairs are matched before
+differencing.}
+\label{tab:drift}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccccc|c}
+\toprule
+$\sigma/\sigma_0^*$ & 0.05 & 0.10 & 0.20 & 0.30 & 0.40 & 0.45 & 0.50 & 0.55 & 0.60 & 0.70 & mean \\
+\midrule
+\multicolumn{12}{l}{\emph{Naive start}} \\
+distance travelled      & 0.395 & 0.316 & 0.277 & 0.218 & 0.330 & 0.298 & 0.253 & 0.292 & 0.262 & 0.270 & 0.291 \\
+start to equilibrium    & 0.427 & 0.347 & 0.321 & 0.242 & 0.340 & 0.367 & 0.275 & 0.335 & 0.298 & 0.351 & 0.330 \\
+end to equilibrium      & 0.049 & 0.161 & 0.193 & 0.036 & 0.034 & 0.127 & 0.038 & 0.066 & 0.070 & 0.123 & 0.090 \\
+gap closed              & 89\% & 54\% & 40\% & 85\% & 90\% & 66\% & 86\% & 80\% & 76\% & 65\% & 73\% \\
+\midrule
+\multicolumn{12}{l}{\emph{Equilibrium start}} \\
+distance travelled      & 0.018 & 0.018 & 0.017 & 0.016 & 0.016 & 0.015 & 0.014 & 0.014 & 0.013 & 0.011 & 0.015 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two qualifications. The residual 0.090 is not zero, so twelve rounds do not fully reach the
+equilibrium, and it varies by reach in a way we cannot yet account for --- from 0.034 at
+$\sigma/\sigma_0^*=0.40$ to 0.193 at $0.20$. And convergence toward the equilibrium is not the same
+as convergence toward better performance: at $K \ge 5$ pairs the two initialisations reach
+statistically indistinguishable margins despite starting a third of the box apart, which is the
+geometric counterpart of the step in Table~\ref{tab:init}. Where the agents end up is predicted by
+the game; whether that prediction is worth anything depends on whether the naive dynamics had enough
+capacity to get there unaided, and above the threshold they do.
+
+\paragraph{The equilibrium does not raise the mean across reach.} Repeating the substitution across
+all ten $\sigma$ settings gives a mean paired difference of $-0.0007$ (median $-0.0027$), with the
+equilibrium ahead at eight of ten. What it changes is the \emph{shape} of the reach response rather
+than its level. Measuring mean $|$second difference$|$ along the reach axis --- which annihilates
+trends and so isolates zigzag --- the naive sweep scores 0.0164 and the equilibrium sweep 0.0021, a
+factor of 7.8; on the mixture metric the ratio is 4.5, and there the equilibrium curve rises
+monotonically with reach in seven of eight steps against the naive curve's four. A standard deviation
+does not show this on the mixture metric, because both curves carry a real upward trend in $\sigma$
+that SD charges as scatter.
+
+We are deliberately cautious about the cause. The two sweeps are not constructed alike: each naive
+arm re-solves from a fresh random start at its own $\sigma$, so adjacent reaches begin 0.302 apart in
+mean matched $L_2$ and occupy six distinct axis-sets across the ten arms, whereas the equilibrium
+arms begin 0.014 apart and share one axis-set at eight of ten. The smoothness may therefore be a
+property of how the family was built rather than of equilibrium as such, and the obvious bridge fails
+--- within the naive family, larger position steps do not predict larger changes in margin
+(Spearman $\rho = -0.40$, $n=9$). The control that separates the two accounts is to repeat the naive
+sweep with positions held fixed across $\sigma$, and it has not been run.
+
+\section{Which ensemble number to report}
+\label{sec:mixture}
+Everything above reports the \emph{expected} NLL, $\sum_p G_p \cdot \mathrm{NLL}_p$, which is the loss
+of committing to one expert drawn according to the router's weights. That is the right quantity for a
+system that must pick, and it is what a top-1 or top-$k$ MoE actually pays. It is not, however, what
+``ensemble'' normally means. Combining the experts' predictions gives the sequence-level mixture
+\begin{equation}
+\mathrm{mix}_i \;=\; -\frac{1}{n_i}\,\log \sum_p w_p \exp\!\big(-n_i\,\mathrm{NLL}_{p i}\big),
+\label{eq:mixture}
+\end{equation}
+for prompt $i$ of $n_i$ tokens, reduced the same way as pooled and expected so the numbers stay
+comparable. Jensen's inequality orders the three: oracle $\le$ mixture $\le$ expected, always. We
+verified this holds on every scored run, which is a theorem and therefore a usable bug check.
+
+Reporting the mixture raises the headline margin on the dense arm from $-0.0693$ to $-0.1095$
+--- that is, from 3.4\% to 5.4\% of the pooled NLL --- and changes one qualitative conclusion, the
+hard-routing sign discussed in Section~\ref{sec:routing}. We report both throughout rather than
+choosing, because they answer different questions, and we flag the weakness of the mixture
+explicitly. Equation~\ref{eq:mixture} is a post-hoc reweighting of \emph{completed} sequences. It is
+not token-level mixing at generation time, which is what a deployed ensemble would need and which
+requires per-token distributions from every expert. The weights also enter only as $(-\log w_p)/n_i$,
+so their influence shrinks as sequences lengthen; at the measured mean of 68.2 test tokens they still
+matter, as the uniform column shows, but a corpus of long generations would compress the gap between
+learned and uniform weighting.
+
 \section{Model scale}
 \label{sec:scale}
 We repeat the $\sigma/\sigma_0^*=0.50$ arm on five base models, each with its own data-matched
@@ -478,14 +654,23 @@ at a given position, not where the positions are.
 
 \section{Limitations}
 \label{sec:limits}
-\textbf{Replication is preliminary.} Table~\ref{tab:rep} reports three data splits, each varying both
-the run seed and the split seed. Pooled within-$\sigma$ standard deviation of the margin is 0.0079,
-about 10\% of the margin itself. Because every $\sigma$ is scored on the same split, paired contrasts
-are the right test. The collapse at $\sigma/\sigma_0^*=0.70$ replicates cleanly: $+0.0389$ against
-the 0.50 arm, $t(2)=11.5$. The apparent optimum at $0.20$ does not: $-0.0063$, $t(2)=-0.78$, with the
-sign disagreeing across splits (Figure~
-ef{fig:rep}). We report the plateau as a plateau. A
-ten-split sweep is in progress.
+\textbf{Replication is preliminary.} Table~\ref{tab:rep} reports four data splits, each varying both
+the run seed and the split seed. Pooled within-$\sigma$ standard deviation of the margin is 0.0069,
+under 10\% of the margin itself. Because every $\sigma$ is scored on the same split, paired contrasts
+are the right test. The collapse at $\sigma/\sigma_0^*=0.70$ replicates cleanly and strengthens with
+the fourth split: $+0.0380$ against the 0.50 arm, $t(3)=14.9$, $p=0.001$, with all four signs
+agreeing. The apparent optimum at $0.20$ still does not separate from the 0.50 arm: $-0.0056$,
+$t(3)=-0.98$, $p=0.40$, sign disagreeing across splits (Figure~\ref{fig:rep}).
+
+Two revisions to the three-split version of this table. The advantage of $0.45$ over $0.50$, which
+looked real at $t(2)=3.1$, does not survive the fourth split: $+0.0044$, $t(3)=1.78$, $p=0.17$. And
+the $0.20$ arm needs a more careful statement than ``does not replicate''. It fails to beat the
+$0.50$ arm, but it beats its \emph{own split's sweep mean} in all four splits, by $+0.0220$,
+$+0.0069$, $+0.0075$ and $+0.0042$. Short reach is therefore reliably good; what does not replicate
+is the size of the seed-0 spike, which is roughly three times the other three and is what originally
+motivated running replicates at all. We report the region below $0.55$ as a plateau with a mild
+short-reach tilt, and we do not claim an argmax: the best arm is a different $\sigma$ in every one of
+the four splits ($0.20$, $0.30$, $0.50$, $0.40$).
 
 \textbf{Data-matched is not compute-matched.} With dense allocation the ensemble takes about seven
 times the gradient steps of the generalist and holds seven times the adapter parameters. Hard
@@ -502,10 +687,24 @@ close to a nearest-cell histogram. It enters the initial position solve and the 
 $\sigma_0^*$, so a finer grid could shift the reach scale, though not the comparisons within it,
 which all use the same $B$.
 
-\textbf{The position solve did not converge.} The initial gradient ascent stops at its 8{,}000-step
-budget with the layout classifier still reporting a collapsed configuration. Positions then move
-during training, which is where the final layout comes from. We describe the initialisation as a
-starting point, not as an equilibrium.
+\textbf{The initialisation used through Section~\ref{sec:scale} is not an equilibrium.} The initial
+gradient ascent stops at its 8{,}000-step budget, and the density it was solving against was close to
+uniform for the reason given in Section~\ref{sec:init}. We therefore describe it as an uninformative
+start. The equilibrium comparison in Section~\ref{sec:init} was run as a separate substitution and
+does not retroactively change any arm reported elsewhere in the paper; where the two differ at
+$K \ge 5$ they differ by less than the replicate noise.
+
+\textbf{Run-seed variation is unmeasured.} Every replicate varies the run seed and the split seed
+together, so no arm has been retrained at a second run seed on the same split. Split-level noise is
+bounded by Table~\ref{tab:rep}; retraining noise at fixed $(\sigma, \text{initialisation})$ is not,
+and the sub-0.005 differences in Section~\ref{sec:init} at $K \ge 5$ sit inside that unmeasured
+quantity. This matters most for the reach-smoothness result, where the natural control --- fixing
+positions across $\sigma$ --- would also isolate run-seed effects, since the run seed moves the naive
+positions while leaving the equilibrium positions pinned.
+
+\textbf{The mixture is post-hoc, not token-level.} Equation~\ref{eq:mixture} reweights completed
+sequences. A deployed ensemble would mix next-token distributions, which needs per-token
+probabilities from every expert and is a larger change than a rescoring pass.
 
 \section{Conclusion}
 Experts do not have to be given. Placing LoRA adapters in a learned trait space and letting them
@@ -527,19 +726,19 @@ so the pooled level differs between splits and only within-split contrasts are m
 
 \begin{table}[t]
 \centering
-\caption{Routing margin (router $-$ pooled) across three replicate splits. Each split has its own
-generalist, so the pooled level differs (2.0151, 1.9841, 1.9925) and only within-split contrasts are
-meaningful.}
+\caption{Routing margin (router $-$ pooled) across four replicate splits. Each split has its own
+generalist, so the pooled level differs (2.0152, 1.9841, 1.9925, 1.9990) and only within-split
+contrasts are meaningful. More negative is better.}
 \label{tab:rep}
 \small
-\begin{tabular}{ccccccc}
+\begin{tabular}{cccccccc}
 \toprule
-$\sigma/\sigma_0^*$ & Split 0 & Split 1 & Split 2 & Mean & SD & vs 0.50 \\
+$\sigma/\sigma_0^*$ & Split 0 & Split 1 & Split 2 & Split 3 & Mean & SD & vs 0.50 \\
 \midrule
-0.70 & $-0.0370$ & $-0.0453$ & $-0.0408$ & $-0.0410$ & 0.0042 & $+0.0389$ ($t=11.5$) \\
-0.50 & $-0.0692$ & $-0.0864$ & $-0.0841$ & $-0.0799$ & 0.0093 & --- \\
-0.45 & $-0.0612$ & $-0.0778$ & $-0.0818$ & $-0.0736$ & 0.0109 & $+0.0063$ ($t=3.1$) \\
-0.20 & $-0.0916$ & $-0.0846$ & $-0.0823$ & $-0.0862$ & 0.0048 & $-0.0063$ ($t=-0.8$) \\
+0.70 & $-0.0371$ & $-0.0453$ & $-0.0408$ & $-0.0397$ & $-0.0407$ & 0.0034 & $+0.0380$ ($t=14.9$) \\
+0.50 & $-0.0693$ & $-0.0864$ & $-0.0841$ & $-0.0752$ & $-0.0787$ & 0.0079 & --- \\
+0.45 & $-0.0611$ & $-0.0778$ & $-0.0818$ & $-0.0768$ & $-0.0744$ & 0.0091 & $+0.0044$ ($t=1.8$) \\
+0.20 & $-0.0917$ & $-0.0846$ & $-0.0823$ & $-0.0789$ & $-0.0844$ & 0.0054 & $-0.0056$ ($t=-1.0$) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -547,9 +746,13 @@ $\sigma/\sigma_0^*$ & Split 0 & Split 1 & Split 2 & Mean & SD & vs 0.50 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{fig_replication.pdf}
-\caption{Left: routing margin at each reach, one bar per replicate split. Right: paired differences
-against the 0.50 arm, with the standard error over the three splits. The collapse at 0.70 is well
-separated from zero; the 0.20 arm is not.}
+\caption{Left: routing margin against competitive reach. The heavy line is the mean over the four
+replicate splits and the band is $\pm1$ SD; the four thin grey lines are the individual splits. Lower
+is better, so the curve is a basin: the margin worsens at both ends and is flat between about 0.20
+and 0.55. Ticks mark every arm; only the uncrowded ones are labelled. Right: paired differences
+against the 0.50 arm, with the standard error over the four splits. The collapse at 0.70 is well
+separated from zero and $0.05$ nearly so; $0.20$ is the only reach that improves on $0.50$, and it is
+not separable from it.}
 \label{fig:rep}
 \end{figure}
 

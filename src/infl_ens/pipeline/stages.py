@@ -23,6 +23,9 @@ directory, i.e. the repository root):
     Route-then-score each specialist arm on ``eval.routing_partition``
     against the generalist replay, writing
     ``<run>/routing_ensemble_diagnostics.json``.
+``behavioral``
+    Generate and grade external safety suites with frozen final checkpoints,
+    writing schema-versioned artifacts under ``results_dir/behavioral``.
 ``figures``
     Render the experiment's figures into ``figures_dir``.
 ``prune``
@@ -662,6 +665,26 @@ def stage_figures(ctx: PipelineContext) -> None:
         log.info("figures: %s -> %d file(s)", name, len(paths))
 
 
+def stage_behavioral(ctx: PipelineContext) -> None:
+    """Generate and grade configured external behavioral safety suites.
+
+    :param ctx: Pipeline context.
+    :type ctx: PipelineContext
+    :raises ValueError: If the experiment has no ``behavioral_eval`` block.
+    """
+    if ctx.exp.behavioral_eval is None:
+        raise ValueError("behavioral stage requires an experiment behavioral_eval block")
+    from infl_ens.evaluation.behavioral_eval import run_behavioral_eval
+
+    path = run_behavioral_eval(
+        ctx.exp,
+        repo_root=ctx.repo_root,
+        selected_arms=ctx.only_arms or None,
+        force=ctx.force,
+    )
+    log.info("behavioral: wrote %s", path)
+
+
 def stage_prune(ctx: PipelineContext) -> None:
     """Delete intermediate ``round-NN`` adapters of every selected arm."""
     from infl_ens.utils.checkpoints import prune_intermediate_adapters
@@ -682,6 +705,7 @@ STAGES: dict[str, Callable[[PipelineContext], None]] = {
     "train": stage_train,
     "perround": stage_perround,
     "routing": stage_routing,
+    "behavioral": stage_behavioral,
     "figures": stage_figures,
     "prune": stage_prune,
 }
@@ -758,6 +782,7 @@ __all__ = [
     "run_pipeline",
     "run_smoke",
     "smoke_config",
+    "stage_behavioral",
     "stage_download",
     "stage_figures",
     "stage_manifest",

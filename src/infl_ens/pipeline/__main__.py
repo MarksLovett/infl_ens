@@ -57,6 +57,14 @@ def describe(exp: ExperimentConfig, stages: Sequence[str]) -> str:
             f"    - {arm.name:<12} {arm.role:<10} task={cfg.get('task'):<15} "
             f"fingerprint={trait_space_fingerprint(cfg)}  -> {arm.output_dir}"
         )
+    if exp.behavioral_eval is not None:
+        suites = [str(entry["kind"]) for entry in exp.behavioral_eval.suites]
+        lines.extend([
+            "  behavioral:",
+            f"    checkpoints: {exp.behavioral_eval.checkpoints}",
+            f"    protocols:   {', '.join(exp.behavioral_eval.protocols)}",
+            f"    suites:      {', '.join(suites)}",
+        ])
     return "\n".join(lines)
 
 
@@ -89,8 +97,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--only-arm", action="append", default=[], help="Restrict per-arm stages.")
     parser.add_argument("--force", action="store_true", help="Re-run stages whose outputs exist.")
-    parser.add_argument("--smoke", action="store_true", help="Run the smoke gate instead of the stages.")
-    parser.add_argument("--dry-run", action="store_true", help="Validate configs and print the plan.")
+    parser.add_argument(
+        "--smoke", action="store_true", help="Run the smoke gate instead of the stages.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Validate configs and print the plan.",
+    )
     args = parser.parse_args(argv)
 
     try:
