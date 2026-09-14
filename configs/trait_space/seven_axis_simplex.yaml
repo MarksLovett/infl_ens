@@ -1,0 +1,10 @@
+# Native compositional geometry for kernel-comparison routing.
+# This intentionally has a different cache fingerprint from seven_axis.yaml.
+includes:
+  - seven_axis.yaml
+
+trait_space:
+  coordinate_domain: simplex
+  simplex_temperature: 1.0
+  simplex_resolution: 14
+

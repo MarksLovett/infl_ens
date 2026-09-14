@@ -4,9 +4,9 @@ Builds an :math:`L`-dimensional trait space :math:`\\mathbb{B}` together with
 an empirical resource distribution :math:`B(b)` from a corpus of queries.
 The space is constructed automatically: queries are embedded by a user-supplied
 encoder, projected onto a low-dimensional space (either via interpretable
-*anchor* directions or via PCA), scaled to :math:`[0, 1]^L`, and the
-resource density is estimated by Gaussian kernel-density estimation on a
-uniform grid.
+*anchor* directions or via PCA), scaled to :math:`[0, 1]^L` or mapped to
+the probability simplex, and the resource density is estimated by Gaussian
+kernel-density estimation on a domain-appropriate grid.
 
 This module is data-prep only: no disk I/O, no global state.
 
@@ -19,6 +19,7 @@ References:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Callable, Optional, Sequence, Tuple
 
 import numpy as np
@@ -41,12 +42,48 @@ class TraitSpace:
     :param axis_labels: Optional human-readable labels for the ``L`` axes
         (e.g. ``('math', 'code', 'creative')``).
     :type axis_labels: tuple[str, ...] | None
+    :param coordinate_domain: Position domain, ``"box"`` or ``"simplex"``.
+    :type coordinate_domain: str
+    :param simplex_temperature: Temperature used by the simplex projector.
+    :type simplex_temperature: float
+    :param simplex_resolution: Optional barycentric grid resolution.
+    :type simplex_resolution: int | None
     """
 
     grid: np.ndarray
     weights: np.ndarray
     project: Callable[[Sequence[str]], np.ndarray]
     axis_labels: Optional[Tuple[str, ...]] = None
+    coordinate_domain: str = "box"
+    simplex_temperature: float = 1.0
+    simplex_resolution: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        """Validate immutable trait-space geometry.
+
+        :raises ValueError: If arrays, weights, or domain constraints fail.
+        """
+        grid = np.asarray(self.grid, dtype=float)
+        weights = np.asarray(self.weights, dtype=float)
+        if grid.ndim != 2 or len(grid) == 0:
+            raise ValueError("TraitSpace.grid must be a non-empty 2-D matrix")
+        if weights.shape != (len(grid),):
+            raise ValueError(
+                f"TraitSpace.weights must have shape ({len(grid)},), got {weights.shape}"
+            )
+        if not np.isfinite(grid).all() or not np.isfinite(weights).all():
+            raise ValueError("TraitSpace grid and weights must be finite")
+        if np.any(weights < 0.0) or float(weights.sum()) <= 0.0:
+            raise ValueError("TraitSpace weights must be nonnegative with positive mass")
+        if self.coordinate_domain not in ("box", "simplex"):
+            raise ValueError("coordinate_domain must be 'box' or 'simplex'")
+        if self.coordinate_domain == "simplex":
+            if np.any(grid <= 0.0) or not np.allclose(
+                grid.sum(axis=1), 1.0, atol=1e-8
+            ):
+                raise ValueError("simplex trait grids must lie in the open simplex")
+            if self.simplex_temperature <= 0.0:
+                raise ValueError("simplex_temperature must be positive")
 
     @property
     def L(self) -> int:
@@ -93,6 +130,177 @@ class TraitSpace:
         """
         c = self.grid - self.mean
         return np.einsum("k,kl,km->lm", self.weights, c, c)
+
+    def project_tangent(self, vectors: np.ndarray) -> np.ndarray:
+        """Project vectors onto the position-domain tangent space.
+
+        The box has the full ambient tangent space.  The simplex projector
+        removes the component parallel to the all-ones normal.
+
+        :param vectors: Vectors with trailing dimension ``L``.
+        :type vectors: numpy.ndarray
+        :returns: Tangent vectors with the same shape.
+        :rtype: numpy.ndarray
+        :raises ValueError: If the trailing dimension is wrong.
+        """
+        value = np.asarray(vectors, dtype=float)
+        if value.shape[-1] != self.L:
+            raise ValueError(f"vectors must have trailing dimension {self.L}")
+        if self.coordinate_domain == "box":
+            return value.copy()
+        return value - value.mean(axis=-1, keepdims=True)
+
+    def project_positions(self, positions: np.ndarray) -> np.ndarray:
+        """Euclidean-project positions back into the configured domain.
+
+        :param positions: One position or a matrix of positions.
+        :type positions: numpy.ndarray
+        :returns: Projected array with the same shape.
+        :rtype: numpy.ndarray
+        :raises ValueError: If the trailing dimension is wrong.
+        """
+        value = np.asarray(positions, dtype=float)
+        if value.shape[-1] != self.L:
+            raise ValueError(f"positions must have trailing dimension {self.L}")
+        if self.coordinate_domain == "box":
+            return np.clip(value, 0.0, 1.0)
+        flat = value.reshape(-1, self.L)
+        projected = np.stack([_project_simplex_row(row) for row in flat], axis=0)
+        return projected.reshape(value.shape)
+
+
+def softmax_to_simplex(coords: np.ndarray, temperature: float = 1.0) -> np.ndarray:
+    """Map unconstrained or cube coordinates into the open simplex.
+
+    :param coords: Coordinate array with traits on the final axis.
+    :type coords: numpy.ndarray
+    :param temperature: Positive softmax temperature.
+    :type temperature: float
+    :returns: Strictly positive simplex coordinates.
+    :rtype: numpy.ndarray
+    :raises ValueError: If the temperature or input is invalid.
+    """
+    value = np.asarray(coords, dtype=float)
+    temp = float(temperature)
+    if value.ndim < 1 or not np.isfinite(value).all():
+        raise ValueError("coords must be a finite array")
+    if not np.isfinite(temp) or temp <= 0.0:
+        raise ValueError("simplex temperature must be positive and finite")
+    logits = value / temp
+    logits = logits - logits.max(axis=-1, keepdims=True)
+    exp_logits = np.exp(logits)
+    return exp_logits / exp_logits.sum(axis=-1, keepdims=True)
+
+
+def simplex_projector(
+    project: Callable[[Sequence[str]], np.ndarray],
+    *,
+    temperature: float = 1.0,
+) -> Callable[[Sequence[str]], np.ndarray]:
+    """Wrap a cube-coordinate text projector with a simplex softmax.
+
+    :param project: Existing calibrated text projector.
+    :type project: Callable[[Sequence[str]], numpy.ndarray]
+    :param temperature: Positive softmax temperature.
+    :type temperature: float
+    :returns: Text projector whose rows lie in the open simplex.
+    :rtype: Callable[[Sequence[str]], numpy.ndarray]
+    """
+    def wrapped(queries: Sequence[str]) -> np.ndarray:
+        return softmax_to_simplex(project(queries), temperature)
+
+    return wrapped
+
+
+def positive_simplex_grid(dimension: int, resolution: int) -> np.ndarray:
+    """Build the positive barycentric grid of a probability simplex.
+
+    Grid rows are positive integer compositions of ``resolution`` divided by
+    that resolution.  For ``dimension=7`` and ``resolution=14`` this yields
+    :math:`\\binom{13}{6}=1716` points.
+
+    :param dimension: Simplex ambient dimension.
+    :type dimension: int
+    :param resolution: Integer barycentric denominator, at least ``dimension``.
+    :type resolution: int
+    :returns: Interior simplex grid, shape ``(K, dimension)``.
+    :rtype: numpy.ndarray
+    :raises ValueError: If the parameters cannot form positive compositions.
+    """
+    dimension = int(dimension)
+    resolution = int(resolution)
+    if dimension < 2:
+        raise ValueError("simplex dimension must be at least two")
+    if resolution < dimension:
+        raise ValueError("simplex resolution must be at least the dimension")
+    rows: list[list[int]] = []
+    for dividers in combinations(range(1, resolution), dimension - 1):
+        endpoints = (0, *dividers, resolution)
+        rows.append([endpoints[i + 1] - endpoints[i] for i in range(dimension)])
+    return np.asarray(rows, dtype=float) / float(resolution)
+
+
+def stable_kde_on_grid(
+    coords: np.ndarray,
+    grid: np.ndarray,
+    bandwidth: float,
+    *,
+    grid_chunk_size: int = 64,
+    sample_chunk_size: int = 2048,
+) -> np.ndarray:
+    """Evaluate a Gaussian KDE with stable, memory-bounded log summation.
+
+    This corrected implementation is used by new simplex spaces only so
+    rebuilding a legacy cube cache remains bit-compatible.
+
+    :param coords: Calibration coordinates, shape ``(N, L)``.
+    :type coords: numpy.ndarray
+    :param grid: Query grid, shape ``(K, L)``.
+    :type grid: numpy.ndarray
+    :param bandwidth: Positive isotropic bandwidth.
+    :type bandwidth: float
+    :param grid_chunk_size: Grid rows evaluated together.
+    :type grid_chunk_size: int
+    :param sample_chunk_size: Calibration rows evaluated together.
+    :type sample_chunk_size: int
+    :returns: Nonnegative grid masses summing to one.
+    :rtype: numpy.ndarray
+    """
+    points = np.asarray(coords, dtype=float)
+    support = np.asarray(grid, dtype=float)
+    bw = float(bandwidth)
+    if points.ndim != 2 or support.ndim != 2 or points.shape[1] != support.shape[1]:
+        raise ValueError("coords and grid must be compatible 2-D matrices")
+    if len(points) == 0 or bw <= 0.0 or not np.isfinite(bw):
+        raise ValueError("KDE needs samples and a positive finite bandwidth")
+    log_density = np.empty(len(support), dtype=float)
+    for g0 in range(0, len(support), grid_chunk_size):
+        g = support[g0:g0 + grid_chunk_size]
+        accum = np.full(len(g), -np.inf, dtype=float)
+        for s0 in range(0, len(points), sample_chunk_size):
+            sample = points[s0:s0 + sample_chunk_size]
+            diff = g[:, None, :] - sample[None, :, :]
+            log_values = -0.5 * np.einsum("gsl,gsl->gs", diff, diff) / bw**2
+            row_max = log_values.max(axis=1)
+            chunk_lse = row_max + np.log(
+                np.exp(log_values - row_max[:, None]).sum(axis=1)
+            )
+            accum = np.logaddexp(accum, chunk_lse)
+        log_density[g0:g0 + len(g)] = accum
+    log_density -= log_density.max()
+    density = np.exp(log_density)
+    return density / density.sum()
+
+
+def _project_simplex_row(row: np.ndarray) -> np.ndarray:
+    value = np.asarray(row, dtype=float)
+    order = np.sort(value)[::-1]
+    cumulative = np.cumsum(order) - 1.0
+    indices = np.arange(1, len(value) + 1)
+    active = order - cumulative / indices > 0.0
+    rho = int(np.flatnonzero(active)[-1])
+    theta = cumulative[rho] / float(rho + 1)
+    return np.maximum(value - theta, 0.0)
 
 
 def _make_anchor_projector(

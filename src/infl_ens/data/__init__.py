@@ -3,8 +3,9 @@
 This subpackage groups the *data side* of the influencer-game pipeline:
 
 - :class:`TraitSpace` and :func:`build_trait_space` define the
-  :math:`L`-dimensional trait space :math:`\\mathbb{B}` and the empirical
-  resource distribution :math:`B(b)` over it.
+  :math:`L`-dimensional trait space :math:`\\mathbb{B}` (a unit box or
+  probability simplex) and the empirical resource distribution
+  :math:`B(b)` over it.
 - :func:`position_from_corpus` projects a fresh corpus of queries into a
   pre-built trait space (used by closed-loop trainers to refresh agent
   positions between rounds).
@@ -35,7 +36,9 @@ from infl_ens.data.trait_normalize import QuantileNormalizer
 from infl_ens.data.trait_space import (
     TraitSpace,
     build_trait_space,
+    positive_simplex_grid,
     position_from_corpus,
+    softmax_to_simplex,
 )
 
 __all__ = [
@@ -53,4 +56,6 @@ __all__ = [
     "load_behavioral_suite",
     "load_behavioral_suites",
     "position_from_corpus",
+    "positive_simplex_grid",
+    "softmax_to_simplex",
 ]

@@ -48,6 +48,9 @@ TOP_LEVEL_KEYS: frozenset[str] = frozenset(
         "sigma_mode",
         "sigma",
         "sigma_fraction",
+        "kernel",
+        "resolved_sigma",
+        "kernel_stability",
         "history_path",
         "repo_root",
         "benchmarks",
@@ -115,6 +118,9 @@ TRAIT_SPACE_KEYS: frozenset[str] = frozenset(
         "coordinate_stretch_gamma",
         "coordinate_stretch_gammas",
         "quantile_knots",
+        "coordinate_domain",
+        "simplex_temperature",
+        "simplex_resolution",
     },
 )
 
@@ -158,6 +164,9 @@ CLOSED_LOOP_KEYS: frozenset[str] = frozenset(
         "routing_weight",
         "loss_reweight",
         "position_update",
+        "gradient_resource",
+        "position_learning_rate",
+        "position_max_step_norm",
         "centroid_mode",
         "blend",
         "blend_schedule",
@@ -174,8 +183,17 @@ CLOSED_LOOP_KEYS: frozenset[str] = frozenset(
 )
 
 THEORY_GRADIENT_KEYS: frozenset[str] = frozenset(
-    {"learning_rate", "n_steps", "tol", "min_pairwise", "pairing"},
+    {
+        "learning_rate",
+        "max_step_norm",
+        "n_steps",
+        "tol",
+        "min_pairwise",
+        "pairing",
+    },
 )
+
+KERNEL_KEYS: frozenset[str] = frozenset({"kind", "shape", "delta"})
 
 VAL_EVAL_KEYS: frozenset[str] = frozenset(
     {"every_n_rounds", "agents", "max_eval_records"},
@@ -499,6 +517,7 @@ def validate_config(cfg: Mapping[str, Any], *, source: str = "<config>") -> None
     simple_blocks = (
         ("data_split", DATA_SPLIT_KEYS),
         ("trait_space", TRAIT_SPACE_KEYS),
+        ("kernel", KERNEL_KEYS),
         ("encoder", ENCODER_KEYS),
         ("sft", SFT_KEYS),
         ("eval", EVAL_KEYS),
@@ -596,6 +615,7 @@ __all__ = [
     "ENCODER_KEYS",
     "EVAL_KEYS",
     "KNOWN_TASKS",
+    "KERNEL_KEYS",
     "MIXTURE_LORA_KEYS",
     "PARTITION_REPLAY_KEYS",
     "SFT_KEYS",

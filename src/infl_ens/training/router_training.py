@@ -1,8 +1,11 @@
 """Train router-agent positions via gradient ascent on influencer-game utility.
 
-This trainer specialises the canonical adaptive-dynamics loop for the router
+This trainer specializes the canonical adaptive-dynamics loop for the router
 use case. It consumes a :class:`TraitSpace` and a list of
-:class:`RouterAgent`, runs the symmetric gradient-ascent dynamics
+:class:`RouterAgent`, then runs simultaneous gradient ascent. Explicit
+kernels use their exact score-function game gradient and the configured
+domain projection; configurations without a kernel retain the historical
+Gaussian update
 
 .. math::
 
@@ -10,19 +13,14 @@ use case. It consumes a :class:`TraitSpace` and a list of
         x_i^{(t)} + \\eta\\, \\nabla_{x_i} u_i(\\mathbf{x}^{(t)})
     \\Big)
 
-until convergence (or a step cap), and writes the equilibrium positions back
-into each agent in place.
+until convergence and writes the equilibrium positions back into each agent
+in place.
 
 Per AGENTS.md §4 rule 1, this module is not a standalone CLI: training is
-launched via ``python -m inflai.training`` with a config under
-``configs/benchmark/router/``.
+launched via ``python -m infl_ens.training`` with a config under
+``configs/arms/``. Game reward and gradient math remain owned by
+:mod:`infl_ens.inflgame`.
 
-.. note::
-    The closed-form gradient lives in
-    :func:`infl_ens.inflgame.router.allocation.utility_gradient`. Once the
-    canonical ``inflgame.env`` exposes a router-friendly step interface,
-    replace the body of :func:`train_router_positions` with a call into it
-    (AGENTS.md §4 rule 2: the env owns the reward).
 """
 
 from __future__ import annotations
@@ -33,6 +31,11 @@ from typing import Union
 import numpy as np
 
 from infl_ens.data.trait_space import TraitSpace
+from infl_ens.inflgame.dynamics import (
+    kernel_allocation_weights,
+    projected_game_gradient_step,
+)
+from infl_ens.inflgame.kernels import InfluenceKernel
 from infl_ens.inflgame.router.agents import RouterAgent
 from infl_ens.inflgame.router.allocation import (
     allocation_weights,
@@ -56,6 +59,12 @@ class RouterTrainingConfig:
     :param clip_to_box: Whether to project positions back to
         :math:`[0, 1]^L` after each step.
     :type clip_to_box: bool
+    :param kernel: Explicit kernel. ``None`` selects the legacy Gaussian
+        implementation.
+    :type kernel: InfluenceKernel | None
+    :param max_step_norm: Optional population-wide cap on the largest
+        explicit-kernel per-agent L2 step.
+    :type max_step_norm: float | None
     """
 
     sigma: Union[float, np.ndarray]
@@ -63,6 +72,8 @@ class RouterTrainingConfig:
     n_steps: int = 5000
     tol: float = 1e-8
     clip_to_box: bool = True
+    kernel: InfluenceKernel | None = None
+    max_step_norm: float | None = None
 
 
 def train_router_positions(
@@ -103,15 +114,19 @@ def train_router_positions(
         np.random.seed(seed)
 
     L = trait_space.L
-    sigma_arr = np.atleast_1d(np.asarray(cfg.sigma, dtype=float))
-    if sigma_arr.size == 1:
-        cov = float(sigma_arr.item()) ** 2 * np.eye(L)
-    elif sigma_arr.shape == (L,):
-        cov = np.diag(sigma_arr ** 2)
+    cov: np.ndarray | None = None
+    if cfg.kernel is None:
+        sigma_arr = np.atleast_1d(np.asarray(cfg.sigma, dtype=float))
+        if sigma_arr.size == 1:
+            cov = float(sigma_arr.item()) ** 2 * np.eye(L)
+        elif sigma_arr.shape == (L,):
+            cov = np.diag(sigma_arr ** 2)
+        else:
+            raise ValueError(
+                f"sigma must be scalar or shape ({L},), got {sigma_arr.shape}"
+            )
     else:
-        raise ValueError(
-            f"sigma must be scalar or shape ({L},), got {sigma_arr.shape}"
-        )
+        cfg.kernel.validate_domain(trait_space.coordinate_domain)
 
     pos = np.stack([a.position for a in agents], axis=0).copy()
     grid = trait_space.grid
@@ -123,14 +138,31 @@ def train_router_positions(
     t = 0
 
     for t in range(1, cfg.n_steps + 1):
-        grad = utility_gradient(pos, grid, weights, cov)
-        new_pos = pos + cfg.learning_rate * grad
-        if cfg.clip_to_box:
-            new_pos = np.clip(new_pos, 0.0, 1.0)
+        if cfg.kernel is None:
+            assert cov is not None
+            grad = utility_gradient(pos, grid, weights, cov)
+            new_pos = pos + cfg.learning_rate * grad
+            if cfg.clip_to_box:
+                new_pos = np.clip(new_pos, 0.0, 1.0)
+        else:
+            result = projected_game_gradient_step(
+                pos,
+                grid,
+                cfg.kernel,
+                trait_space,
+                weights=weights,
+                learning_rate=cfg.learning_rate,
+                max_step_norm=cfg.max_step_norm,
+            )
+            new_pos = result.positions
 
         step = float(np.max(np.abs(new_pos - pos)))
         pos = new_pos
-        G = allocation_weights(pos, grid, cov)
+        G = (
+            kernel_allocation_weights(pos, grid, cfg.kernel)
+            if cfg.kernel is not None
+            else allocation_weights(pos, grid, cov)
+        )
         traj_pos.append(pos.copy())
         traj_u.append(G @ weights)
 

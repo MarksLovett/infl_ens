@@ -8,9 +8,10 @@ The proportional-allocation rule
 
    G_i(\\mathbf{x}, b) \\;=\\; \\frac{f_i(x_i, b)}{\\sum_{j=1}^{N} f_j(x_j, b)}
 
-routes queries to candidate models via a multivariate-Gaussian influence
-kernel on a trait space constructed automatically from a calibration
-corpus.
+routes queries to candidate models via configurable log-concave influence
+kernels on a trait space constructed automatically from a calibration
+corpus. The legacy Gaussian implementation is preserved when no explicit
+kernel is configured.
 
 Subpackages are imported lazily — ``import infl_ens`` does *not* pull in
 :mod:`torch`, :mod:`transformers`, or any other heavy dependency. Import

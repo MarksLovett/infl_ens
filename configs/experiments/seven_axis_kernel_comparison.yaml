@@ -1,0 +1,65 @@
+# Compare four log-concave kernels under identical online observations.
+name: seven_axis_kernel_comparison
+results_dir: results/seven_axis_kernel_comparison
+figures_dir: figures/seven_axis_kernel_comparison
+
+arms:
+  - name: gaussian
+    label: "Gaussian"
+    title: "Gaussian game gradient"
+    role: specialist
+    config: ../arms/soft_game_gradient_gaussian.yaml
+  - name: hyperbolic
+    label: "Hyperbolic"
+    title: "Smoothed hyperbolic game gradient"
+    role: specialist
+    config: ../arms/soft_game_gradient_hyperbolic.yaml
+  - name: dirichlet
+    label: "Dirichlet"
+    title: "Mode-parameterized Dirichlet game gradient"
+    role: specialist
+    config: ../arms/soft_game_gradient_dirichlet.yaml
+  - name: product_beta
+    label: "Product-Beta"
+    title: "Mode-parameterized product-Beta game gradient"
+    role: specialist
+    config: ../arms/soft_game_gradient_product_beta.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Data-matched pooled generalist"
+    role: generalist
+    config: ../arms/generalist_kernel_comparison.yaml
+
+stages: [manifest, train, perround, routing, figures]
+
+eval:
+  perround_rounds: [4, final]
+  perround_partition: val
+  routing_partition: test
+  max_eval_records: 1000
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include:
+    - oracle_routing
+    - arm_comparison
+    - pair_positions
+    - within_pair
+    - cross_arm_report
+    - closed_loop_history
+
+smoke:
+  tests:
+    - tests/test_kernels.py
+    - tests/test_game_gradient.py
+    - tests/test_routing_eval.py
+  arms: [gaussian, hyperbolic, dirichlet, product_beta]
+  output_root: results/_smoke
+  overrides:
+    data_split: null
+    eval: null
+    closed_loop.n_rounds: 2
+    closed_loop.batch_size: 64
+    closed_loop.theory_gradient.n_steps: 100

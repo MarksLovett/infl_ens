@@ -1,76 +1,151 @@
-\documentclass{article}
-\usepackage{amsmath}
-\usepackage{amssymb}
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\cfg}[1]{\texttt{#1}}
+
+\title{Kernel-Agnostic Game-Gradient Position Updates}
+\date{September 2026}
 
 \begin{document}
+\maketitle
 
-\section*{Kernel-Agnostic Gradient-Matched Position Step}
+\section{Allocation identity}
 
-Let agent \(i\) have influence kernel \(k(x_i,b) > 0\), and define
-\begin{equation*}
-f_i(b) := k(x_i,b), \qquad
-G_i(\mathbf{x},b) := \frac{f_i(b)}{\sum_j f_j(b)}.
-\end{equation*}
-Its utility is
-\begin{equation*}
-u_i(\mathbf{x}) := \sum_b B(b)\,G_i(\mathbf{x},b).
-\end{equation*}
-
-Define the score of the kernel with respect to position:
-\begin{equation*}
-s_i(b) := \nabla_{x_i}\log k(x_i,b).
-\end{equation*}
-Then
-\begin{equation*}
-\nabla_{x_i} G_i(b)
-=
-G_i(b)\bigl(1-G_i(b)\bigr)\,s_i(b),
-\end{equation*}
-and therefore
-\begin{equation*}
+Let agent $i$ use a positive differentiable influence kernel
+$f_\kappa(x_i,b)$ and let
+\[
+G_i(\bx,b)=\frac{f_\kappa(x_i,b)}{\sum_j f_\kappa(x_j,b)},
+\qquad
+u_i(\bx;B)=\E_{b\sim B}[G_i(\bx,b)].
+\]
+Writing $s_i(b)=\nabla_{x_i}\log f_\kappa(x_i,b)$ gives the exact identity
+\[
 \nabla_{x_i}u_i
-=
-\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)\,s_i(b).
-\end{equation*}
+=\E_{b\sim B}\!\left[G_i(b)(1-G_i(b))s_i(b)\right].
+\]
+The score must belong to the configured kernel.  Replacing it with $b-x_i$
+is valid only for an isotropic Gaussian, up to a constant metric factor.
 
-\subsection*{Position-only style Monte-Carlo estimator}
+\section{Offline theory versus online observations}
 
-Under canonical routing \(p_i(b) \propto B(b)G_i(b)\), samples routed to
-agent \(i\) are distributed according to that density. For routed samples
-\(\{b_m\}_{m \in \mathcal{Q}_i}\), define
-\begin{equation*}
-w_m := 1 - G_i(b_m), \qquad
-d_i :=
-\frac{\sum_{m \in \mathcal{Q}_i} w_m\,s_i(b_m)}
-     {\sum_{m \in \mathcal{Q}_i} w_m + \varepsilon}.
-\end{equation*}
-Because routing contributes one factor \(G_i\), and \(w_m\) contributes the
-factor \((1-G_i)\), we have
-\begin{equation*}
-\mathbb{E}[d_i]
-\propto
-\sum_b B(b)\,G_i(b)\bigl(1-G_i(b)\bigr)\,s_i(b)
-=
-\nabla_{x_i}u_i.
-\end{equation*}
-So \(d_i\) is gradient-matched in expectation for any differentiable kernel.
+The non-naive theory initialization and the $\sigma^*$ calculation use the
+offline KDE quadrature
+\[
+B_{\rm KDE}=\{(b_k,B_k)\}_{k=1}^{K},\qquad \sum_k B_k=1,
+\]
+stored as \cfg{TraitSpace.grid} and \cfg{TraitSpace.weights}.  Their gradient
+is
+\[
+g_i^{\rm off}=\sum_k B_kG_i(b_k)(1-G_i(b_k))s_i(b_k).
+\]
 
-\subsection*{Generic update rule}
+The trained router is online: it does not know the complete resource
+distribution.  In round $t$ it observes only the training batch
+$\mathcal B_t=\{b_{tm}\}_{m=1}^{M_t}$ and uses
+\[
+\widehat g_i^{(t)}=
+\frac{1}{M_t}\sum_{m=1}^{M_t}
+G_i(b_{tm})(1-G_i(b_{tm}))s_i(b_{tm}).
+\]
+Thus the online rule is the exact gradient of the empirical batch game and a
+stochastic approximation to the training-resource law.  It is intentionally
+not equal to $g_i^{\rm off}$ on every round.  Validation, test, and KDE-grid
+resources are not used by the normal online update.  An offline-KDE update is
+retained only as an oracle diagnostic.
 
-Use
-\begin{equation*}
-x_i^{+} = x_i + \eta\,P_i\,d_i,
-\end{equation*}
-where \(\eta > 0\) is step size and \(P_i \succ 0\) is an optional
-preconditioner (take \(P_i = I\) by default).
+Soft top-$k$ controls which adapters train on each observed prompt.  It does
+not truncate the sum defining $\widehat g_i^{(t)}$: all observed prompts and
+all clone-level allocations enter the position gradient.
 
-\subsection*{Gaussian special case}
+\section{Constrained simultaneous step}
 
-For multivariate Gaussian kernels,
-\begin{equation*}
-s_i(b) = \Sigma^{-1}(b-x_i),
-\end{equation*}
-which recovers the earlier position-only centroid form up to metric and
-normalization factors.
+Let $P_D$ be the tangent projector and $\Pi_D$ the Euclidean projection for
+the position domain $D$.  The box uses the identity tangent projector.  For
+the probability simplex $\Delta^{L-1}$,
+\[
+P_\Delta=I-\frac1L\one\one^\top.
+\]
+One scalar is applied to the complete population gradient:
+\[
+\eta_{\rm eff}=\min\left\{\eta,
+\frac{c}{\max_i\|P_D\widehat g_i\|_2}\right\},
+\qquad
+x_i^+=\Pi_D\!\left(x_i+\eta_{\rm eff}P_D\widehat g_i\right).
+\]
+This cap preserves the joint vector-field direction.  There is no per-agent
+division by $\sum_mG_i(1-G_i)$ and no inverse-Hessian preconditioner.
+
+\section{Implemented kernel scores}
+
+Let $d=b-x$, let $C\succ0$ be the configured shape, and let
+$r=\sqrt{\delta^2+d^\top C^{-1}d}$.
+\begin{center}
+\begin{tabular}{p{0.18\linewidth}p{0.72\linewidth}}
+\toprule
+Kernel & Position score $s(x,b)$ \\
+\midrule
+Gaussian & $C^{-1}(b-x)/\sigma^2$ \\
+Hyperbolic & $C^{-1}(b-x)/(\sigma r)$ \\
+Dirichlet & $\sigma^{-1}[\log b-\psi(\alpha)+\psi(\alpha_0)\one]$,
+where $\alpha=\one+x/\sigma$ \\
+Product--Beta & $\sigma^{-1}[\log b-\log(1-b)-\psi(\alpha)+\psi(\beta)]$,
+where $\alpha=\one+x/\sigma$ and $\beta=\one+(1-x)/\sigma$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For the Dirichlet kernel $x\in\Delta^{L-1}$ and
+\[
+\alpha_0-L=\frac1\sigma,
+\qquad
+\operatorname{mode}\operatorname{Dir}(\alpha)
+=\frac{\alpha-\one}{\alpha_0-L}=x.
+\]
+It is therefore mode-parameterized, not mean-parameterized.  The common
+$\psi(\alpha_0)\one$ term is part of the full ambient derivative and vanishes
+only after projection onto the simplex tangent.
+
+\section{Kernel-matched stability}
+
+At a symmetric equilibrium $x^*$ found from
+$P_D\E_B[s(x^*,b)]=0$, the antisymmetric population mode is
+\[
+A_-=\frac{1}{N^2}\left[(N-1)\E_B[H]+(N-2)\E_B[ss^\top]\right],
+\qquad H=\nabla_x^2\log f_\kappa.
+\]
+On the simplex the active matrix is $Q^\top A_-Q$, where the columns of $Q$
+span $\one^\perp$.
+
+For the hyperbolic family, $x^*$ does not depend on $\sigma$.  Evaluating at
+$\sigma=1$, define the positive log-curvature and score scatter
+\[
+K=-\E_B[H_1(b)],\qquad C=\E_B[s_1(b)s_1(b)^\top].
+\]
+After restricting both matrices to the active domain (replace them by
+$Q^\top KQ$ and $Q^\top CQ$ on the simplex), the supplied closed form is
+\[
+\sigma^*_{\rm hyp}=\frac{N-2}{N-1}\,
+\lambda_{\max}\!\left(K^{-1/2}CK^{-1/2}\right).
+\]
+The implementation uses a Cholesky reduction of this symmetric generalized
+eigenproblem.  Dirichlet and product--Beta thresholds, whose equilibria move
+with $\sigma$, are instead found by a warm-started logarithmic scan followed
+by Brent refinement of the first positive-to-negative largest-eigenvalue
+crossing.
+
+\section{Compatibility}
+
+An explicit \cfg{kernel} block defaults to
+\cfg{position\_update: game\_gradient}.  Configurations without that block
+continue through the pre-existing Gaussian allocation, centroid update, and
+analytic threshold implementation unchanged.  The historical
+\cfg{theory\_matched} centroid is parallel to the isotropic Gaussian gradient
+on the same resources, but its per-agent normalization gives different
+simultaneous dynamics and it is not a general-kernel update.
 
 \end{document}

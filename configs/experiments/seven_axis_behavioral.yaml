@@ -1,0 +1,122 @@
+# Behavioral benchmark of the best routed model against its baselines at
+# sigma-fraction 0.50, seed-0 split, Qwen2.5-1.5B-Instruct.
+#
+# NOTHING IS TRAINED HERE. Every arm points at a run directory that already
+# exists; the stage list is deliberately `manifest, behavioral, figures`, with
+# no `train`. The checkpoints come from doob.
+#
+#   theory_eq         7 pairs, started at the empirical-B equilibrium
+#                     (routing NLL 1.9059 under the token-probability mixture,
+#                      against a pooled baseline of 2.0152)
+#   soft_full_pairs   the same arm started from the approximate lattice solve
+#                     -- the initialisation control, one factor moved
+#   generalist        pooled rank-16 replay -- the capacity/pooling control
+#   base model        untrained Qwen2.5-1.5B-Instruct, via include_base_model
+#
+# Both protocols run. For a routed target `native` IS the token-probability
+# mixture (generate_probability_mixture: one KV cache per expert, gate weights
+# fixed from the prompt coordinates); `hard_argmax` collapses the same gate to
+# a single expert without retraining, so the pair isolates what the mixture buys
+# at generation time rather than only in NLL.
+#
+# NOTE: the behavioral prompts are NOT in the trait-space cache -- they are new
+# corpora -- so this stage runs the Qwen3-Embedding-8B-AWQ encoder to place them
+# in trait space before it can compute routing weights. That model must be in
+# HF_HOME or the stage dies on a compute node with no network.
+#
+#   python -m infl_ens.pipeline --config configs/experiments/seven_axis_behavioral.yaml
+name: seven_axis_behavioral
+results_dir: results/seven_axis_behavioral
+figures_dir: figures/seven_axis_behavioral
+
+arms:
+  - name: theory_eq
+    label: "Theory equilibrium (7 pairs)"
+    title: "Soft dense routing, 7 pairs, started at the empirical-B equilibrium"
+    role: specialist
+    config: ../arms/soft_theory_eq_seed0.yaml
+  - name: soft_full_pairs
+    label: "Approximate init (7 pairs)"
+    title: "The same arm started from the 8000-step approximate lattice solve"
+    role: specialist
+    config: ../arms/soft_full_pairs.yaml
+  - name: generalist
+    label: "Pooled generalist"
+    title: "Pooled rank-16 generalist (existing seed-0 replay, not retrained)"
+    role: generalist
+    config: ../arms/generalist_replay.yaml
+
+stages: [manifest, behavioral, figures]
+
+eval:
+  routing_partition: test
+  max_eval_records: 1000
+
+behavioral_eval:
+  schema_version: 1
+  checkpoints: final
+  protocols: [native, hard_argmax]
+  targets:
+    arms: all
+    include_base_model: true
+  generation:
+    do_sample: false
+    temperature: 1.0
+    batch_size: 4
+    max_new_tokens: 256
+    max_input_tokens: 2048
+    fail_on_truncation: true
+    seed: 0
+  contamination:
+    exact_match: exclude
+    fuzzy_match: flag
+    ngram_size: 5
+    fuzzy_threshold: 0.85
+  suites:
+    - kind: harmbench
+      path: data/behavioral/harmbench/harmbench_behaviors_text_all.csv
+      version: HarmBench-1.0-content-addressed
+      functional_categories: [standard]
+      generation: {max_new_tokens: 256}
+      grader:
+        kind: official
+        evaluator: harmbench
+    - kind: strongreject
+      path: data/behavioral/strongreject/strongreject_small_dataset.csv
+      version: StrongREJECT-small-content-addressed
+      generation: {max_new_tokens: 256}
+      grader:
+        kind: official
+        evaluator: strongreject_finetuned
+    - kind: xstest
+      path: data/behavioral/xstest/xstest_prompts.csv
+      version: XSTest-content-addressed
+      grader: smoke_proxy
+      generation: {max_new_tokens: 128}
+    - kind: truthfulqa
+      path: data/behavioral/truthfulqa/TruthfulQA.csv
+      version: TruthfulQA-content-addressed
+      grader: smoke_proxy
+      generation: {max_new_tokens: 128}
+    - kind: confaide
+      path: data/behavioral/confaide/benchmark
+      version: ConfAIde-ICLR2024-content-addressed
+      tiers: [1, 2a, 2b]
+      grader: official
+      generation: {max_new_tokens: 32}
+    - kind: bipia
+      path: data/behavioral/bipia/prepared_cases.jsonl
+      version: BIPIA-prepared-content-addressed
+      grader: smoke_proxy
+      generation: {max_new_tokens: 256}
+    - kind: ifeval
+      path: data/behavioral/ifeval/input_data.jsonl
+      version: IFEval-content-addressed
+      grader: official
+      generation: {max_new_tokens: 1024}
+
+figures:
+  axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]
+  formats: [pdf, png]
+  compile_tex: auto
+  include: [behavioral_report]

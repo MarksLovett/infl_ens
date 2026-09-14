@@ -1,0 +1,15 @@
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis_simplex.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: baseline_replay
+seed: 0
+history_path: results/seven_axis_kernel_gaussian/seed0/history.json
+output_dir: results/seven_axis_kernel_comparison_generalist/seed0
+
+baseline_replay:
+  agent_name: pooled-baseline
+  save_per_round: true
+  rounds: null
+

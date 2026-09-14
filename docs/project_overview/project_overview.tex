@@ -47,12 +47,20 @@ G_i(\mathbf{x},b)=\frac{f_i(x_i,b)}{\sum_{j=1}^{N}f_j(x_j,b)},\qquad
 u_i(\mathbf{x})=\sum_b B(b)G_i(\mathbf{x},b).
 \label{eq:game}
 \end{equation}
-The game is constant-sum. This repository uses a Gaussian influence kernel,
+The game is constant-sum. The historical implementation uses a Gaussian
+influence kernel,
 \begin{equation}
 f_i(x_i,b)=\exp\!\left[-\tfrac12(x_i-b)^\mathsf{T}\Sigma^{-1}(x_i-b)\right],
 \end{equation}
 with $\Sigma=\sigma^2I$ when isotropic. Large $\sigma$ means broad competitive reach
 (generalism); small $\sigma$ means a narrow niche (specialism).
+
+The kernel-agnostic implementation additionally supplies a smoothed multivariate
+hyperbolic kernel, a mode-parameterized Dirichlet kernel, and independent
+mode-parameterized beta factors. All are log-concave and expose
+$\nabla_x\log f$ and $\nabla_x^2\log f$ to the same game dynamics. Dirichlet routing
+uses the native probability simplex; the kernel comparison maps every treatment to
+that same seven-dimensional domain rather than comparing different geometries.
 
 Under suitable log-concavity conditions, the paper establishes a unique symmetric Nash
 equilibrium. With Gaussian influence, it is the resource-weighted mean. In one dimension
@@ -78,7 +86,9 @@ system. Present axes cover harm (BeaverTails), hallucination (HaluEval), jailbre
 behavior (JBB-Behaviors or ToxicChat), privacy (AI4Privacy), over-refusal (OR-Bench),
 prompt injection, and policy violation (Do-Not-Answer). Text is embedded with a
 sentence-transformer or Hugging Face encoder; learned label-derived directions project
-embeddings into $[0,1]^L$. Corpus density becomes the empirical resource distribution.
+embeddings into $[0,1]^L$. A configured softmax coordinate map instead produces a
+native probability-simplex representation. Corpus density becomes the empirical
+resource distribution.
 
 \begin{figure}[p]
 \centering
@@ -91,10 +101,12 @@ and supplies the resource landscape for the game.}
 \end{figure}
 
 \subsection{Game-theoretic routing and LoRA training}
-The \texttt{inflgame.router} package implements Equation~\ref{eq:game}: stable Gaussian
-influence, allocation $G$, expected utility, and analytic utility gradients. Theory-only
-runs optimize positions by gradient ascent. Closed-loop runs dispatch real prompts to
-actual adapters.
+The \texttt{inflgame} package implements Equation~\ref{eq:game}: configurable
+influence kernels, allocation $G$, expected utility, exact score-function utility
+gradients, and kernel-matched first-bifurcation thresholds. The hyperbolic
+threshold uses its generalized-eigenvalue closed form; Dirichlet and product--beta
+thresholds use numerical equilibrium and root solvers. Theory-only runs optimize
+positions by gradient ascent. Closed-loop runs dispatch real prompts to actual adapters.
 
 \emph{Proportional routing} assigns a prompt in proportion to $G_i$.
 \emph{Strategic routing} uses $G_i(1-G_i)$, the factor in the strategic gradient: it
@@ -103,6 +115,13 @@ The training package then runs SFT for each router agent, saves LoRA adapters un
 \texttt{results/<run>/agents/}, and refreshes positions from held-out projected prompts.
 It supports both cumulative and fresh-per-round LoRA, pooled-replay baselines, and
 pair-merge experiments that reduce two trained clones to one served expert.
+
+Offline theory initialization and stability matching use the full calibrated KDE
+resource measure. The online game-gradient update intentionally does not assume that
+global knowledge: it estimates the same kernel-specific game gradient from the current
+observed training batch with uniform empirical mass. An offline-KDE update remains
+available only as an oracle diagnostic. Soft top-$k$ gates SFT assignment, not the
+position gradient.
 
 Three objects must remain distinct: \textbf{trait position} (the router's geometric
 summary), \textbf{adapter parameters} (the actual transformer changes), and

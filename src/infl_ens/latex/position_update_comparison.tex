@@ -28,7 +28,7 @@ a side-by-side derivation of every implemented method}
 \author{Notes accompanying \texttt{closed\_loop.position\_update},
 \texttt{closed\_loop.soft\_loss} and\\
 \texttt{infl\_ens.inflgame.router.verification}}
-\date{August 2026}
+\date{September 2026}
 
 \begin{document}
 \maketitle
@@ -58,6 +58,40 @@ numerical cosine and Monte-Carlo checks.
 \end{abstract}
 
 \tableofcontents
+
+%======================================================================
+\section{Kernel-agnostic exact-gradient extension}
+%======================================================================
+
+The centroid mechanisms derived in the remainder of this note are retained
+unchanged for legacy Gaussian configurations.  Explicit kernel configurations
+now default to \cfg{position\_update: game\_gradient}.  If
+$s_i(b)=\nabla_{x_i}\log f_\kappa(x_i,b)$, the online soft-routing update uses
+the entire observed round batch,
+\[
+ \widehat g_i=\frac1M\sum_{m=1}^M
+ G_i(b_m)(1-G_i(b_m))s_i(b_m),
+\]
+independently of the top-$k$ SFT gate.  This is the exact gradient of the
+empirical batch game.  It deliberately differs from non-naive theory
+initialization, which uses the full nonuniform KDE grid
+$(\cfg{TraitSpace.grid},\cfg{TraitSpace.weights})$: an online agent sees only
+its current training batch and cannot assume knowledge of the complete
+resource landscape.
+
+For simplex kernels the score is projected with
+$P_\Delta=I-\mathbf1\mathbf1^\top/L$ before a Euclidean simplex projection.
+One population-wide learning-rate cap preserves the joint gradient direction.
+No centroid normalization or curvature preconditioner is applied.  In
+particular, the mode-parameterized Dirichlet family uses
+$\alpha=\mathbf1+x/\sigma$ and its digamma score; it never substitutes the
+Gaussian displacement $b-x$.  See
+\cfg{kernel\_agnostic\_gradient\_step.tex} for the complete four-kernel
+derivation and the kernel-matched stability procedures.
+
+The following sections document the older Gaussian centroid family and its
+ablations.  Their claims of direction matching should be read as applying to
+that isotropic Gaussian setting and the resource sample named in each result.
 
 %======================================================================
 \section{Setting and notation}

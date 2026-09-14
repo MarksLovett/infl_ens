@@ -12,6 +12,11 @@ from typing import Optional, Sequence, Union
 import numpy as np
 
 from infl_ens.data.trait_space import TraitSpace
+from infl_ens.inflgame.dynamics import (
+    kernel_allocation_weights,
+    kernel_expected_utilities,
+)
+from infl_ens.inflgame.kernels import GaussianKernel, InfluenceKernel
 from infl_ens.inflgame.router.agents import RouterAgent
 from infl_ens.inflgame.router.allocation import (
     allocation_weights,
@@ -49,6 +54,9 @@ class InfluencerRouter:
     :type sigma: float | numpy.ndarray
     :param policy: ``'argmax'`` or ``'proportional'``.
     :type policy: str
+    :param kernel: Explicit influence kernel. ``None`` preserves the legacy
+        Gaussian covariance implementation.
+    :type kernel: InfluenceKernel | None
     :raises ValueError: If ``policy`` is unrecognised, ``agents`` is empty,
         ``sigma`` has the wrong shape, or any agent's position has the wrong
         dimensionality.
@@ -60,8 +68,10 @@ class InfluencerRouter:
         self,
         trait_space: TraitSpace,
         agents: Sequence[RouterAgent],
-        sigma: Union[float, np.ndarray],
+        sigma: Union[float, np.ndarray, None] = None,
         policy: str = "argmax",
+        *,
+        kernel: Optional[InfluenceKernel] = None,
     ) -> None:
         if policy not in self._VALID_POLICIES:
             raise ValueError(
@@ -78,20 +88,31 @@ class InfluencerRouter:
                     f" expected ({L},)"
                 )
 
-        sigma_arr = np.atleast_1d(np.asarray(sigma, dtype=float))
-        if sigma_arr.size == 1:
-            cov = float(sigma_arr.item()) ** 2 * np.eye(L)
-        elif sigma_arr.shape == (L,):
-            cov = np.diag(sigma_arr ** 2)
+        if kernel is None:
+            if sigma is None:
+                raise ValueError("sigma is required for the legacy Gaussian router")
+            sigma_arr = np.atleast_1d(np.asarray(sigma, dtype=float))
+            if sigma_arr.size == 1:
+                cov: Optional[np.ndarray] = float(sigma_arr.item()) ** 2 * np.eye(L)
+            elif sigma_arr.shape == (L,):
+                cov = np.diag(sigma_arr ** 2)
+            else:
+                raise ValueError(
+                    f"sigma must be scalar or shape ({L},), got {sigma_arr.shape}"
+                )
         else:
-            raise ValueError(
-                f"sigma must be scalar or shape ({L},), got {sigma_arr.shape}"
-            )
+            if kernel.dimension != L:
+                raise ValueError(
+                    f"kernel dimension {kernel.dimension} does not match trait dimension {L}"
+                )
+            kernel.validate_domain(trait_space.coordinate_domain)
+            cov = kernel.covariance if isinstance(kernel, GaussianKernel) else None
 
         self.trait_space = trait_space
         self.agents = agents
         self.policy = policy
         self.cov = cov
+        self.kernel = kernel
 
     @property
     def positions(self) -> np.ndarray:
@@ -113,7 +134,23 @@ class InfluencerRouter:
         :returns: Effective scalar :math:`\\sigma`.
         :rtype: float
         """
+        if self.kernel is not None:
+            return float(self.kernel.sigma)
+        assert self.cov is not None
         return float(np.exp(0.5 * np.mean(np.log(np.diag(self.cov)))))
+
+    def allocation_weights(self, resources: np.ndarray) -> np.ndarray:
+        """Evaluate allocations at already-projected resource coordinates.
+
+        :param resources: Resource coordinates, shape ``(M, L)``.
+        :type resources: numpy.ndarray
+        :returns: Clone-level allocation matrix, shape ``(N, M)``.
+        :rtype: numpy.ndarray
+        """
+        if self.kernel is not None:
+            return kernel_allocation_weights(self.positions, resources, self.kernel)
+        assert self.cov is not None
+        return allocation_weights(self.positions, resources, self.cov)
 
     def expected_utilities(self) -> np.ndarray:
         """Expected utility :math:`u_i(\\mathbf{x})` for each agent.
@@ -121,26 +158,40 @@ class InfluencerRouter:
         :returns: Utility vector, shape ``(N,)``. Sums to one in expectation.
         :rtype: numpy.ndarray
         """
+        if self.kernel is not None:
+            return kernel_expected_utilities(
+                self.positions,
+                self.trait_space.grid,
+                self.trait_space.weights,
+                self.kernel,
+            )
+        assert self.cov is not None
         return expected_utilities(
-            self.positions,
-            self.trait_space.grid,
-            self.trait_space.weights,
-            self.cov,
+            self.positions, self.trait_space.grid, self.trait_space.weights, self.cov
         )
 
     def is_stable(self) -> bool:
         """Whether the configured :math:`\\sigma` clears the symmetric stability threshold.
 
-        Tests :math:`\\sigma > \\sigma_0^*` (Corollary 8, multivariate form).
-        This is a *necessary* condition for the symmetric Nash equilibrium
-        of an :math:`N`-agent MV-Gaussian game to be locally asymptotically
-        stable on this resource landscape; it does not certify any specific
-        asymmetric configuration.
+        Explicit kernels use their numerical antisymmetric bifurcation root.
+        The legacy Gaussian path retains the existing analytic multivariate
+        threshold. This local test does not certify any particular asymmetric
+        configuration.
 
         :returns: ``True`` if the configured reach exceeds the threshold.
         :rtype: bool
         """
-        # Local import keeps this module decoupled from utils at import time.
+        if self.kernel is not None:
+            from infl_ens.inflgame.stability import numerical_stability_threshold
+
+            config = self.kernel.to_config()
+            config.pop("sigma", None)
+            config.pop("parameterization", None)
+            result = numerical_stability_threshold(
+                config, self.trait_space, len(self.agents)
+            )
+            return self.sigma_scalar > result.sigma_star
+        # Local import keeps the legacy implementation decoupled from utils.
         from infl_ens.utils.resource import gaussian_stability_threshold
         thresh = gaussian_stability_threshold(
             len(self.agents),
@@ -173,7 +224,7 @@ class InfluencerRouter:
         :rtype: RouterAgent
         """
         b_star = self.trait_space.project([query])                       # (1, L)
-        G_b = allocation_weights(self.positions, b_star, self.cov)[:, 0] # (N,)
+        G_b = self.allocation_weights(b_star)[:, 0] # (N,)
         rng = rng if rng is not None else np.random.default_rng()
         if self.policy == "argmax":
             top = G_b.max()
@@ -227,7 +278,7 @@ class InfluencerRouter:
                 f"routing_weight must be 'G' or 'G_times_1mG', got {routing_weight!r}"
             )
         b_star = self.trait_space.project(list(queries))                 # (M, L)
-        G = allocation_weights(self.positions, b_star, self.cov)         # (N, M)
+        G = self.allocation_weights(b_star)                              # (N, M)
         rng = rng if rng is not None else np.random.default_rng()
         N, M = G.shape
         if self.policy == "argmax":
@@ -239,9 +290,15 @@ class InfluencerRouter:
                 idx[m] = int(rng.choice(ties))
         else:
             if routing_weight == "G_times_1mG":
-                P = strategic_routing_weights(
-                    self.positions, b_star, self.cov,
-                )                                                         # (N, M)
+                if self.kernel is not None:
+                    P = G * (1.0 - G)
+                    totals = P.sum(axis=0, keepdims=True)
+                    P = np.divide(P, totals, out=G.copy(), where=totals > 1e-12)
+                else:
+                    assert self.cov is not None
+                    P = strategic_routing_weights(
+                        self.positions, b_star, self.cov,
+                    )                                                     # (N, M)
             else:
                 P = G
             idx = np.fromiter(

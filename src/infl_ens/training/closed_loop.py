@@ -3,9 +3,9 @@
 :func:`run_closed_loop` is the ``closed_loop`` task behind
 ``python -m infl_ens.training``.  Each round it routes a batch of prompts
 through the influencer-game router, fine-tunes the agents (or their merge
-groups) on what they were routed, and moves every agent toward the
-gradient-matched centroid of its routed mass.  ``history.json`` is
-rewritten after every round.
+groups) on what they were routed, and updates every position with either
+the legacy centroid rule or the exact configured-kernel game gradient.
+``history.json`` is rewritten after every round.
 
 Configuration knobs (``closed_loop`` block; see
 :data:`infl_ens.config.CLOSED_LOOP_KEYS` for the full list):
@@ -22,8 +22,10 @@ Configuration knobs (``closed_loop`` block; see
 - ``routing_mode``: ``hard`` (sample one agent per query) or ``soft``
   (every query trains its top-``soft_top_k`` agents or merge groups;
   ``soft_loss`` = ``weighted`` share-weighted loss or ``unit``).
-- ``position_update``: ``theory_matched`` (default; expected drift
-  parallel to :math:`\\nabla_{x_i} u_i`) or ``naive`` (ablation).
+- ``position_update``: ``game_gradient`` (default for every explicit
+  kernel), ``theory_matched`` (unchanged default when no kernel block is
+  present), or ``naive`` (ablation). ``game_gradient`` uses the observed
+  batch by default; ``gradient_resource: offline_kde`` is an oracle.
 - ``loss_reweight``: ``null`` or ``one_minus_G`` (hard routing only;
   ``position_only`` is a deprecated alias for the default).
 - ``centroid_mode``: ``batch`` or ``expected_pool``; ``blend``: EMA weight
@@ -49,6 +51,7 @@ import numpy as np
 from infl_ens.config import resolve_sft_block
 from infl_ens.data.benchmarks import BenchmarkSplit
 from infl_ens.data.trait_space import TraitSpace
+from infl_ens.inflgame.kernels import InfluenceKernel, build_kernel
 from infl_ens.inflgame.router import InfluencerRouter, RouterAgent
 from infl_ens.training.agent_init import resolve_agent_entries
 from infl_ens.training.setup import (
@@ -56,7 +59,7 @@ from infl_ens.training.setup import (
     init_agents,
     load_splits,
     make_trait_space,
-    sigma_from_config,
+    resolve_kernel_setup,
     write_history,
     write_resolved_config,
 )
@@ -81,12 +84,17 @@ _VALID_LOSS_REWEIGHT_MODES: tuple[Optional[str], ...] = (
     None, "one_minus_G", "position_only",
 )
 
-#: Valid values for ``closed_loop.position_update``. ``theory_matched``
-#: (default) always applies the centroid mass that makes the expected
+#: Valid values for ``closed_loop.position_update``. ``game_gradient`` is
+#: the explicit-kernel default. ``theory_matched`` remains the no-kernel
+#: legacy default and applies the centroid mass that makes the expected
 #: trait-space drift proportional to the strategic gradient coefficient
 #: :math:`G_i(1-G_i)`; ``naive`` keeps the historical uninstrumented centroid
 #: (unweighted under hard routing, renormalised share under soft routing).
-_VALID_POSITION_UPDATE_MODES: tuple[str, ...] = ("theory_matched", "naive")
+_VALID_POSITION_UPDATE_MODES: tuple[str, ...] = (
+    "game_gradient",
+    "theory_matched",
+    "naive",
+)
 
 #: Valid values for ``closed_loop.soft_loss`` (soft routing only).
 #: ``weighted`` trains each assigned agent with its renormalised share as the
@@ -216,6 +224,10 @@ def validate_routing_and_loss_modes(
             "closed_loop.position_update must be one of "
             f"{_VALID_POSITION_UPDATE_MODES}, got {position_update!r}"
         )
+    if position_update == "game_gradient" and routing_weight != "G":
+        raise ValueError(
+            "position_update='game_gradient' requires canonical routing_weight='G'"
+        )
     if soft_loss not in _VALID_SOFT_LOSS_MODES:
         raise ValueError(
             f"closed_loop.soft_loss must be one of {_VALID_SOFT_LOSS_MODES}, "
@@ -323,6 +335,7 @@ def init_agents_closed_loop(
     *,
     sigma: float,
     rng: Optional[np.random.Generator],
+    kernel: InfluenceKernel | None = None,
 ) -> tuple[list[RouterAgent], Optional[dict[str, Any]]]:
     """Initialize agents for the closed loop.
 
@@ -338,6 +351,8 @@ def init_agents_closed_loop(
     :type sigma: float
     :param rng: RNG for mean-noise init.
     :type rng: numpy.random.Generator | None
+    :param kernel: Explicit kernel for non-naive theory initialization.
+    :type kernel: InfluenceKernel | None
     :returns: Router agents and optional theory-init metadata.
     :rtype: tuple[list[RouterAgent], dict | None]
     """
@@ -357,6 +372,7 @@ def init_agents_closed_loop(
             seed=seed,
             init_noise=init_noise,
             theory_cfg=cl.get("theory_gradient"),
+            kernel=kernel,
         )
         log_meta = {
             "init_mode": "theory_gradient",
@@ -380,6 +396,7 @@ def init_agents_closed_loop(
             seed=seed,
             init_noise=init_noise,
             theory_cfg=cl.get("theory_gradient"),
+            kernel=kernel,
         )
         log_meta = {
             k: (v.tolist() if isinstance(v, np.ndarray) else v)
@@ -465,10 +482,32 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
     cl = cfg.get("closed_loop", {})
     rng = np.random.default_rng(int(cfg.get("seed", 0)))
     n_agents = len(cfg.get("agents", []))
-    sigma = sigma_from_config(cfg, n_agents, space)
+    kernel_setup = resolve_kernel_setup(cfg, n_agents, space)
+    sigma = kernel_setup.sigma
+    if kernel_setup.kernel is not None:
+        # Evaluation reconstructs exactly this explicit kernel instead of
+        # rerunning the numerical root solve. Legacy resolved configs retain
+        # their pre-existing shape.
+        cfg["resolved_sigma"] = sigma
+        cfg["kernel_stability"] = kernel_setup.stability
     agents, theory_init_meta = init_agents_closed_loop(
-        cfg, space, splits, cl, sigma=sigma, rng=rng,
+        cfg,
+        space,
+        splits,
+        cl,
+        sigma=sigma,
+        rng=rng,
+        kernel=kernel_setup.kernel,
     )
+    if theory_init_meta is not None and kernel_setup.kernel is not None:
+        theory_init_meta["kernel"] = (
+            kernel_setup.kernel.to_config()
+        )
+        theory_init_meta["offline_resource"] = {
+            "source": "trait_space_kde",
+            "support_size": int(space.K),
+        }
+        theory_init_meta["stability"] = kernel_setup.stability
     if theory_init_meta is not None:
         layout = theory_init_meta.get(
             "theory_layout",
@@ -545,11 +584,6 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                 + ", ".join(snapped),
             )
 
-    router = InfluencerRouter(
-        space, agents, sigma=sigma,
-        policy=cfg.get("policy", "proportional"),
-    )
-
     routing_weight = str(cl.get("routing_weight", "G"))
     # Loss-side weighting under hard routing. See
     # ``_VALID_LOSS_REWEIGHT_MODES`` and ``_validate_routing_and_loss_modes``
@@ -562,7 +596,22 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
     # the expected trait-space drift proportional to the strategic
     # gradient coefficient G_i(1-G_i) in every routing mode; 'naive' keeps
     # the historical uninstrumented centroid as an ablation arm.
-    position_update = str(cl.get("position_update", "theory_matched"))
+    configured_position_update = cl.get("position_update")
+    position_update = str(
+        configured_position_update
+        if configured_position_update is not None
+        else ("game_gradient" if cfg.get("kernel") is not None else "theory_matched")
+    )
+    runtime_kernel = kernel_setup.kernel
+    if position_update == "game_gradient" and runtime_kernel is None:
+        runtime_kernel = build_kernel(None, sigma=sigma, dimension=space.L)
+    router = InfluencerRouter(
+        space,
+        agents,
+        sigma=sigma,
+        policy=cfg.get("policy", "proportional"),
+        kernel=runtime_kernel,
+    )
     centroid_mode = str(cl.get("centroid_mode", "batch"))
     if loss_reweight == "position_only":
         if str(cl.get("position_update", "theory_matched")) == "naive":
@@ -605,6 +654,33 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
         soft_select=soft_select,
         centroid_mode=centroid_mode,
     )
+    if (
+        kernel_setup.kernel is not None
+        and kernel_setup.kernel.kind != "gaussian"
+        and position_update != "game_gradient"
+    ):
+        raise ValueError(
+            f"kernel {kernel_setup.kernel.kind!r} requires position_update='game_gradient'"
+        )
+    gradient_resource = str(cl.get("gradient_resource", "observed_batch"))
+    if gradient_resource not in ("observed_batch", "offline_kde"):
+        raise ValueError(
+            "closed_loop.gradient_resource must be 'observed_batch' or 'offline_kde'"
+        )
+    if position_update != "game_gradient" and "gradient_resource" in cl:
+        raise ValueError(
+            "closed_loop.gradient_resource applies only to position_update='game_gradient'"
+        )
+    position_learning_rate = float(cl.get("position_learning_rate", 1.0))
+    position_max_step_norm = cl.get("position_max_step_norm", 0.05)
+    if position_max_step_norm is not None:
+        position_max_step_norm = float(position_max_step_norm)
+    if cfg.get("kernel") is not None or configured_position_update is not None:
+        cl["position_update"] = position_update
+    if position_update == "game_gradient":
+        cl["gradient_resource"] = gradient_resource
+        cl["position_learning_rate"] = position_learning_rate
+        cl["position_max_step_norm"] = position_max_step_norm
     # Whether hard canonical routing needs the per-query (1-G) weights this
     # round: for the loss (one_minus_G) and/or the matched centroid.
     hard_needs_one_minus_g = routing_mode != "soft" and (
@@ -655,14 +731,18 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             f"closed_loop.centroid_mode must be 'batch' or 'expected_pool', "
             f"got {centroid_mode!r}"
         )
-    if centroid_mode == "expected_pool" and routing_weight != "G":
+    if (
+        position_update != "game_gradient"
+        and centroid_mode == "expected_pool"
+        and routing_weight != "G"
+    ):
         raise ValueError(
             "centroid_mode='expected_pool' requires routing_weight='G'"
         )
     if (
         routing_mode == "soft"
         and centroid_mode == "expected_pool"
-        and position_update != "theory_matched"
+        and position_update not in ("theory_matched", "game_gradient")
     ):
         raise ValueError(
             "routing_mode='soft' with centroid_mode='expected_pool' is the "
@@ -850,13 +930,10 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
         G_batch: Optional[np.ndarray] = None
         name_to_idx: dict[str, int] = {}
         if hard_needs_one_minus_g:
-            from infl_ens.inflgame.router.allocation import allocation_weights
             batch_coords = coords_for_prompts(
                 batch_prompts, coord_by_text, space.project,
             )                                                       # (M, L)
-            G_batch = allocation_weights(
-                router.positions, batch_coords, router.cov,
-            )                                                       # (N, M)
+            G_batch = router.allocation_weights(batch_coords)       # (N, M)
             name_to_idx = {a.name: i for i, a in enumerate(agents)}
 
         # Soft (dense) routing: every agent trains on each of its top-k
@@ -875,16 +952,13 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
         batch_coords_soft: Optional[np.ndarray] = None
         if routing_mode == "soft":
             from infl_ens.inflgame.router.allocation import (
-                allocation_weights,
                 matched_centroid_mass,
                 top_k_allocation_weights,
             )
             batch_coords_soft = coords_for_prompts(
                 batch_prompts, coord_by_text, space.project,
             )                                                       # (M, L)
-            G_soft = allocation_weights(
-                router.positions, batch_coords_soft, router.cov,
-            )                                                       # (N, M)
+            G_soft = router.allocation_weights(batch_coords_soft)   # (N, M)
             soft_pos_mass = matched_centroid_mass(G_soft)
             if soft_pairs:
                 assert static_merge_groups is not None
@@ -1012,7 +1086,7 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                 sample_weights_arg: Optional[list[float]] = (
                     None if soft_loss == "unit" else list(share_i)
                 )
-                if position_update == "theory_matched":
+                if position_update in ("theory_matched", "game_gradient"):
                     eval_weights_arg: Optional[list[float]] = None
                     skip_pos = True
                 else:
@@ -1089,15 +1163,12 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                 )
 
         from infl_ens.inflgame.router.allocation import (
-            allocation_weights,
             empirical_utility,
             strategic_routing_weights,
         )
 
         if centroid_mode == "expected_pool" and position_update == "theory_matched":
-            G_pool = allocation_weights(
-                router.positions, pool_coords, router.cov,
-            )
+            G_pool = router.allocation_weights(pool_coords)
             for i, agent in enumerate(agents):
                 target = expected_pool_centroid(i, pool_coords, G_pool)
                 agent.position, beta_eff = apply_position_update(
@@ -1107,6 +1178,46 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                     position_step=position_step,
                 )
                 agent_blend_effective[agent.name].append(float(beta_eff))
+
+        game_step_meta: dict[str, Any] | None = None
+        if position_update == "game_gradient":
+            from infl_ens.inflgame.dynamics import projected_game_gradient_step
+
+            assert runtime_kernel is not None
+            if gradient_resource == "offline_kde":
+                gradient_coords = space.grid
+                gradient_weights: np.ndarray | None = space.weights
+            else:
+                gradient_coords = (
+                    batch_coords_soft
+                    if batch_coords_soft is not None
+                    else coords_for_prompts(
+                        batch_prompts, coord_by_text, space.project
+                    )
+                )
+                gradient_weights = None
+            game_step = projected_game_gradient_step(
+                router.positions,
+                gradient_coords,
+                runtime_kernel,
+                space,
+                weights=gradient_weights,
+                learning_rate=position_learning_rate,
+                max_step_norm=position_max_step_norm,
+            )
+            for agent, new_position in zip(agents, game_step.positions):
+                agent.position = new_position.copy()
+            game_step_meta = {
+                "resource_source": gradient_resource,
+                "resource_count": int(len(gradient_coords)),
+                "learning_rate": position_learning_rate,
+                "effective_learning_rate": game_step.effective_learning_rate,
+                "max_step_norm": position_max_step_norm,
+                "max_gradient_norm": game_step.max_gradient_norm,
+                "tangent_residual": game_step.tangent_residual,
+                "gradient": game_step.gradient.tolist(),
+                "projected_gradient": game_step.projected_gradient.tolist(),
+            }
 
         if (
             routing_mode == "soft"
@@ -1203,7 +1314,7 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
                     }
                     agent_sft_logs[train_name] = merge_sft_logs[train_name]
                     agent_loaded_prior[train_name] = merge_loaded_prior[train_name]
-                if position_update == "theory_matched":
+                if position_update in ("theory_matched", "game_gradient"):
                     # Each member already took its own theory-matched step
                     # (dense batch block or expected-pool block above). The
                     # trainer's routing position simply tracks its members;
@@ -1307,12 +1418,26 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             [sum(1 for c in choices if c.name == a.name) / max(len(choices), 1)
              for a in agents]
         )
-        strategic_share_pool = strategic_routing_weights(
-            router.positions, pool_coords, router.cov,
-        ).mean(axis=1)
-        u_pool_round = empirical_utility(
-            router.positions, pool_coords, router.cov,
-        ).tolist()
+        if runtime_kernel is None:
+            assert router.cov is not None
+            strategic_share_pool = strategic_routing_weights(
+                router.positions, pool_coords, router.cov,
+            ).mean(axis=1)
+            u_pool_round = empirical_utility(
+                router.positions, pool_coords, router.cov,
+            ).tolist()
+        else:
+            g_pool_current = router.allocation_weights(pool_coords)
+            strategic_pool = g_pool_current * (1.0 - g_pool_current)
+            strategic_totals = strategic_pool.sum(axis=0, keepdims=True)
+            strategic_pool = np.divide(
+                strategic_pool,
+                strategic_totals,
+                out=g_pool_current.copy(),
+                where=strategic_totals > 1e-12,
+            )
+            strategic_share_pool = strategic_pool.mean(axis=1)
+            u_pool_round = g_pool_current.mean(axis=1).tolist()
         from infl_ens.training.pool_dynamics import agent_pairwise_geometry
 
         pos_stack = np.stack([a.position for a in agents], axis=0)
@@ -1360,6 +1485,15 @@ def run_closed_loop(cfg: dict[str, Any]) -> int:
             "allocation_accounting": allocation_accounting,
             "loss_reweight": loss_reweight,
             "position_update": position_update,
+            **(
+                {
+                    "kernel": runtime_kernel.to_config(),
+                    "stability": kernel_setup.stability,
+                    "game_gradient": game_step_meta,
+                }
+                if runtime_kernel is not None
+                else {}
+            ),
             "agent_prompts": agent_prompts,
             "agent_responses": agent_responses,
             "agent_sft_logs": agent_sft_logs,

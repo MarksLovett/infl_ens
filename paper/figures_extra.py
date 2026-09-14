@@ -282,7 +282,7 @@ def fig_model_families() -> None:
                         for lbl, _f, _p, _c in rows], fontsize=6.5)
     ax.tick_params(length=0)
     despine(ax, keep=())
-    ax.set_title("base model at $\\sigma/\\hat\sigma_0^*=0.50$, round 11, seed 0",
+    ax.set_title("base model at $\\sigma/\\hat\\sigma_0^*=0.50$, round 11, seed 0",
                  loc="left", fontsize=7.5, pad=6)
     fig.text(0.005, -0.10,
              "Shaded columns are ratios and compare across families. Per-token NLL "

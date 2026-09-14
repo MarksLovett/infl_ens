@@ -151,8 +151,9 @@ def _native_routing_weights(
         parse_merge_groups,
         resolve_merge_adapters,
     )
+    from infl_ens.inflgame.dynamics import kernel_allocation_weights
     from infl_ens.inflgame.router.allocation import allocation_weights
-    from infl_ens.training.setup import sigma_from_config
+    from infl_ens.training.setup import resolve_kernel_setup
 
     if target.config is None or target.run_dir is None or target.round_idx is None:
         raise ValueError("routed target is missing config/run metadata")
@@ -168,9 +169,13 @@ def _native_routing_weights(
     if tuple(resolved) != target.expert_names:
         raise ValueError("behavioral target expert order disagrees with routing merge order")
     positions = load_final_positions(target.run_dir / "history.json", agents)
-    sigma = sigma_from_config(cfg, len(agents), space)
-    covariance = float(sigma) ** 2 * np.eye(space.L)
-    clone_weights = allocation_weights(positions, coordinates, covariance)
+    kernel_setup = resolve_kernel_setup(cfg, len(agents), space)
+    covariance = float(kernel_setup.sigma) ** 2 * np.eye(space.L)
+    clone_weights = (
+        kernel_allocation_weights(positions, coordinates, kernel_setup.kernel)
+        if kernel_setup.kernel is not None
+        else allocation_weights(positions, coordinates, covariance)
+    )
     weights = aggregate_clone_g_to_merge(
         clone_weights, agents, clone_to_merge, resolved, name_map,
     ).T

@@ -10,6 +10,7 @@ stages cannot disagree about them.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
@@ -19,7 +20,12 @@ from infl_ens.data.benchmarks import BenchmarkSplit
 from infl_ens.data.benchmarks.loading import load_benchmark_splits
 from infl_ens.data.trait_space import TraitSpace
 from infl_ens.data.trait_space_cache import build_or_load_safety_trait_space
+from infl_ens.inflgame.kernels import InfluenceKernel, build_kernel
 from infl_ens.inflgame.router import RouterAgent
+from infl_ens.inflgame.stability import (
+    hyperbolic_stability_threshold,
+    numerical_stability_threshold,
+)
 from infl_ens.utils.resource import gaussian_stability_threshold
 
 
@@ -47,28 +53,126 @@ def make_trait_space(cfg: dict[str, Any], splits: list[BenchmarkSplit]) -> Trait
     return build_or_load_safety_trait_space(cfg, splits)
 
 
+@dataclass(frozen=True)
+class KernelSetup:
+    """Resolved reach, optional explicit kernel, and stability diagnostics.
+
+    :param sigma: Competitive reach used by routing.
+    :type sigma: float
+    :param kernel: Explicit kernel, or ``None`` for the untouched legacy
+        Gaussian path.
+    :type kernel: InfluenceKernel | None
+    :param stability: Serializable threshold diagnostics.
+    :type stability: dict[str, Any]
+    """
+
+    sigma: float
+    kernel: Optional[InfluenceKernel]
+    stability: dict[str, Any]
+
+
+def resolve_kernel_setup(
+    cfg: dict[str, Any], n_agents: int, space: TraitSpace,
+) -> KernelSetup:
+    """Resolve competitive reach and an explicitly configured kernel.
+
+    A configuration without a ``kernel`` block deliberately returns a null
+    kernel so all existing Gaussian call sites, thresholds, and histories
+    retain their current behavior.
+
+    :param cfg: Configuration dictionary.
+    :type cfg: dict
+    :param n_agents: Number of competing agents.
+    :type n_agents: int
+    :param space: Trait space and offline resource distribution.
+    :type space: TraitSpace
+    :returns: Reach, optional kernel, and stability metadata.
+    :rtype: KernelSetup
+    """
+    if "resolved_sigma" in cfg:
+        sigma = float(cfg["resolved_sigma"])
+        kernel_cfg = cfg.get("kernel")
+        kernel = (
+            build_kernel(kernel_cfg, sigma=sigma, dimension=space.L)
+            if kernel_cfg is not None
+            else None
+        )
+        if kernel is not None:
+            kernel.validate_domain(space.coordinate_domain)
+        return KernelSetup(
+            sigma=sigma,
+            kernel=kernel,
+            stability=dict(cfg.get("kernel_stability", {"method": "resolved"})),
+        )
+
+    mode = cfg.get("sigma_mode", "absolute")
+    kernel_cfg = cfg.get("kernel")
+    if mode == "absolute":
+        sigma = float(cfg["sigma"])
+        kernel = (
+            build_kernel(kernel_cfg, sigma=sigma, dimension=space.L)
+            if kernel_cfg is not None
+            else None
+        )
+        if kernel is not None:
+            kernel.validate_domain(space.coordinate_domain)
+        return KernelSetup(
+            sigma=sigma,
+            kernel=kernel,
+            stability={"method": "absolute"},
+        )
+    if mode == "stability_fraction":
+        fraction = float(cfg.get("sigma_fraction", 0.8))
+        if kernel_cfg is None:
+            sigma_star = gaussian_stability_threshold(
+                n_agents, space.grid, space.weights
+            )
+            return KernelSetup(
+                sigma=fraction * max(sigma_star, 1e-3),
+                kernel=None,
+                stability={
+                    "method": "legacy_gaussian_analytic",
+                    "sigma_star": float(sigma_star),
+                },
+            )
+        kind = str(kernel_cfg.get("kind", "gaussian")).lower().replace("-", "_")
+        result = (
+            hyperbolic_stability_threshold(kernel_cfg, space, n_agents)
+            if kind == "hyperbolic"
+            else numerical_stability_threshold(kernel_cfg, space, n_agents)
+        )
+        sigma = fraction * result.sigma_star
+        kernel = build_kernel(kernel_cfg, sigma=sigma, dimension=space.L)
+        kernel.validate_domain(space.coordinate_domain)
+        return KernelSetup(
+            sigma=sigma,
+            kernel=kernel,
+            stability={
+                "method": result.method,
+                "sigma_star": result.sigma_star,
+                "equilibrium": result.equilibrium.tolist(),
+                "equilibrium_residual": result.equilibrium_residual,
+                "eigenvalue_residual": result.eigenvalue_residual,
+            },
+        )
+    raise ValueError(f"unknown sigma_mode {mode!r}")
+
+
 def sigma_from_config(
     cfg: dict[str, Any], n_agents: int, space: TraitSpace,
 ) -> float:
-    """Resolve the competitive reach :math:`\\sigma` from the config.
+    """Resolve the competitive reach while preserving the historical API.
 
     :param cfg: Configuration dictionary.
     :type cfg: dict
     :param n_agents: Number of agents.
     :type n_agents: int
-    :param space: Trait space (for the stability threshold).
+    :param space: Trait space and offline resource distribution.
     :type space: TraitSpace
-    :returns: Scalar :math:`\\sigma`.
+    :returns: Scalar competitive reach.
     :rtype: float
     """
-    mode = cfg.get("sigma_mode", "absolute")
-    if mode == "absolute":
-        return float(cfg["sigma"])
-    if mode == "stability_fraction":
-        frac = float(cfg.get("sigma_fraction", 0.8))
-        s0 = gaussian_stability_threshold(n_agents, space.grid, space.weights)
-        return frac * max(s0, 1e-3)
-    raise ValueError(f"unknown sigma_mode {mode!r}")
+    return resolve_kernel_setup(cfg, n_agents, space).sigma
 
 
 def init_agents(
@@ -124,6 +228,8 @@ def init_agents(
                 pos = x0 + init_noise * rng.standard_normal(space.L)
             else:
                 pos = x0.copy()
+            if cfg.get("kernel") is not None or space.coordinate_domain != "box":
+                pos = space.project_positions(pos)
             agents.append(RouterAgent(name=name, position=pos))
     return agents
 
@@ -202,10 +308,12 @@ def write_resolved_config(cfg: dict[str, Any], path: Path) -> Optional[Path]:
 
 
 __all__ = [
+    "KernelSetup",
     "coords_for_prompts",
     "init_agents",
     "load_splits",
     "make_trait_space",
+    "resolve_kernel_setup",
     "sigma_from_config",
     "write_history",
     "write_resolved_config",

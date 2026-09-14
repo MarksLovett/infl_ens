@@ -215,7 +215,7 @@ def closed_loop_weight_args(
     """
     if loss_reweight == "position_only":
         position_update = "theory_matched"
-    skip = centroid_mode == "expected_pool"
+    skip = centroid_mode == "expected_pool" or position_update == "game_gradient"
     sample_weights = weights_i if loss_reweight == "one_minus_G" else None
     if skip or position_update != "theory_matched":
         return sample_weights, None, skip

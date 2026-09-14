@@ -1,0 +1,10 @@
+includes:
+  - _kernel_game_gradient_base.yaml
+
+kernel:
+  kind: hyperbolic
+  shape: identity
+  delta: 0.1
+
+output_dir: results/seven_axis_kernel_hyperbolic/seed0
+

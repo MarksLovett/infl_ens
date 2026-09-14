@@ -1,8 +1,8 @@
-PWD c:/Users/Mark-Fu-Lab/Dartmouth College Dropbox/Mark Lovett/infl_ens/docs/project_overview
+PWD C:/Users/Mark-Fu-Lab/Dartmouth College Dropbox/Mark Lovett/infl_ens/docs/project_overview
 INPUT c:/texlive/2025/texmf.cnf
 INPUT c:/texlive/2025/texmf-dist/web2c/texmf.cnf
 INPUT c:/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT c:/Users/Mark-Fu-Lab/Dartmouth College Dropbox/Mark Lovett/infl_ens/docs/project_overview/project_overview.tex
+INPUT project_overview.tex
 OUTPUT project_overview.log
 INPUT c:/texlive/2025/texmf-dist/tex/latex/base/article.cls
 INPUT c:/texlive/2025/texmf-dist/tex/latex/base/article.cls

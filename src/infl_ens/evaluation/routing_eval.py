@@ -39,7 +39,8 @@ from infl_ens.inflgame.router.allocation import (
     allocation_weights,
     strategic_routing_weights,
 )
-from infl_ens.training.setup import load_splits, make_trait_space, sigma_from_config
+from infl_ens.inflgame.dynamics import kernel_allocation_weights
+from infl_ens.training.setup import load_splits, make_trait_space, resolve_kernel_setup
 
 DEFAULT_MERGE_ALIASES: dict[str, str] = {
     "merge-jailbreak": "merge-generalist",
@@ -994,15 +995,25 @@ def run_flat_routing_eval(
 
     full_splits = load_splits(cfg)
     space = make_trait_space(cfg, full_splits)
-    sigma = sigma_from_config(cfg, len(agent_names), space)
+    kernel_setup = resolve_kernel_setup(cfg, len(agent_names), space)
+    sigma = kernel_setup.sigma
     positions = load_final_positions(history_path, agent_names)
     coords = np.asarray(space.project(prompts), dtype=float)
     cov = float(sigma) ** 2 * np.eye(space.L)
-    g_clone = allocation_weights(positions, coords, cov)
+    g_clone = (
+        kernel_allocation_weights(positions, coords, kernel_setup.kernel)
+        if kernel_setup.kernel is not None
+        else allocation_weights(positions, coords, cov)
+    )
     g_merge = aggregate_clone_g_to_merge(
         g_clone, agent_names, clone_to_merge, merge_names, merge_name_map,
     )
-    p_clone = strategic_routing_weights(positions, coords, cov)
+    if kernel_setup.kernel is not None:
+        p_clone = g_clone * (1.0 - g_clone)
+        total = p_clone.sum(axis=0, keepdims=True)
+        p_clone = np.divide(p_clone, total, out=g_clone.copy(), where=total > 1e-12)
+    else:
+        p_clone = strategic_routing_weights(positions, coords, cov)
     p_merge = aggregate_clone_g_to_merge(
         p_clone, agent_names, clone_to_merge, merge_names, merge_name_map,
     )

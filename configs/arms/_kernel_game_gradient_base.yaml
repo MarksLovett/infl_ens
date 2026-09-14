@@ -1,0 +1,59 @@
+# Shared online-routing treatment for the four explicit influence kernels.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis_simplex.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: closed_loop
+seed: 0
+policy: proportional
+
+agents:
+  pairs_from_axes: true
+  name_prefix: clone
+
+sigma_mode: stability_fraction
+sigma_fraction: 0.5
+
+closed_loop:
+  init_mode: theory_gradient_paired
+  init_noise: 0.0
+  theory_gradient:
+    learning_rate: 1.0
+    max_step_norm: 0.05
+    n_steps: 8000
+    tol: 1.0e-8
+    min_pairwise: 0.2
+    pairing: nearest
+
+  snap_collapsed_pairs: true
+  collapse_merge_threshold: 0.01
+  routing_mode: soft
+  soft_top_k: 7
+  soft_loss: weighted
+  routing_weight: G
+  loss_reweight: null
+
+  # Explicit kernels default to this mode; spelling it out makes the
+  # experimental treatment and online resource approximation auditable.
+  position_update: game_gradient
+  gradient_resource: observed_batch
+  position_learning_rate: 1.0
+  position_max_step_norm: 0.05
+
+  sft_merge_groups: from_init
+  merge_group_prefix: pair
+  save_per_round: true
+  val_eval:
+    every_n_rounds: 0
+
+eval:
+  partitions: [train, test]
+  rounds: final
+  agents: null
+  max_eval_records: 1000
+  forward_batch_size: 8
+  max_seq_length: null
+  after_training: true
+  baseline_run_dir: results/seven_axis_kernel_comparison_generalist/seed0
+

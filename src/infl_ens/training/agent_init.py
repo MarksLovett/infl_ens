@@ -7,6 +7,7 @@ from typing import Any, Optional, Sequence
 import numpy as np
 
 from infl_ens.data.trait_space import TraitSpace
+from infl_ens.inflgame.kernels import InfluenceKernel
 from infl_ens.inflgame.router import RouterAgent
 
 
@@ -163,7 +164,11 @@ def random_separated_initial_positions(
     for _ in range(n_agents):
         placed = False
         for _ in range(max_tries):
-            cand = rng.uniform(lo, hi)
+            cand = (
+                rng.dirichlet(np.ones(space.L))
+                if space.coordinate_domain == "simplex"
+                else rng.uniform(lo, hi)
+            )
             if not positions:
                 positions.append(cand)
                 placed = True
@@ -196,6 +201,17 @@ def _radial_separated_positions(
     :rtype: numpy.ndarray
     """
     rng = np.random.default_rng(seed)
+    if space.coordinate_domain == "simplex":
+        candidates = np.asarray(space.grid, dtype=float)
+        first = int(rng.integers(0, len(candidates)))
+        selected = [first]
+        min_distance = np.linalg.norm(candidates - candidates[first], axis=1)
+        while len(selected) < n_agents:
+            next_idx = int(np.argmax(min_distance))
+            selected.append(next_idx)
+            distance = np.linalg.norm(candidates - candidates[next_idx], axis=1)
+            min_distance = np.minimum(min_distance, distance)
+        return candidates[np.asarray(selected, dtype=int)].copy()
     lo, hi = trait_box_bounds(space)
     span = float(np.max(hi - lo))
     radius = 0.22 * span
@@ -227,6 +243,8 @@ def run_theory_gradient_positions(
     n_steps: int = 5000,
     tol: float = 1e-8,
     min_pairwise: float = 0.2,
+    kernel: InfluenceKernel | None = None,
+    max_step_norm: float | None = None,
 ) -> dict[str, Any]:
     """Gradient-ascent Nash from a random separated state.
 
@@ -246,6 +264,10 @@ def run_theory_gradient_positions(
     :type tol: float
     :param min_pairwise: Minimum separation at random start.
     :type min_pairwise: float
+    :param kernel: Explicit influence kernel; ``None`` preserves Gaussian.
+    :type kernel: InfluenceKernel | None
+    :param max_step_norm: Optional shared step cap.
+    :type max_step_norm: float | None
     :returns: Dict with ``initial``, ``theory_end``, ``layout``, ``converged``,
         ``n_steps``, ``final_spread``.
     :rtype: dict
@@ -265,6 +287,8 @@ def run_theory_gradient_positions(
         n_steps=n_steps,
         tol=tol,
         seed=seed,
+        kernel=kernel,
+        max_step_norm=max_step_norm,
     )
     theory_end = grad["positions"][-1]
     return {
@@ -311,6 +335,8 @@ def init_agents_at_positions(
         pos = np.asarray(base, dtype=float).copy()
         if init_noise > 0.0:
             pos = pos + init_noise * rng.standard_normal(space.L)
+        if cfg.get("kernel") is not None or space.coordinate_domain != "box":
+            pos = space.project_positions(pos)
         agents.append(RouterAgent(name=entry["name"], position=pos))
     return agents
 
@@ -389,6 +415,8 @@ def init_agents_mean_noise(
             pos = x0 + init_noise * rng.standard_normal(space.L)
         else:
             pos = x0.copy()
+        if cfg.get("kernel") is not None or space.coordinate_domain != "box":
+            pos = space.project_positions(pos)
         agents.append(RouterAgent(name=entry["name"], position=pos))
     return agents
 
@@ -401,6 +429,7 @@ def init_agents_theory_gradient(
     seed: int,
     init_noise: float = 0.0,
     theory_cfg: Optional[dict[str, Any]] = None,
+    kernel: InfluenceKernel | None = None,
 ) -> tuple[list[RouterAgent], dict[str, Any]]:
     """Initialize SFT agents at gradient-ascent theory positions.
 
@@ -420,6 +449,8 @@ def init_agents_theory_gradient(
     :type init_noise: float
     :param theory_cfg: Optional ``closed_loop.theory_gradient`` block.
     :type theory_cfg: dict | None
+    :param kernel: Explicit influence kernel; ``None`` preserves Gaussian.
+    :type kernel: InfluenceKernel | None
     :returns: Agents and theory metadata (for logging / history).
     :rtype: tuple[list[RouterAgent], dict]
     """
@@ -434,6 +465,10 @@ def init_agents_theory_gradient(
         n_steps=int(tc.get("n_steps", 5000)),
         tol=float(tc.get("tol", 1e-8)),
         min_pairwise=float(tc.get("min_pairwise", 0.2)),
+        kernel=kernel,
+        max_step_norm=(
+            float(tc["max_step_norm"]) if tc.get("max_step_norm") is not None else None
+        ),
     )
     agents = init_agents_at_positions(
         cfg, meta["theory_end"], space, seed=seed, init_noise=init_noise,
@@ -490,6 +525,7 @@ def init_agents_theory_gradient_paired(
     init_noise: float = 0.0,
     theory_cfg: Optional[dict[str, Any]] = None,
     skip_initial_theory: bool = False,
+    kernel: InfluenceKernel | None = None,
 ) -> tuple[list[RouterAgent], dict[str, Any]]:
     """Theory init with co-located harm pairs, then a paired theory refinement step.
 
@@ -516,6 +552,8 @@ def init_agents_theory_gradient_paired(
     :type theory_cfg: dict | None
     :param skip_initial_theory: If ``True``, skip the first theory pass.
     :type skip_initial_theory: bool
+    :param kernel: Explicit influence kernel; ``None`` preserves Gaussian.
+    :type kernel: InfluenceKernel | None
     :returns: Agents and theory metadata.
     :rtype: tuple[list[RouterAgent], dict]
     """
@@ -532,6 +570,9 @@ def init_agents_theory_gradient_paired(
     tol = float(tc.get("tol", 1e-8))
     min_pairwise = float(tc.get("min_pairwise", 0.2))
     pairing = str(tc.get("pairing", "harm_adjacent"))
+    max_step_norm = (
+        float(tc["max_step_norm"]) if tc.get("max_step_norm") is not None else None
+    )
 
     if skip_initial_theory:
         p0 = random_separated_initial_positions(
@@ -560,6 +601,8 @@ def init_agents_theory_gradient_paired(
             n_steps=n_steps,
             tol=tol,
             min_pairwise=min_pairwise,
+            kernel=kernel,
+            max_step_norm=max_step_norm,
         )
         paired_start = co_locate_theory_pairs(
             meta0["theory_end"], names, pairing=pairing,
@@ -573,6 +616,8 @@ def init_agents_theory_gradient_paired(
         n_steps=n_steps,
         tol=tol,
         seed=seed,
+        kernel=kernel,
+        max_step_norm=max_step_norm,
     )
     second_pass_end = np.asarray(grad1["positions"][-1], dtype=float)
     theory_end = co_locate_theory_pairs(
@@ -635,5 +680,3 @@ def init_agents_theory_gradient_paired(
         cfg, theory_end, space, seed=seed, init_noise=init_noise,
     )
     return agents, meta
-
-

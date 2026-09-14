@@ -1,10 +1,10 @@
 """The layered arm configs must keep the trait-space cache fingerprint.
 
-The GPU host holds a 28k-prompt encode under
-``data/trait_space_cache/3b42c68a8dd334c5``.  That fingerprint hashes the
-resolved ``benchmarks`` list and ``trait_space`` block, so any edit to the
-shared fragments that changes either forces a multi-hour re-encode.  This
-test pins the contract for every arm of the experiment.
+The GPU host holds the established box-coordinate encode under
+``data/trait_space_cache/3b42c68a8dd334c5``. The explicit kernel comparison
+intentionally has a separate simplex identity. Both fingerprints hash the
+resolved ``benchmarks`` list and ``trait_space`` block, so this module pins
+each cache family independently.
 """
 
 from __future__ import annotations
@@ -17,7 +17,16 @@ from infl_ens.config import load_config
 
 ROOT = Path(__file__).resolve().parents[1]
 ARMS_DIR = ROOT / "configs" / "arms"
-ARMS = sorted(p for p in ARMS_DIR.glob("*.yaml") if not p.name.startswith("_"))
+ALL_ARMS = sorted(p for p in ARMS_DIR.glob("*.yaml") if not p.name.startswith("_"))
+SIMPLEX_ARM_NAMES = {
+    "soft_game_gradient_gaussian",
+    "soft_game_gradient_hyperbolic",
+    "soft_game_gradient_dirichlet",
+    "soft_game_gradient_product_beta",
+    "generalist_kernel_comparison",
+}
+ARMS = [path for path in ALL_ARMS if path.stem not in SIMPLEX_ARM_NAMES]
+SIMPLEX_ARMS = [ARMS_DIR / f"{name}.yaml" for name in sorted(SIMPLEX_ARM_NAMES)]
 # The five arms of the canonical routing design table (configs/experiments/
 # seven_axis_3arm.yaml). Named explicitly rather than globbed: configs/arms/ now
 # also holds baseline_replay generalists (no closed_loop block), per-data-seed
@@ -86,7 +95,7 @@ def test_all_arms_are_present() -> None:
     replicates, the per-base-model variants and the pair-count ablation, which
     are separate experiments added after this guard was written.
     """
-    names = {p.stem for p in ARMS}
+    names = {p.stem for p in ALL_ARMS}
     canonical = set(DESIGN_TABLE_ARMS) | {"generalist_replay"}
     assert canonical <= names, sorted(canonical - names)
 
@@ -106,6 +115,36 @@ def test_arm_resolves_to_the_cached_fingerprint(path: Path) -> None:
 def test_encoder_block_agrees_with_trait_space_encoder(path: Path) -> None:
     cfg = load_config(path)
     assert cfg["encoder"]["model_name"] == cfg["trait_space"]["encoder"]
+
+
+@pytest.mark.parametrize("path", SIMPLEX_ARMS, ids=[p.stem for p in SIMPLEX_ARMS])
+def test_kernel_comparison_uses_one_distinct_simplex_cache(path: Path) -> None:
+    """New kernel arms share one intentional re-encode without moving legacy cache."""
+    from infl_ens.data.trait_space_cache import trait_space_fingerprint
+
+    cfg = load_config(path)
+    assert cfg["trait_space"]["coordinate_domain"] == "simplex"
+    assert cfg["trait_space"]["simplex_resolution"] == 14
+    assert trait_space_fingerprint(cfg) == "9a7070ef0eca7ae0"
+
+
+def test_explicit_kernel_arms_share_the_game_gradient_treatment() -> None:
+    """Only the influence family and output path vary across kernel arms."""
+    specialist_paths = [
+        path for path in SIMPLEX_ARMS
+        if path.stem != "generalist_kernel_comparison"
+    ]
+    resolved = [load_config(path) for path in specialist_paths]
+    reference = dict(resolved[0])
+    reference.pop("kernel")
+    reference.pop("output_dir")
+    for cfg in resolved:
+        assert cfg["closed_loop"]["position_update"] == "game_gradient"
+        assert cfg["closed_loop"]["gradient_resource"] == "observed_batch"
+        common = dict(cfg)
+        common.pop("kernel")
+        common.pop("output_dir")
+        assert common == reference
 
 
 def test_specialist_arms_differ_only_in_routing_and_output() -> None:

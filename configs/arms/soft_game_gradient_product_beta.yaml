@@ -1,0 +1,8 @@
+includes:
+  - _kernel_game_gradient_base.yaml
+
+kernel:
+  kind: product_beta
+
+output_dir: results/seven_axis_kernel_product_beta/seed0
+

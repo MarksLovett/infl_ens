@@ -68,6 +68,16 @@ ml = [
     "scipy>=1.11",
 ]
 
+# Official StrongREJECT / HarmBench graders for the behavioral stage.
+# NOT on PyPI -- git-only, hence the PEP 508 direct reference. Without it
+# behavioral_graders records package_version "unavailable" and the two
+# official safety graders silently degrade while still reporting as official.
+# `strongreject_finetuned` pulls a fine-tuned Gemma 2B judge from HuggingFace
+# and needs HF_TOKEN, because Gemma is a gated repo.
+behavioral = [
+    "strong-reject @ git+https://github.com/dsbowen/strong_reject.git@main",
+]
+
 # Plotting (``python -m infl_ens.figures``) is kept separate so headless
 # CI installs stay slim.
 figures = [
@@ -97,7 +107,7 @@ test = [
 # Convenience "everything" extra — installs the full development
 # environment. Listed last so the cross-extra references above resolve.
 dev = [
-    "infl_ens[ml,figures,configs,docs,test]",
+    "infl_ens[ml,figures,configs,docs,test,behavioral]",
     "ruff>=0.4",
     "mypy>=1.10",
 ]
@@ -121,6 +131,14 @@ infl-ens-figures = "infl_ens.figures.__main__:main"
 # ---------------------------------------------------------------------------
 # Hatchling: src-layout configuration
 # ---------------------------------------------------------------------------
+# The `behavioral` extra pins strong-reject by git URL (it is not on PyPI).
+# Hatchling refuses PEP 508 direct references in optional-dependencies unless
+# this is set, and refuses at METADATA GENERATION time -- so without it even
+# `pip install -e .` fails, not just a build. The package is not published to
+# PyPI (see project.urls), so allowing direct references costs nothing.
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 # Ship only the importable package in the wheel.
 packages = ["src/infl_ens"]

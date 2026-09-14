@@ -16,13 +16,13 @@ Layout
 
    configs/
    ├── encoders/     qwen3_embedding_8b_awq.yaml (default), bge_large_en_v1_5.yaml (template)
-   ├── trait_space/  seven_axis.yaml           geometry knobs; includes the encoder preset
+   ├── trait_space/  seven_axis.yaml, seven_axis_simplex.yaml
    ├── data/         seven_axis_safety.yaml    the seven benchmarks + the train/val/test split
    ├── models/       qwen2_5_1_5b_instruct.yaml base LM + LoRA hyperparameters (sft block)
    ├── arms/         _closed_loop_base.yaml    everything the specialist arms share
    │                 soft_full_pairs.yaml, soft_topk3_pairs.yaml, topk3_unit_pairs.yaml,
    │                 hard_topk3_pairs.yaml, hard_pairs_matched.yaml, generalist_replay.yaml
-   └── experiments/  seven_axis_3arm.yaml      arms, stages, evaluation window, figures, smoke
+   └── experiments/  seven_axis_3arm.yaml, seven_axis_kernel_comparison.yaml
 
 An arm file is short because it only says what differs:
 
@@ -52,6 +52,12 @@ Changing an experiment
   ``position_update``, ...; see
   :data:`infl_ens.config.CLOSED_LOOP_KEYS`), then list it under ``arms:``
   in the experiment file.
+- **A kernel game**: set top-level ``kernel.kind`` to ``gaussian``,
+  ``hyperbolic``, ``dirichlet``, or ``product_beta``. Explicit kernels
+  default to ``closed_loop.position_update: game_gradient``. The Dirichlet
+  family is mode-parameterized and therefore requires
+  ``trait_space.coordinate_domain: simplex``; the comparison experiment
+  uses that same seven-dimensional simplex for all four treatments.
 - **A different base model**: add ``configs/models/<name>.yaml`` with an
   ``sft`` block and include it instead of the Qwen2.5 one. A closed-loop
   config may still override individual fields under ``closed_loop.sft``.
@@ -65,10 +71,11 @@ The trait-space cache contract
 The resolved ``benchmarks`` list and ``trait_space`` block are hashed into
 the trait-space cache fingerprint
 (:func:`infl_ens.data.trait_space_cache.trait_space_fingerprint`). The
-GPU host holds the 28k-prompt encode under
-``data/trait_space_cache/3b42c68a8dd334c5``; every arm in
-``configs/arms/`` resolves to exactly those blocks, and
-``tests/test_config_fingerprint.py`` fails if an edit changes that.
+GPU host holds the established box-coordinate encode under
+``data/trait_space_cache/3b42c68a8dd334c5``. Existing arms still resolve
+to exactly that fingerprint. The new simplex kernel arms deliberately use
+a separate fingerprint, ``9a7070ef0eca7ae0``; the fingerprint test locks
+both families independently.
 
 Two keys are deliberately *outside* the fingerprint:
 
@@ -115,6 +122,20 @@ Resolved configs
 
 Every run writes ``<output_dir>/resolved_config.yaml``: the flattened
 config with ``agents`` and ``sft_merge_groups`` expanded to literal lists
-and the merged ``sft`` block. The evaluation, routing and figure stages
-read that file, never the arm YAML, so they always see what the run
-actually used.
+and the merged ``sft`` block. Kernel runs also record ``resolved_sigma``
+and the matched ``kernel_stability`` diagnostics, so evaluation rebuilds
+the trained router without repeating the root solve. The evaluation,
+routing and figure stages read that file, never the arm YAML, so they
+always see what the run actually used.
+
+Offline theory versus online routing
+------------------------------------
+
+The difference between initialization and learning is intentional. Theory
+initialization and :math:`\sigma^*` matching use the complete calibrated
+resource measure ``TraitSpace.grid`` with its nonuniform KDE
+``TraitSpace.weights``. The default online ``game_gradient`` update instead
+uses the current observed training batch with uniform empirical mass. It
+does not inspect validation/test prompts or the offline KDE. Set
+``closed_loop.gradient_resource: offline_kde`` only for the explicit oracle
+diagnostic.

@@ -119,7 +119,7 @@ def fig_sigma_table() -> None:
              "comparable across splits. Shading is min-max within a column "
              "only.\nCapture is (router $-$ pooled)/(oracle $-$ pooled): the "
              "share of the available headroom the router actually took. It "
-             "peaks at\n$\\sigma/\\hat\sigma_0^*=0.20$ and collapses at $0.70$, "
+             "peaks at\n$\\sigma/\\hat\\sigma_0^*=0.20$ and collapses at $0.70$, "
              "where the specialists stop separating.",
              fontsize=5.6, color=INK_2, va="top")
 
@@ -226,7 +226,7 @@ def fig_theory_drift() -> None:
     fig.text(0.005, 0.255,
              "Pairs are Hungarian-matched before differencing, because the two "
              "solves index pairs independently. The space has diagonal "
-             "$\sqrt{7}\approx2.65$.\nEvery run was initialised from the "
+             "$\\sqrt{7}\\approx2.65$.\nEvery run was initialised from the "
              "approximate solve; the empirical-$B$ solve is offline comparison "
              "only. Shaded columns are min-max within the column.",
              fontsize=5.6, color=INK_2, va="top")

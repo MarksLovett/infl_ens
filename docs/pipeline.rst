@@ -112,8 +112,9 @@ Environment variables: ``REMOTE`` (default ``mslovett@doob.dartmouth.edu``),
 ``REMOTE_REPO``, ``EXPERIMENT``, ``GPU``, ``STAGES``, ``ONLY_ARM``,
 ``FORCE=1``, ``SKIP_SYNC=1``, ``FORCE_GPU=1``, ``PY``.
 
-The first log lines of a real launch should show the trait-space cache
-being **loaded**, not built: the layered configs resolve to the same
-``benchmarks`` + ``trait_space`` blocks as the cached encode
-(fingerprint ``3b42c68a8dd334c5``), which ``tests/test_config_fingerprint.py``
-guards.
+For established box-domain experiments, the first log lines of a real
+launch should show the trait-space cache being **loaded**, not built: their
+layered configs retain fingerprint ``3b42c68a8dd334c5``. The explicit
+kernel comparison deliberately uses a separate simplex cache fingerprint,
+``9a7070ef0eca7ae0``, and will build it once if the GPU host does not yet
+have it. ``tests/test_config_fingerprint.py`` guards both identities.

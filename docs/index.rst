@@ -10,8 +10,11 @@ the proportional-allocation rule
 
    G_i(\mathbf{x}, b) = \frac{f_i(x_i, b)}{\sum_{j=1}^{N} f_j(x_j, b)}
 
-with a multivariate-Gaussian influence kernel on a trait space learned
-from labelled safety benchmarks.
+with a configurable log-concave influence kernel on a trait space learned
+from labelled safety benchmarks. Explicit Gaussian, smoothed hyperbolic,
+mode-parameterized Dirichlet, and product-Beta games share one exact
+kernel-score gradient implementation; the historical Gaussian path remains
+available unchanged when no ``kernel`` block is configured.
 
 This site is built from the package source on every push to ``main`` by
 ``.github/workflows/docs.yml`` and published to GitHub Pages.

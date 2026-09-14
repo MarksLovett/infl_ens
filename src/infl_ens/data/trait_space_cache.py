@@ -24,7 +24,7 @@ from infl_ens.data.benchmarks.safety_trait_space import (
 )
 from infl_ens.data.encoders import HuggingFaceEncoder, make_encoder
 from infl_ens.data.trait_normalize import AxisQuantileMap, QuantileNormalizer
-from infl_ens.data.trait_space import TraitSpace
+from infl_ens.data.trait_space import TraitSpace, simplex_projector, softmax_to_simplex
 
 _CACHE_VERSION = 3
 _MANIFEST_NAME = "manifest.json"
@@ -239,6 +239,9 @@ def save_safety_trait_space_cache(
         "axes": [_axis_to_manifest(ax) for ax in bundle.axes],
         "quantile_knots": int(bundle.normalizer.n_knots),
         "normalizer_fit_n": int(bundle.normalizer.fit_n),
+        "coordinate_domain": bundle.space.coordinate_domain,
+        "simplex_temperature": float(bundle.space.simplex_temperature),
+        "simplex_resolution": bundle.space.simplex_resolution,
     }
     array_payload: dict[str, np.ndarray] = {
         "grid": np.asarray(bundle.space.grid, dtype=float),
@@ -321,12 +324,19 @@ def load_safety_trait_space_cache(
         coordinate_stretch_gamma=float(manifest["coordinate_stretch_gamma"]),
         coordinate_stretch_gammas=manifest.get("coordinate_stretch_gammas"),
     )
+    coordinate_domain = str(manifest.get("coordinate_domain", "box"))
+    simplex_temperature = float(manifest.get("simplex_temperature", 1.0))
+    if coordinate_domain == "simplex":
+        project = simplex_projector(project, temperature=simplex_temperature)
     axis_labels = tuple(manifest.get("axis_labels") or tuple(ax.name for ax in axes))
     return TraitSpace(
         grid=grid,
         weights=weights,
         project=project,
         axis_labels=axis_labels,
+        coordinate_domain=coordinate_domain,
+        simplex_temperature=simplex_temperature,
+        simplex_resolution=manifest.get("simplex_resolution"),
     )
 
 
@@ -349,6 +359,9 @@ def _trait_space_build_kwargs(cfg: dict[str, Any]) -> dict[str, Any]:
         "coordinate_stretch_gamma": float(ts_cfg.get("coordinate_stretch_gamma", 1.0)),
         "coordinate_stretch_gammas": ts_cfg.get("coordinate_stretch_gammas"),
         "quantile_knots": int(ts_cfg.get("quantile_knots", 1001)),
+        "coordinate_domain": str(ts_cfg.get("coordinate_domain", "box")),
+        "simplex_temperature": float(ts_cfg.get("simplex_temperature", 1.0)),
+        "simplex_resolution": int(ts_cfg.get("simplex_resolution", 14)),
     }
 
 
@@ -420,6 +433,8 @@ class CachedTraitArtifacts:
     normalizer: QuantileNormalizer
     gammas: np.ndarray
     axis_labels: tuple[str, ...]
+    coordinate_domain: str = "box"
+    simplex_temperature: float = 1.0
 
 
 def artifacts_from_bundle(bundle: SafetyTraitSpaceBundle) -> CachedTraitArtifacts:
@@ -447,6 +462,8 @@ def artifacts_from_bundle(bundle: SafetyTraitSpaceBundle) -> CachedTraitArtifact
         axis_labels=tuple(
             bundle.space.axis_labels or tuple(a.name for a in bundle.axes)
         ),
+        coordinate_domain=bundle.space.coordinate_domain,
+        simplex_temperature=bundle.space.simplex_temperature,
     )
 
 
@@ -499,6 +516,8 @@ def load_cache_artifacts(cfg: dict[str, Any]) -> CachedTraitArtifacts:
         normalizer=normalizer,
         gammas=gammas,
         axis_labels=tuple(manifest.get("axis_labels") or names),
+        coordinate_domain=str(manifest.get("coordinate_domain", "box")),
+        simplex_temperature=float(manifest.get("simplex_temperature", 1.0)),
     )
 
 
@@ -530,6 +549,9 @@ def coordinate_chain_from_cache(
         x = normalizer.transform(x)
         if not np.all(gammas == 1.0):
             x = 1.0 - np.power(1.0 - np.clip(x, 0.0, 1.0), gammas)
-        return np.clip(x, 0.0, 1.0)
+        x = np.clip(x, 0.0, 1.0)
+        if artifacts.coordinate_domain == "simplex":
+            x = softmax_to_simplex(x, artifacts.simplex_temperature)
+        return x
 
     return chain

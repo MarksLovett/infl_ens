@@ -11,8 +11,9 @@ from typing import Any, Optional, Sequence
 
 import numpy as np
 
-from infl_ens.inflgame.router import RouterAgent
 from infl_ens.data.trait_space import TraitSpace
+from infl_ens.inflgame.kernels import InfluenceKernel
+from infl_ens.inflgame.router import RouterAgent
 from infl_ens.training.router_training import (
     RouterTrainingConfig,
     train_router_positions,
@@ -92,6 +93,8 @@ def run_gradient_ascent_theory(
     n_steps: int = 5000,
     tol: float = 1e-8,
     seed: int = 0,
+    kernel: InfluenceKernel | None = None,
+    max_step_norm: float | None = None,
 ) -> dict[str, Any]:
     """Grid gradient-ascent Nash solver from the same initial state (fix 4).
 
@@ -111,6 +114,10 @@ def run_gradient_ascent_theory(
     :type tol: float
     :param seed: RNG seed.
     :type seed: int
+    :param kernel: Explicit kernel; ``None`` retains the legacy Gaussian.
+    :type kernel: InfluenceKernel | None
+    :param max_step_norm: Optional shared per-agent step cap.
+    :type max_step_norm: float | None
     :returns: Dict with trajectory, convergence, layout.
     :rtype: dict
     """
@@ -127,6 +134,8 @@ def run_gradient_ascent_theory(
             n_steps=n_steps,
             tol=tol,
             clip_to_box=True,
+            kernel=kernel,
+            max_step_norm=max_step_norm,
         ),
         seed=seed,
     )

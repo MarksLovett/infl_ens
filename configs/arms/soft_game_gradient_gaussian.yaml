@@ -1,0 +1,9 @@
+includes:
+  - _kernel_game_gradient_base.yaml
+
+kernel:
+  kind: gaussian
+  shape: identity
+
+output_dir: results/seven_axis_kernel_gaussian/seed0
+

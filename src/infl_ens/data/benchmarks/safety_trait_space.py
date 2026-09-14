@@ -47,7 +47,14 @@ import numpy as np
 
 from infl_ens.data.benchmarks.base import BenchmarkSplit
 from infl_ens.data.trait_normalize import QuantileNormalizer, fit_quantile_normalizer
-from infl_ens.data.trait_space import TraitSpace, _kde_on_grid
+from infl_ens.data.trait_space import (
+    TraitSpace,
+    _kde_on_grid,
+    positive_simplex_grid,
+    simplex_projector,
+    softmax_to_simplex,
+    stable_kde_on_grid,
+)
 
 
 @dataclass(frozen=True)
@@ -765,6 +772,9 @@ def build_safety_trait_space_bundle(
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
     quantile_knots: int = 1001,
+    coordinate_domain: str = "box",
+    simplex_temperature: float = 1.0,
+    simplex_resolution: int = 14,
 ) -> SafetyTraitSpaceBundle:
     """Construct a multi-axis :class:`TraitSpace` from labelled benchmarks.
 
@@ -822,6 +832,15 @@ def build_safety_trait_space_bundle(
     :param quantile_knots: Quantile-grid size for the always-on per-axis
         empirical-CDF normalizer.
     :type quantile_knots: int
+    :param coordinate_domain: ``"box"`` for the legacy cube or ``"simplex"``
+        for native compositional routing.
+    :type coordinate_domain: str
+    :param simplex_temperature: Softmax temperature used to transform the
+        calibrated seven-axis scores when ``coordinate_domain="simplex"``.
+    :type simplex_temperature: float
+    :param simplex_resolution: Positive-composition grid denominator for a
+        simplex trait space.
+    :type simplex_resolution: int
     :returns: Trait space plus learned-axis artifacts for caching.
     :rtype: SafetyTraitSpaceBundle
     :raises ValueError: If ``splits`` is empty.
@@ -915,21 +934,40 @@ def build_safety_trait_space_bundle(
     )
     coords = _finalize_coordinates(pre, normalizer, gammas)
 
-    grid_axes = [np.linspace(0.0, 1.0, n_grid) for _ in range(L)]
-    mesh = np.meshgrid(*grid_axes, indexing="ij")
-    grid = np.stack([m.ravel() for m in mesh], axis=1)
+    if coordinate_domain == "simplex":
+        coords = softmax_to_simplex(coords, simplex_temperature)
+        project = simplex_projector(project, temperature=simplex_temperature)
+        grid = positive_simplex_grid(L, simplex_resolution)
+    elif coordinate_domain == "box":
+        grid_axes = [np.linspace(0.0, 1.0, n_grid) for _ in range(L)]
+        mesh = np.meshgrid(*grid_axes, indexing="ij")
+        grid = np.stack([m.ravel() for m in mesh], axis=1)
+    else:
+        raise ValueError(
+            "coordinate_domain must be 'box' or 'simplex', "
+            f"got {coordinate_domain!r}"
+        )
 
     if kde_bandwidth is None:
         n = coords.shape[0]
         kde_bandwidth = float(n ** (-1.0 / (L + 4)))
 
-    weights = _kde_on_grid(coords, grid, float(kde_bandwidth))
+    weights = (
+        stable_kde_on_grid(coords, grid, float(kde_bandwidth))
+        if coordinate_domain == "simplex"
+        else _kde_on_grid(coords, grid, float(kde_bandwidth))
+    )
 
     space = TraitSpace(
         grid=grid,
         weights=weights,
         project=project,
         axis_labels=axis_labels,
+        coordinate_domain=coordinate_domain,
+        simplex_temperature=float(simplex_temperature),
+        simplex_resolution=(
+            int(simplex_resolution) if coordinate_domain == "simplex" else None
+        ),
     )
     return SafetyTraitSpaceBundle(
         space=space,
@@ -954,6 +992,9 @@ def build_safety_trait_space(
     coordinate_stretch_gamma: float = 1.0,
     coordinate_stretch_gammas: Optional[dict[str, float]] = None,
     quantile_knots: int = 1001,
+    coordinate_domain: str = "box",
+    simplex_temperature: float = 1.0,
+    simplex_resolution: int = 14,
 ) -> TraitSpace:
     """Construct a multi-axis :class:`TraitSpace` from labelled benchmarks.
 
@@ -984,6 +1025,12 @@ def build_safety_trait_space(
     :type coordinate_stretch_gammas: dict[str, float] | None
     :param quantile_knots: Quantile-grid size for the final normalizer.
     :type quantile_knots: int
+    :param coordinate_domain: ``"box"`` or ``"simplex"``.
+    :type coordinate_domain: str
+    :param simplex_temperature: Softmax temperature for simplex coordinates.
+    :type simplex_temperature: float
+    :param simplex_resolution: Positive-composition grid denominator.
+    :type simplex_resolution: int
     :returns: A :class:`TraitSpace` of dimension ``L = len(splits)``.
     :rtype: TraitSpace
     :raises ValueError: If ``splits`` is empty.
@@ -1001,4 +1048,7 @@ def build_safety_trait_space(
         coordinate_stretch_gamma=coordinate_stretch_gamma,
         coordinate_stretch_gammas=coordinate_stretch_gammas,
         quantile_knots=quantile_knots,
+        coordinate_domain=coordinate_domain,
+        simplex_temperature=simplex_temperature,
+        simplex_resolution=simplex_resolution,
     ).space

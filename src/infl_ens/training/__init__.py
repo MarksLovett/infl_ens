@@ -71,15 +71,17 @@ four orthogonal "rule" knobs in the YAML config:
   or ``'soft'`` (assign each query to its top-``soft_top_k`` agents;
   ``closed_loop.soft_loss`` = ``'weighted'`` share-weighted loss or
   ``'unit'`` unit-weight "top-k winners").
-- ``closed_loop.position_update``: centroid mass of the position step.
-  ``'theory_matched'`` (**default**) makes the expected trait-space drift
+- ``closed_loop.position_update``: position dynamics. For configurations
+  without an explicit ``kernel`` block, ``'theory_matched'`` remains the
+  unchanged legacy Gaussian default and makes expected trait-space drift
   proportional to the strategic gradient coefficient :math:`G_i(1-G_i)`
   in every routing mode — ``(1 - G_i)`` under hard canonical routing,
   uniform under strategic routing, and the dense :math:`G_i(1-G_i)` mass
   over the whole batch under soft routing
   (:func:`infl_ens.inflgame.router.allocation.matched_centroid_mass`),
   independent of ``soft_top_k``. ``'naive'`` keeps the historical
-  uninstrumented centroid as an ablation arm.
+  uninstrumented centroid as an ablation arm. Every explicit kernel defaults
+  to ``'game_gradient'``, the exact kernel-score gradient described below.
 - ``closed_loop.loss_reweight``: loss-side weighting under hard routing —
   ``null`` (unit) or ``'one_minus_G'`` (:math:`w_m = 1 - G_i(\\mathbf{x},
   b_m)` on the SFT loss). ``'position_only'`` is a deprecated alias for
@@ -88,6 +90,27 @@ four orthogonal "rule" knobs in the YAML config:
   per-round evaluation stage of the pipeline scores.
 - ``closed_loop.position_step``: adaptive EMA blend for trait-space
   position updates (:mod:`infl_ens.training.position_step`).
+
+Exact kernel game gradient
+--------------------------
+
+For every explicit kernel, the online router update is
+
+.. math::
+
+   g_i = \\sum_m w_m G_i(b_m)(1-G_i(b_m))
+         \\nabla_{x_i}\\log f_\\kappa(x_i,b_m).
+
+The default ``gradient_resource: observed_batch`` uses only the current
+training batch and gives its examples uniform empirical mass. This models
+the online agent's incomplete view of the resource landscape. In contrast,
+theory initialization and numerical :math:`\\sigma^*` matching deliberately
+use the complete nonuniform ``TraitSpace.grid`` / ``TraitSpace.weights`` KDE.
+``gradient_resource: offline_kde`` exposes that full distribution only as
+an oracle diagnostic. The step is projected to the active domain (including
+the simplex tangent space), and one population-wide scalar cap preserves the
+joint game-gradient direction. Soft top-k controls LoRA SFT assignment only;
+it does not truncate the position gradient.
 
 The matrix of gradient-aligned modes (``position_update: theory_matched``
 unless stated) is:

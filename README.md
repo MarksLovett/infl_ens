@@ -119,5 +119,5 @@ added, moved or removed (AGENTS.md rule 10).
 
 ## References
 
-Lovett, M. & Fu, X. (2024). *Learning Dynamics of the Influencer's Game
+Lovett, M. & Fu, X. *Learning Dynamics of the Influencer's Game
 in Resource Landscapes.*

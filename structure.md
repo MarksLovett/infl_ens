@@ -49,6 +49,12 @@ infl_ens/
 │   │       └── safety_trait_space.py     multi-axis learned benchmark trait-space builder
 │   ├── inflgame/
 │   │   ├── __init__.py
+│   │   ├── dynamics.py                     kernel-agnostic allocation and projected exact game-gradient steps
+│   │   ├── stability.py                    symmetric equilibria and numerical first-bifurcation matching
+│   │   ├── kernels/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py                     InfluenceKernel interface + configuration factory
+│   │   │   └── families.py                 Gaussian, hyperbolic, mode-Dirichlet, product-Beta kernels
 │   │   └── router/
 │   │       ├── __init__.py
 │   │       ├── agents.py                 RouterAgent
@@ -121,13 +127,15 @@ infl_ens/
 │   │   ├── qwen3_embedding_8b_awq.yaml   default trait-space encoder (cache identity + HF kwargs)
 │   │   └── bge_large_en_v1_5.yaml        template for another Hugging Face encoder
 │   ├── trait_space/
-│   │   └── seven_axis.yaml               geometry knobs; includes the encoder preset
+│   │   ├── seven_axis.yaml               geometry knobs; includes the encoder preset
+│   │   └── seven_axis_simplex.yaml       seven-axis native-simplex coordinates and KDE grid
 │   ├── data/
 │   │   └── seven_axis_safety.yaml        the seven benchmarks + the 70/10/20 split
 │   ├── models/
 │   │   └── qwen2_5_1_5b_instruct.yaml    base LM + LoRA hyperparameters (sft block)
 │   ├── arms/
-│   │   ├── _closed_loop_base.yaml        everything the specialist arms share
+│   │   ├── _closed_loop_base.yaml        everything the legacy specialist arms share
+│   │   ├── _kernel_game_gradient_base.yaml shared simplex, theory init, and online exact-gradient treatment
 │   │   ├── _theory_eq_init_7pair.yaml    shared converged seven-pair equilibrium (init_mode: given)
 │   │   ├── soft_full_pairs.yaml          soft, k = 7, share-weighted
 │   │   ├── soft_topk3_pairs.yaml         soft, k = 3, share-weighted
@@ -147,10 +155,13 @@ infl_ens/
 │   │   ├── theory_eq_expert_choice_seed0.yaml       Expert-Choice allocation, at the equilibrium
 │   │   ├── ewora_dense.yaml              dense learned seven-component LoRA mixture
 │   │   ├── trait_gated_lora_moe.yaml     trait-gated top-3 LoRA mixture
-│   │   └── domain_adapter_merges.yaml    router-free validation-selected adapter merges
+│   │   ├── domain_adapter_merges.yaml    router-free validation-selected adapter merges
+│   │   ├── soft_game_gradient_{gaussian,hyperbolic,dirichlet,product_beta}.yaml explicit kernel arms
+│   │   └── generalist_kernel_comparison.yaml pooled control replaying the Gaussian treatment batches
 │   └── experiments/
 │       ├── seven_axis_3arm.yaml          the canonical experiment: arms, stages, eval window, figures, smoke
-│       └── seven_axis_baselines.yaml     causal, routing, learned-mixture, and deployment baselines
+│       ├── seven_axis_baselines.yaml     causal, routing, learned-mixture, and deployment baselines
+│       └── seven_axis_kernel_comparison.yaml four-kernel simplex comparison plus pooled control
 ├── scripts/
 │   ├── run_on_doob.sh                    the only shell script: sync + tmux launch + status + pull
 │   └── figures/seven_axis_safety_resource_separated.png   included by docs/project_overview/project_overview.tex
@@ -175,7 +186,7 @@ infl_ens/
 
 | File | Role |
 |---|---|
-| `config.py` | `load_config` (includes → overrides → validation), key tables (`TOP_LEVEL_KEYS`, `CLOSED_LOOP_KEYS`, ...), `resolve_sft_block`, `ConfigError` |
+| `config.py` | `load_config` (includes → overrides → validation), key tables (`TOP_LEVEL_KEYS`, `KERNEL_KEYS`, `CLOSED_LOOP_KEYS`, ...), `resolve_sft_block`, `ConfigError` |
 | `experiment.py` | `load_experiment` → `ExperimentConfig` (`arms`, `stages`, `eval`, `figures`, `smoke`), `ArmSpec` |
 
 ## `src/infl_ens/data/`
@@ -183,7 +194,7 @@ infl_ens/
 | File | Role |
 |---|---|
 | `encoders.py` | `HuggingFaceEncoder` (AutoModel + mean/cls/last_token pooling, L2 norm); `make_encoder(cfg)` / `encoder_kwargs_from_config` read `trait_space.encoder` + the `encoder` block |
-| `trait_space.py` | `TraitSpace` (grid, weights, project), `build_trait_space` (anchor/PCA), `position_from_corpus` |
+| `trait_space.py` | `TraitSpace` (box/simplex domain, grid, weights, projection), `softmax_to_simplex`, `positive_simplex_grid`, `build_trait_space`, `position_from_corpus` |
 | `trait_space_cache.py` | `trait_space_fingerprint` (hashes `benchmarks` + `trait_space` minus throughput keys), save/load cache, `build_or_load_safety_trait_space`, `load_cache_artifacts`, `coordinate_chain_from_cache` |
 | `trait_normalize.py` | `QuantileNormalizer`, `fit_quantile_normalizer` |
 | `position_blend.py` | `apply_position_update`, `parse_position_step`, `effective_blend` |
@@ -196,7 +207,21 @@ infl_ens/
 | `behavioral/{harmbench,strongreject,xstest,truthfulqa,confaide,bipia,ifeval}.py` | one offline loader per external behavioral suite |
 | `benchmarks/loading.py` | `BENCHMARK_KINDS`, `load_benchmark_split(s)`, `load_benchmark_splits_with_partition`, `subsample_split` |
 | `benchmarks/<kind>.py` | one offline loader per benchmark returning a `BenchmarkSplit` |
-| `benchmarks/safety_trait_space.py` | `build_safety_trait_space_bundle` (learned Fisher axes, residualisation, quantile normalisation, KDE grid), `LearnedAxis` |
+| `benchmarks/safety_trait_space.py` | `build_safety_trait_space_bundle` (learned Fisher axes, residualisation, box or softmax-simplex coordinates, KDE grid), `LearnedAxis` |
+
+## `src/infl_ens/inflgame/`
+
+| File | Role |
+|---|---|
+| `dynamics.py` | stable kernel allocation, expected utility, exact score-function game gradient, tangent projection, and population-wide step cap |
+| `stability.py` | symmetric equilibrium solver, antisymmetric linearization, analytic hyperbolic generalized-eigenvalue threshold, and numerical log-scan/Brent matching |
+
+## `src/infl_ens/inflgame/kernels/`
+
+| File | Role |
+|---|---|
+| `base.py` | `InfluenceKernel` interface, input/shape validation, and `build_kernel` configuration factory |
+| `families.py` | vectorized Gaussian, smoothed hyperbolic, mode-parameterized Dirichlet, and mode-parameterized product-Beta implementations |
 
 ## `src/infl_ens/inflgame/router/`
 
@@ -204,7 +229,7 @@ infl_ens/
 |---|---|
 | `agents.py` | `RouterAgent` (name, position, `from_calibration`, `update_position_from_corpus`) |
 | `allocation.py` | `allocation_weights`, `expected_utilities`, `empirical_utility`, `utility_gradient`, `strategic_routing_weights`, top-k helpers, `balanced_assignment_mask`, `expert_choice_mask`, `matched_centroid_mass`, `group_allocation_weights` |
-| `core.py` | `InfluencerRouter` (`route`, `route_batch`, `expected_utilities`) |
+| `core.py` | `InfluencerRouter` (`route`, `route_batch`, `allocation_weights`, `expected_utilities`), dispatching to the untouched legacy Gaussian path or an explicit kernel |
 | `verification.py` | expected-drift derivations and Monte-Carlo checks of every routing / position-update rule (used by tests) |
 
 ## `src/infl_ens/training/`
@@ -214,10 +239,10 @@ infl_ens/
 | `__main__.py` | argparse → `load_config` → `TASKS[cfg["task"]]`; exit 2 on config errors |
 | `tasks.py` | `TASKS = {closed_loop, baseline_replay, partition_replay, mixture_lora, adapter_merge}` and lazy task wrappers |
 | `closed_loop.py` | `run_closed_loop`, `validate_routing_and_loss_modes`, `init_agents_closed_loop`; module docstring lists every `closed_loop.*` knob |
-| `setup.py` | `load_splits`, `make_trait_space`, `sigma_from_config`, `init_agents`, `coords_for_prompts`, `write_history`, `write_resolved_config` |
+| `setup.py` | `KernelSetup`, `resolve_kernel_setup`, legacy-compatible `sigma_from_config`, trait/data setup, agent init, history/resolved-config writers |
 | `agent_init.py` | `resolve_agent_entries`, `init_agents_theory_gradient(_paired)`, `co_locate_theory_pairs`, pairing rules, separated random starts |
 | `position_step.py` | `blend_for_round`, `expected_pool_centroid` (+ re-exports of `position_blend`) |
-| `router_training.py` | `RouterTrainingConfig`, `train_router_positions` |
+| `router_training.py` | `RouterTrainingConfig`, `train_router_positions`; legacy Gaussian solver or exact kernel game-gradient theory initialization |
 | `sft_training.py` | `SFTTrainingConfig`, `sft_train_agent`, weighted causal-LM loss |
 | `merge_training.py` | `parse_sft_merge_groups`, `merge_groups_from_theory_pairs`, `snap_configured_merge_pairs`, `soft_pair_assignments`, `soft_pair_position_target`, `closed_loop_weight_args` |
 | `baseline_replay.py` | `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
@@ -226,7 +251,7 @@ infl_ens/
 | `adapter_merge.py` | reconstructs `BA` deltas; validation-selects linear, task arithmetic, TIES, DARE-TIES, and joint-SVD KnOTS merges at ranks 16/112 |
 | `data_split.py` | `resolve_closed_loop_data_split`, `shuffled_train_batch_indices`, `partitioned_splits_for_eval` |
 | `closed_loop_eval.py` | `run_closed_loop_val_eval`, `append_val_eval_summary` |
-| `pool_dynamics.py` | `run_gradient_ascent_theory`, `classify_layout`, `pairwise_spread`, `agent_pairwise_geometry` |
+| `pool_dynamics.py` | kernel-aware `run_gradient_ascent_theory`, layout classification, pair spread and geometry diagnostics |
 
 ## `src/infl_ens/evaluation/`
 
@@ -285,9 +310,13 @@ infl_ens/
 | `encoders/qwen3_embedding_8b_awq.yaml` | `trait_space.encoder` = `drawais/Qwen3-Embedding-8B-AWQ-INT4` (fingerprinted) + `encoder` kwargs (left padding, last-token pooling, device_map auto) |
 | `encoders/bge_large_en_v1_5.yaml` | worked template for a different Hugging Face encoder (cls pooling, right padding) |
 | `trait_space/seven_axis.yaml` | includes the encoder preset; cache dir, `n_grid: 3`, `kde_bandwidth: 0.08`, residualisation, mode-alignment weights, stretch off |
+| `trait_space/seven_axis_simplex.yaml` | includes the legacy seven-axis geometry but maps coordinates through softmax and builds a positive simplex composition grid |
 | `data/seven_axis_safety.yaml` | the seven `benchmarks` entries + `data_split` (70/10/20, exact train coverage, 12 rounds) |
 | `models/qwen2_5_1_5b_instruct.yaml` | top-level `sft` block: base model, LoRA r/alpha/dropout, batch, epochs, bf16, cumulative LoRA |
 | `arms/_closed_loop_base.yaml` | includes data + trait_space + model; theory-paired init, `sft_merge_groups: from_init`, `position_update: theory_matched`, final-round `eval` |
+| `arms/_kernel_game_gradient_base.yaml` | shared 14-clone simplex treatment: numerical half-threshold reach, paired theory init, soft routing, observed-batch exact game gradient |
+| `arms/soft_game_gradient_{gaussian,hyperbolic,dirichlet,product_beta}.yaml` | four explicit log-concave kernel treatments on the same seven-dimensional simplex |
+| `arms/generalist_kernel_comparison.yaml` | pooled data-matched control replaying the Gaussian treatment's batch history |
 | `arms/*.yaml` | one arm each: only `output_dir` and the routing knobs differ (see the on-disk tree) |
 | `experiments/seven_axis_3arm.yaml` | five specialist arms + generalist, stages, `perround_rounds: [4, final]`, figure list, smoke gate |
 | `arms/generalist_r112.yaml`, `arms/soft_full_naive_centroid.yaml` | stored-parameter and positioning controls |
@@ -298,15 +327,18 @@ infl_ens/
 | `arms/ewora_dense.yaml`, `arms/trait_gated_lora_moe.yaml` | joint dense and sparse learned LoRA mixtures |
 | `arms/domain_adapter_merges.yaml` | validation-selected router-free merge suite |
 | `experiments/seven_axis_baselines.yaml` | canonical external-baseline experiment plus content-addressed seven-suite behavioral safety evaluation |
+| `experiments/seven_axis_kernel_comparison.yaml` | four explicit kernel treatments plus the pooled control, with common soft routing and evaluation stages |
 
-Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py`.
+Legacy arms retain byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`). The explicit kernel treatments intentionally share a separate simplex fingerprint (`9a7070ef0eca7ae0`). Both contracts are enforced by `tests/test_config_fingerprint.py`.
 
 ## `tests/`
 
 | File | Covers |
 |---|---|
 | `test_config.py` | includes, overrides, key validation of `infl_ens.config` |
-| `test_config_fingerprint.py` | every arm keeps the cache fingerprint; arms differ only in routing knobs |
+| `test_config_fingerprint.py` | legacy and simplex-kernel arm families independently retain their expected cache fingerprints |
+| `test_kernels.py` | kernel construction, log-concavity, mode parameterizations, vectorized scores/Hessians, and finite-difference identities |
+| `test_game_gradient.py` | exact finite-difference game gradients, simplex tangent/projection rules, global step cap, numerical stability roots, and resource-source separation |
 | `test_encoder_config.py` | encoder presets and `make_encoder` resolution (no torch) |
 | `test_encoders.py` | `HuggingFaceEncoder` pooling / placement (mocked transformers; needs torch) |
 | `test_training_cli.py` | `python -m infl_ens.training` dispatch and error exits |
@@ -327,8 +359,9 @@ Every arm resolves to byte-identical `benchmarks` + `trait_space` blocks (cache 
 
 ## Re-exports
 
-- `infl_ens.data`: existing trait/data API plus behavioral records, suite loaders, and contamination helpers
+- `infl_ens.data`: existing trait/data API plus simplex coordinate/grid helpers, behavioral records, suite loaders, and contamination helpers
 - `infl_ens.data.benchmarks`: `BenchmarkSplit`, `LearnedAxis`, `build_safety_trait_space`, the seven `load_*` loaders and their constants
+- `infl_ens.inflgame`: kernel families/factory, generic allocation and exact game dynamics, symmetric-equilibrium, analytic-hyperbolic and numerical-stability API, plus the router subpackage
 - `infl_ens.inflgame.router`: existing game/router API plus `balanced_assignment_mask` and `expert_choice_mask`
 - `infl_ens.training`: existing router/SFT API plus lazy fixed-partition, learned-mixture, and adapter-merge entry points
 - `infl_ens.evaluation`: existing NLL/router API plus behavioral artifacts, target resolution, grading, probability-mixture math, and orchestration
