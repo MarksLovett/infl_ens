@@ -34,7 +34,7 @@ from typing import Any, Mapping, Sequence
 INCLUDES_KEY = "includes"
 
 #: Tasks accepted by ``python -m infl_ens.training``.
-KNOWN_TASKS: frozenset[str] = frozenset({"closed_loop", "baseline_replay"})
+KNOWN_TASKS: frozenset[str] = frozenset({"closed_loop", "baseline_replay", "modula_res"})
 
 #: Keys allowed at the top level of a run config.
 TOP_LEVEL_KEYS: frozenset[str] = frozenset(
@@ -57,6 +57,7 @@ TOP_LEVEL_KEYS: frozenset[str] = frozenset(
         "sft",
         "eval",
         "baseline_replay",
+        "modula_res",
     },
 )
 
@@ -209,6 +210,22 @@ EVAL_KEYS: frozenset[str] = frozenset(
 
 BASELINE_REPLAY_KEYS: frozenset[str] = frozenset(
     {"agent_name", "save_per_round", "rounds"},
+)
+
+#: Knobs of the ``modula_res`` task (:mod:`infl_ens.training.modula_res`).
+#: ``merge_aliases`` and ``universal_adapter_dir`` are written by the task
+#: into ``resolved_config.yaml`` for the evaluation stages, not set by hand.
+MODULA_RES_KEYS: frozenset[str] = frozenset(
+    {
+        "domain_source",
+        "universal_run_dir",
+        "universal_agent",
+        "universal_round",
+        "save_per_round",
+        "rounds",
+        "merge_aliases",
+        "universal_adapter_dir",
+    },
 )
 
 
@@ -463,6 +480,7 @@ def validate_config(cfg: Mapping[str, Any], *, source: str = "<config>") -> None
         ("sft", SFT_KEYS),
         ("eval", EVAL_KEYS),
         ("baseline_replay", BASELINE_REPLAY_KEYS),
+        ("modula_res", MODULA_RES_KEYS),
     )
     for name, allowed in simple_blocks:
         block = cfg.get(name)
@@ -552,6 +570,7 @@ __all__ = [
     "ENCODER_KEYS",
     "EVAL_KEYS",
     "KNOWN_TASKS",
+    "MODULA_RES_KEYS",
     "SFT_KEYS",
     "THEORY_GRADIENT_KEYS",
     "TOP_LEVEL_KEYS",

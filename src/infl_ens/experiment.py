@@ -30,7 +30,13 @@ ALL_STAGES: tuple[str, ...] = (
     "prune",
 )
 DEFAULT_STAGES: tuple[str, ...] = ("manifest", "train", "perround", "routing", "figures")
-ARM_ROLES: frozenset[str] = frozenset({"specialist", "generalist"})
+#: ``specialist`` = a routed closed loop (has trajectories); ``generalist`` =
+#: the pooled replay comparator; ``baseline`` = a routed ensemble that is
+#: scored like a specialist (per-round + route-then-score) but has no
+#: position dynamics of its own (the ``modula_res`` arms).
+ARM_ROLES: frozenset[str] = frozenset({"specialist", "generalist", "baseline"})
+#: Roles that own per-expert adapters and take part in route-then-score.
+ROUTED_ROLES: frozenset[str] = frozenset({"specialist", "baseline"})
 
 EXPERIMENT_KEYS: frozenset[str] = frozenset(
     {"name", "results_dir", "figures_dir", "arms", "stages", "eval", "figures", "smoke"},
@@ -39,7 +45,13 @@ ARM_KEYS: frozenset[str] = frozenset(
     {"name", "label", "title", "role", "config", "family", "scale"},
 )
 EVAL_SETTING_KEYS: frozenset[str] = frozenset(
-    {"perround_rounds", "perround_partition", "routing_partition", "max_eval_records"},
+    {
+        "perround_rounds",
+        "perround_partition",
+        "routing_partition",
+        "max_eval_records",
+        "fitted_router",
+    },
 )
 FIGURE_SETTING_KEYS: frozenset[str] = frozenset(
     {"axis_labels", "formats", "compile_tex", "include"},
@@ -65,8 +77,9 @@ class ArmSpec:
     :type label: str
     :param title: Longer figure title.
     :type title: str
-    :param role: ``specialist`` (a routed closed loop) or ``generalist`` (the
-        pooled replay comparator).
+    :param role: ``specialist`` (a routed closed loop), ``generalist`` (the
+        pooled replay comparator) or ``baseline`` (a routed ensemble without
+        position dynamics, e.g. the ``modula_res`` arms).
     :type role: str
     :param config_path: Absolute path of the arm's run config.
     :type config_path: pathlib.Path
@@ -114,6 +127,15 @@ class ArmSpec:
         """Whether this arm is a routed closed loop."""
         return self.role == "specialist"
 
+    @property
+    def is_routed(self) -> bool:
+        """Whether this arm has per-expert adapters to route over.
+
+        True for ``specialist`` and ``baseline`` arms; the per-round and
+        route-then-score stages run over exactly these.
+        """
+        return self.role in ROUTED_ROLES
+
 
 @dataclass(frozen=True)
 class EvalSettings:
@@ -128,12 +150,17 @@ class EvalSettings:
     :type routing_partition: str
     :param max_eval_records: Per-benchmark cap for both stages.
     :type max_eval_records: int | None
+    :param fitted_router: Also fit the prompt-level softmax router on the
+        validation pool and report it in route-then-score (one extra
+        validation scoring pass per routed arm).
+    :type fitted_router: bool
     """
 
     perround_rounds: tuple[int | str, ...] = (4, "final")
     perround_partition: str = "val"
     routing_partition: str = "test"
     max_eval_records: int | None = 1000
+    fitted_router: bool = True
 
     def resolve_rounds(self, final_round: int) -> list[int]:
         """Replace ``final`` by the last trained round and sort.
@@ -230,6 +257,11 @@ class ExperimentConfig:
     def specialists(self) -> tuple[ArmSpec, ...]:
         """Arms with ``role: specialist``, in order."""
         return tuple(a for a in self.arms if a.is_specialist)
+
+    @property
+    def routed(self) -> tuple[ArmSpec, ...]:
+        """Arms with per-expert adapters (``specialist`` + ``baseline``), in order."""
+        return tuple(a for a in self.arms if a.is_routed)
 
     @property
     def generalists(self) -> tuple[ArmSpec, ...]:
@@ -386,6 +418,7 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
         max_eval_records=(
             int(ev["max_eval_records"]) if ev.get("max_eval_records") is not None else None
         ),
+        fitted_router=bool(ev.get("fitted_router", True)),
     )
 
     fg = raw.get("figures") or {}
@@ -433,7 +466,9 @@ def load_experiment(path: str | Path) -> ExperimentConfig:
 
 __all__ = [
     "ALL_STAGES",
+    "ARM_ROLES",
     "DEFAULT_STAGES",
+    "ROUTED_ROLES",
     "ArmSpec",
     "EvalSettings",
     "ExperimentConfig",

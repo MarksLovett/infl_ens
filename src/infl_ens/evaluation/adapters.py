@@ -120,14 +120,30 @@ def discover_adapters(
     return found
 
 
-def load_base_causal_lm(base_model: str):
+def load_base_causal_lm(
+    base_model: str,
+    *,
+    universal_adapter_dir: Optional[PathLike] = None,
+):
     """Load a base causal LM and tokenizer for inference.
 
     Heavy dependencies are imported lazily. Dtype selection prefers
     bfloat16 on CUDA and float32 elsewhere.
 
+    When ``universal_adapter_dir`` is given, that LoRA is merged into the
+    base weights **once**, here, in float32 before the cast (mirroring the
+    training-side merge in
+    :func:`infl_ens.training.sft_training.merge_frozen_adapter`), so every
+    adapter later attached with :func:`load_adapter_model` sits on top of
+    ``base + universal``. Merging in this function rather than in
+    :func:`load_adapter_model` keeps the universal delta from being applied
+    once per domain adapter.
+
     :param base_model: HuggingFace model id.
     :type base_model: str
+    :param universal_adapter_dir: Optional frozen universal LoRA to merge
+        into the base.
+    :type universal_adapter_dir: str | pathlib.Path | None
     :returns: Tuple ``(model, tokenizer, device)``.
     :rtype: tuple
     :raises ImportError: If ``torch`` or ``transformers`` are missing.
@@ -141,18 +157,42 @@ def load_base_causal_lm(base_model: str):
         if device.type == "cuda" and torch.cuda.is_bf16_supported()
         else torch.float32
     )
+    load_dtype = torch.float32 if universal_adapter_dir is not None else dtype
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     try:
-        model = AutoModelForCausalLM.from_pretrained(base_model, dtype=dtype)
+        model = AutoModelForCausalLM.from_pretrained(base_model, dtype=load_dtype)
     except TypeError:  # pragma: no cover - old transformers
         model = AutoModelForCausalLM.from_pretrained(
-            base_model, torch_dtype=dtype,
+            base_model, torch_dtype=load_dtype,
         )
+    if universal_adapter_dir is not None:
+        model = merge_universal_adapter(model, universal_adapter_dir, dtype=dtype)
     model.to(device)
     model.eval()
     return model, tokenizer, device
+
+
+def merge_universal_adapter(model, adapter_dir: PathLike, *, dtype):
+    """Fold a LoRA adapter into ``model`` and cast the result to ``dtype``.
+
+    :param model: Causal LM (float32 recommended) to merge into.
+    :type model: transformers.PreTrainedModel
+    :param adapter_dir: LoRA checkpoint directory.
+    :type adapter_dir: str | pathlib.Path
+    :param dtype: Torch dtype of the returned model.
+    :type dtype: torch.dtype
+    :returns: Plain (non-PEFT) merged model.
+    :rtype: transformers.PreTrainedModel
+    :raises FileNotFoundError: If ``adapter_dir`` holds no adapter weights.
+    """
+    from peft import PeftModel
+
+    path = resolve_adapter_dir(adapter_dir)
+    wrapped = PeftModel.from_pretrained(model, str(path))
+    merged = wrapped.merge_and_unload()
+    return merged.to(dtype)
 
 
 def load_adapter_model(base_model, adapter_dir: PathLike):

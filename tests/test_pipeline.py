@@ -27,8 +27,19 @@ FINGERPRINT = "3b42c68a8dd334c5"
 def test_load_canonical_experiment() -> None:
     exp = load_experiment(EXPERIMENT)
     assert exp.name == "seven_axis_3arm"
-    assert [a.name for a in exp.arms] == ["soft_full", "soft", "soft_unit", "hard_topk", "hard", "generalist"]
+    assert [a.name for a in exp.arms] == [
+        "soft_full", "soft", "soft_unit", "hard_topk", "hard", "generalist",
+        "modula_res", "per_benchmark_lora", "frozen_u_pairs",
+    ]
     assert len(exp.specialists) == 5
+    assert [a.name for a in exp.routed] == [
+        "soft_full", "soft", "soft_unit", "hard_topk", "hard",
+        "modula_res", "per_benchmark_lora", "frozen_u_pairs",
+    ]
+    assert all(a.role == "baseline" and a.is_routed and not a.is_specialist for a in exp.arms[6:])
+    # Every baseline pairs with the single generalist for route-then-score.
+    assert all(exp.generalist_for(a) is exp.generalist for a in exp.arms[6:])
+    assert exp.eval.fitted_router is True
     assert exp.generalist is not None and exp.generalist.name == "generalist"
     assert exp.eval.resolve_rounds(11) == [4, 11]
     assert exp.stages == ("manifest", "train", "perround", "routing", "figures")
@@ -39,8 +50,9 @@ def test_load_canonical_experiment() -> None:
 def test_dry_run_prints_every_arm_with_the_cached_fingerprint(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["--config", str(EXPERIMENT), "--dry-run"]) == 0
     out = capsys.readouterr().out
-    assert out.count(FINGERPRINT) == 6
+    assert out.count(FINGERPRINT) == 9
     assert "task=baseline_replay" in out
+    assert out.count("task=modula_res") == 3
     assert "stages:      manifest, train, perround, routing, figures" in out
 
 
@@ -116,6 +128,44 @@ def test_train_stage_skips_complete_runs(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setitem(tasks_mod.TASKS, "closed_loop", lambda cfg: calls.append(cfg["output_dir"]) or 0)
     stage_train(PipelineContext(exp=exp))
     assert calls == [run.as_posix()]
+
+
+def test_baseline_role_is_routed_but_not_a_specialist(tmp_path: Path) -> None:
+    (tmp_path / "gen.yaml").write_text("task: baseline_replay\noutput_dir: g\n", encoding="utf-8")
+    exp = load_experiment(_write_experiment(
+        tmp_path,
+        "task: closed_loop\noutput_dir: r\n",
+        extra=(
+            "  - {name: gen, role: generalist, config: gen.yaml}\n"
+            "  - {name: b, role: baseline, config: arm.yaml}\n"
+            "eval: {fitted_router: false}\n"
+        ),
+    ))
+    assert [a.name for a in exp.specialists] == ["a"]
+    assert [a.name for a in exp.routed] == ["a", "b"]
+    assert exp.generalist_for(exp.arm("b")) is exp.arm("gen")
+    assert exp.eval.fitted_router is False
+    ctx = PipelineContext(exp=exp)
+    assert [a.name for a in ctx.arms(routed_only=True)] == ["a", "b"]
+    assert [a.name for a in ctx.arms(specialists_only=True)] == ["a"]
+    with pytest.raises(ConfigError, match="role"):
+        load_experiment(_write_experiment(
+            tmp_path, "task: closed_loop\noutput_dir: r\n",
+            extra="  - {name: c, role: ablation, config: arm.yaml}\n",
+        ))
+
+
+def test_modula_res_run_is_complete_needs_summary(tmp_path: Path) -> None:
+    run = tmp_path / "run"
+    run.mkdir()
+    (run / "history.json").write_text(json.dumps([{"round": 0}]), encoding="utf-8")
+    exp = load_experiment(_write_experiment(
+        tmp_path, f"task: modula_res\noutput_dir: {run.as_posix()}\nhistory_path: h.json\n",
+    ))
+    arm = exp.arms[0]
+    assert not run_is_complete(arm, arm.load())
+    (run / "modula_res_summary.json").write_text("{}", encoding="utf-8")
+    assert run_is_complete(arm, arm.load())
 
 
 def test_smoke_config_redirects_outputs(tmp_path: Path) -> None:

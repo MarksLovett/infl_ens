@@ -191,14 +191,21 @@ def arm_comparison_tex(arms: Sequence[tuple[str, dict[str, Any]]]) -> str:
     flats = []
     for label, report in arms:
         flat = report["flat"]
+        fitted = flat.get("fitted_routing_expected_nll")
+        universal = flat.get("universal_nll")
         flats.append({
             "label": label,
             "oracle": float(flat["oracle_routing_nll"]),
             "pooled": float(flat["pooled_nll"]),
             "learned": float(flat["learned_routing_expected_nll"]),
+            "fitted": None if fitted is None else float(fitted),
+            "universal": None if universal is None else float(universal),
             "n": int(flat.get("n_prompts", 0)),
             "round": flat.get("round", "?"),
         })
+    # The fitted prompt-level router is a fourth flat-pool bar only when
+    # every arm reports it (mixed reports would misalign the groups).
+    has_fitted = all(f["fitted"] is not None for f in flats)
 
     benches = [
         b for b in PGF_BENCHMARK_ORDER
@@ -213,8 +220,17 @@ def arm_comparison_tex(arms: Sequence[tuple[str, dict[str, Any]]]) -> str:
     oracle_bars = " ".join(f"({i},{_fmt(f['oracle'])})" for i, f in enumerate(flats))
     pooled_bars = " ".join(f"({i},{_fmt(f['pooled'])})" for i, f in enumerate(flats))
     learned_bars = " ".join(f"({i},{_fmt(f['learned'])})" for i, f in enumerate(flats))
+    fitted_plot = ""
+    if has_fitted:
+        fitted_bars = " ".join(f"({i},{_fmt(f['fitted'])})" for i, f in enumerate(flats))
+        fitted_plot = (
+            f"\\addplot[fill=orange!80!black, draw=black!40] coordinates {{{fitted_bars}}};\n"
+            f"\\addlegendentry{{Fitted router}}"
+        )
 
     all_flat = [v for f in flats for v in (f["oracle"], f["pooled"], f["learned"])]
+    if has_fitted:
+        all_flat += [f["fitted"] for f in flats]
     lo, hi = min(all_flat), max(all_flat)
     span = max(hi - lo, 1e-3)
     ymin_flat = max(0.0, lo - 2.5 * span)
@@ -262,10 +278,16 @@ def arm_comparison_tex(arms: Sequence[tuple[str, dict[str, Any]]]) -> str:
     caption = (
         f"Cross-arm route-then-score on the held-out pool "
         f"($n={flats[0]['n']}$, round {flats[0]['round']}). "
-        f"Best specialist arm: {tex_escape(best['label'])} at "
+        f"Best routed arm: {tex_escape(best['label'])} at "
         f"{_fmt(best['learned'])} vs pooled {_fmt(best['pooled'])} "
         f"and oracle {_fmt(best['oracle'])}."
     )
+    universal_notes = [
+        f"{tex_escape(f['label'])}: universal-only {_fmt(f['universal'])}"
+        for f in flats if f["universal"] is not None
+    ]
+    if universal_notes:
+        caption += " Residual arms, " + "; ".join(universal_notes) + "."
 
     return rf"""\documentclass[tikz,border=3pt]{{standalone}}
 \usepackage{{pgfplots}}
@@ -290,7 +312,7 @@ def arm_comparison_tex(arms: Sequence[tuple[str, dict[str, Any]]]) -> str:
   grid style={{dashed, gray!35}},
   title={{Flat pool}},
   legend style={{at={{(0.5,-0.16)}}, anchor=north, font=\scriptsize, draw=none}},
-  legend columns=3,
+  legend columns={4 if has_fitted else 3},
 ]
 \addplot[fill=teal!70!black, draw=black!40] coordinates {{{oracle_bars}}};
 \addlegendentry{{Oracle}}
@@ -298,6 +320,7 @@ def arm_comparison_tex(arms: Sequence[tuple[str, dict[str, Any]]]) -> str:
 \addlegendentry{{Pooled}}
 \addplot[fill=blue!65!black, draw=black!40] coordinates {{{learned_bars}}};
 \addlegendentry{{Learned}}
+{fitted_plot}
 \end{{axis}}
 
 % ---- Right: per-benchmark, one series per arm ----

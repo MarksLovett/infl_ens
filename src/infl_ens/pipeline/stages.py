@@ -14,14 +14,16 @@ directory, i.e. the repository root):
     Build ``data_split.manifest`` of the first specialist arm from its
     config (skipped when the file exists).
 ``train``
-    Run every arm's task (``closed_loop`` or ``baseline_replay``) in order.
+    Run every arm's task (``closed_loop``, ``baseline_replay`` or
+    ``modula_res``) in order.
 ``perround``
-    Score each specialist arm's per-round adapters on
+    Score each routed arm's (specialist + baseline) per-round adapters on
     ``eval.perround_partition`` at ``eval.perround_rounds`` and write the
     pair NLL tables under ``<run>/tables/``.
 ``routing``
-    Route-then-score each specialist arm on ``eval.routing_partition``
-    against the generalist replay, writing
+    Route-then-score each routed arm on ``eval.routing_partition``
+    against the generalist replay (plus the fitted prompt-level router and,
+    for residual arms, the universal-only check), writing
     ``<run>/routing_ensemble_diagnostics.json``.
 ``figures``
     Render the experiment's figures into ``figures_dir``.
@@ -69,15 +71,25 @@ class PipelineContext:
     repo_root: Path = field(default_factory=Path.cwd)
     status: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    def arms(self, *, specialists_only: bool = False) -> list[ArmSpec]:
+    def arms(
+        self, *, specialists_only: bool = False, routed_only: bool = False,
+    ) -> list[ArmSpec]:
         """Arms selected for this run, in experiment order.
 
-        :param specialists_only: Drop the generalist.
+        :param specialists_only: Keep only ``role: specialist`` arms.
         :type specialists_only: bool
+        :param routed_only: Keep ``specialist`` and ``baseline`` arms (the
+            ones with per-expert adapters); drops the generalist.
+        :type routed_only: bool
         :returns: Selected arms.
         :rtype: list[ArmSpec]
         """
-        arms = list(self.exp.specialists if specialists_only else self.exp.arms)
+        if specialists_only:
+            arms = list(self.exp.specialists)
+        elif routed_only:
+            arms = list(self.exp.routed)
+        else:
+            arms = list(self.exp.arms)
         if self.only_arms:
             arms = [a for a in arms if a.name in self.only_arms]
         return arms
@@ -145,7 +157,7 @@ def expected_rounds(arm: ArmSpec, cfg: dict[str, Any]) -> Optional[int]:
                 return int(meta["n_rounds"])
         except (OSError, ValueError):
             pass
-    if cfg.get("task") == "baseline_replay":
+    if cfg.get("task") in ("baseline_replay", "modula_res"):
         return None
     if not cfg.get("data_split"):
         return int((cfg.get("closed_loop") or {}).get("n_rounds", 5))
@@ -167,6 +179,8 @@ def run_is_complete(arm: ArmSpec, cfg: dict[str, Any]) -> bool:
         return False
     if cfg.get("task") == "baseline_replay":
         return (arm.run_dir / "replay_summary.json").is_file()
+    if cfg.get("task") == "modula_res":
+        return (arm.run_dir / "modula_res_summary.json").is_file()
     try:
         records = json.loads(history.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -267,7 +281,7 @@ def stage_perround(ctx: PipelineContext) -> None:
 
     settings = ctx.exp.eval
     partition = settings.perround_partition
-    for arm in ctx.arms(specialists_only=True):
+    for arm in ctx.arms(routed_only=True):
         last = final_round(arm)
         rounds = settings.resolve_rounds(last)
         eval_dir = arm.run_dir / f"eval_{partition}"
@@ -296,6 +310,7 @@ def stage_perround(ctx: PipelineContext) -> None:
 def stage_routing(ctx: PipelineContext) -> None:
     """Route-then-score each specialist arm against the generalist replay."""
     from infl_ens.config import resolve_sft_block
+    from infl_ens.evaluation.evaluate import universal_adapter_dir_from_config
     from infl_ens.evaluation.routing_eval import (
         format_headline_markdown,
         report_to_dict,
@@ -305,7 +320,7 @@ def stage_routing(ctx: PipelineContext) -> None:
     if not ctx.exp.generalists:
         raise ValueError("routing stage needs a generalist arm (role: generalist)")
     settings = ctx.exp.eval
-    for arm in ctx.arms(specialists_only=True):
+    for arm in ctx.arms(routed_only=True):
         gen = ctx.exp.generalist_for(arm)
         if gen is None:
             raise ValueError(
@@ -323,6 +338,11 @@ def stage_routing(ctx: PipelineContext) -> None:
         sft = resolve_sft_block(cfg)
         eval_block = cfg.get("eval") or {}
         last = final_round(arm)
+        # modula_res arms: merge the frozen universal adapter under every
+        # expert and map the source pairs onto the label experts.
+        modula = cfg.get("modula_res") or {}
+        universal = universal_adapter_dir_from_config(cfg)
+        aliases = dict(modula.get("merge_aliases") or {}) or None
         log.info("routing: %s round %d on %s", arm.name, last, settings.routing_partition)
         report = run_flat_routing_eval(
             router_config=resolved,
@@ -337,6 +357,10 @@ def stage_routing(ctx: PipelineContext) -> None:
             base_model=str(sft.get("base_model")),
             max_seq_length=int(sft.get("max_seq_length", 1024)),
             forward_batch_size=int(eval_block.get("forward_batch_size", 8)),
+            universal_adapter_dir=universal,
+            merge_aliases=aliases,
+            fitted_router=settings.fitted_router,
+            val_merge_nll_cache=arm.run_dir / "eval_val" / f"merge_nll_round{last:02d}.npy",
         )
         out_json.parent.mkdir(parents=True, exist_ok=True)
         out_json.write_text(json.dumps(report_to_dict(report), indent=2), encoding="utf-8")

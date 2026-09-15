@@ -13,6 +13,12 @@
 #   hard         sampled              1   unit
 #   generalist   pooled replay of the `soft` arm
 #
+# Baseline arms (role: baseline) reuse the `soft` arm's round schedule and
+# the generalist as the frozen universal adapter:
+#   modula_res          label partition, residual on U, r=8   (primary baseline)
+#   per_benchmark_lora  label partition, from scratch,  r=8   ("one LoRA per benchmark")
+#   frozen_u_pairs      game partition,  residual on U, r=16  (ablation)
+#
 #   python -m infl_ens.pipeline --config configs/experiments/seven_axis_3arm.yaml
 #   python -m infl_ens.pipeline --config ... --stages routing,figures   # re-run analysis
 #   python -m infl_ens.pipeline --config ... --smoke                    # cheap gate
@@ -55,6 +61,23 @@ arms:
     title: "Pooled generalist"
     role: generalist
     config: ../arms/generalist_replay.yaml
+  # Baselines on the `soft` arm's round schedule (run after it and the
+  # generalist). {label, game} partition x {residual-on-U, from-scratch}:
+  - name: modula_res
+    label: "MoDULA-Res (labels)"
+    title: "MoDULA-Res-style: universal + residual per-benchmark LoRAs"
+    role: baseline
+    config: ../arms/modula_res_labels.yaml
+  - name: per_benchmark_lora
+    label: "Per-benchmark LoRA"
+    title: "One LoRA per benchmark (from scratch)"
+    role: baseline
+    config: ../arms/per_benchmark_lora.yaml
+  - name: frozen_u_pairs
+    label: "Frozen-U + residual pairs"
+    title: "Ablation: frozen universal + residual pair LoRAs"
+    role: baseline
+    config: ../arms/frozen_u_pairs.yaml
 
 # Stages run in this order. `download` and `prune` are opt-in
 # (--stages download,manifest,... or --stages prune).
@@ -67,6 +90,7 @@ eval:
   perround_partition: val
   routing_partition: test
   max_eval_records: 1000         # per benchmark, for both stages
+  fitted_router: true            # prompt-level softmax router fitted on val
 
 figures:
   axis_labels: [harm, hallucination, jailbreak, privacy, overrefusal, injection, policy]

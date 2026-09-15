@@ -1,0 +1,16 @@
+# ABLATION (not a baseline): frozen universal LoRA + residual pair LoRAs.
+# Replays the soft top-3 run's logged pair batches and loss weights exactly,
+# but trains each pair as a residual on the merged pooled-baseline adapter.
+# Holding data assignment and router fixed, it asks only whether the
+# residual-on-U parameterisation beats from-scratch pair LoRAs.
+includes:
+  - _modula_res_base.yaml
+
+output_dir: results/seven_axis_frozen_u_pairs/seed0
+
+modula_res:
+  domain_source: history
+  universal_run_dir: results/seven_axis_3arm_generalist/seed0
+
+sft:
+  lora_r: 16                        # matches the specialist pairs

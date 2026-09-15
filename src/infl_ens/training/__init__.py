@@ -21,6 +21,11 @@ Eager:
 
 - :class:`RouterTrainingConfig`, :func:`train_router_positions` from
   :mod:`infl_ens.training.router_training`.
+- :class:`DomainBatch`, :class:`SourceRouterBlocks`,
+  :func:`label_domain_batches`, :func:`history_domain_batches`,
+  :func:`source_router_blocks`, :func:`pair_to_benchmark_aliases`,
+  :func:`resolve_universal_adapter_dir`, :func:`train_modula_res` from
+  :mod:`infl_ens.training.modula_res` (the ``modula_res`` task).
 
 Lazy:
 
@@ -131,6 +136,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from infl_ens.training.modula_res import (
+    DomainBatch,
+    SourceRouterBlocks,
+    history_domain_batches,
+    label_domain_batches,
+    pair_to_benchmark_aliases,
+    resolve_universal_adapter_dir,
+    source_router_blocks,
+    train_modula_res,
+)
 from infl_ens.training.router_training import (
     RouterTrainingConfig,
     train_router_positions,
@@ -149,10 +164,18 @@ _LAZY_SFT_NAMES: frozenset[str] = frozenset(
 )
 
 __all__ = [
+    "DomainBatch",
     "RouterTrainingConfig",
     "SFTTrainingConfig",
+    "SourceRouterBlocks",
+    "history_domain_batches",
+    "label_domain_batches",
     "make_chat_formatter",
+    "pair_to_benchmark_aliases",
+    "resolve_universal_adapter_dir",
     "sft_train_agent",
+    "source_router_blocks",
+    "train_modula_res",
     "train_router_positions",
 ]
 

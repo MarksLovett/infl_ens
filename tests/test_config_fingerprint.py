@@ -18,7 +18,16 @@ from infl_ens.config import load_config
 ROOT = Path(__file__).resolve().parents[1]
 ARMS_DIR = ROOT / "configs" / "arms"
 ARMS = sorted(p for p in ARMS_DIR.glob("*.yaml") if not p.name.startswith("_"))
-SPECIALISTS = [p for p in ARMS if p.name != "generalist_replay.yaml"]
+#: Arms that are not closed loops: the pooled generalist and the
+#: ``modula_res`` baselines replayed on the soft top-3 schedule.
+NON_CLOSED_LOOP = {
+    "generalist_replay.yaml",
+    "modula_res_labels.yaml",
+    "per_benchmark_lora.yaml",
+    "frozen_u_pairs.yaml",
+}
+SPECIALISTS = [p for p in ARMS if p.name not in NON_CLOSED_LOOP]
+BASELINES = [p for p in ARMS if p.stem in {"modula_res_labels", "per_benchmark_lora", "frozen_u_pairs"}]
 
 EXPECTED_FINGERPRINT = "3b42c68a8dd334c5"
 
@@ -75,7 +84,32 @@ def test_all_arms_are_present() -> None:
         "hard_topk3_pairs",
         "hard_pairs_matched",
         "generalist_replay",
+        "modula_res_labels",
+        "per_benchmark_lora",
+        "frozen_u_pairs",
     }
+
+
+def test_baseline_arms_fill_the_design_grid() -> None:
+    """{label, game} x {residual-on-U, from-scratch} minus the closed loop itself."""
+    resolved = {p.stem: load_config(p) for p in BASELINES}
+    for name, cfg in resolved.items():
+        assert cfg["task"] == "modula_res", name
+        assert cfg["history_path"] == "results/seven_axis_soft_topk3_pairs/seed0/history.json", name
+        assert cfg["eval"]["baseline_run_dir"] == "results/seven_axis_3arm_generalist/seed0", name
+        assert cfg["modula_res"]["universal_agent"] == "pooled-baseline", name
+    gen = "results/seven_axis_3arm_generalist/seed0"
+    assert resolved["modula_res_labels"]["modula_res"]["domain_source"] == "labels"
+    assert resolved["modula_res_labels"]["modula_res"]["universal_run_dir"] == gen
+    assert resolved["modula_res_labels"]["sft"]["lora_r"] == 8
+    assert resolved["per_benchmark_lora"]["modula_res"]["domain_source"] == "labels"
+    assert resolved["per_benchmark_lora"]["modula_res"]["universal_run_dir"] is None
+    assert resolved["per_benchmark_lora"]["sft"]["lora_r"] == 8
+    assert resolved["frozen_u_pairs"]["modula_res"]["domain_source"] == "history"
+    assert resolved["frozen_u_pairs"]["modula_res"]["universal_run_dir"] == gen
+    assert resolved["frozen_u_pairs"]["sft"]["lora_r"] == 16
+    outputs = {cfg["output_dir"] for cfg in resolved.values()}
+    assert len(outputs) == len(resolved)
 
 
 @pytest.mark.parametrize("path", ARMS, ids=[p.stem for p in ARMS])

@@ -1,0 +1,18 @@
+# BASELINE: MoDULA-Res-style, label partition, residual on the universal LoRA.
+# One expert per benchmark (rank 8, paper-faithful) trained on that
+# benchmark's rows of every round batch, on top of the frozen final
+# pooled-baseline adapter merged into the base. Primary baseline: tests
+# whether "shared component + label-specific residuals" matches the game's
+# discovered partition and G-allocation router.
+includes:
+  - _modula_res_base.yaml
+
+output_dir: results/seven_axis_modula_res/seed0
+
+modula_res:
+  domain_source: labels
+  universal_run_dir: results/seven_axis_3arm_generalist/seed0
+
+sft:
+  lora_r: 8
+  lora_alpha: 16

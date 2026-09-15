@@ -324,6 +324,31 @@ def make_chat_formatter(
     return _fmt
 
 
+def merge_frozen_adapter(model: "Any", adapter_dir: Path, *, dtype: "Any") -> "Any":
+    """Merge a LoRA adapter into a model's weights and cast the result.
+
+    Used for the frozen *universal* adapter of the MoDULA-Res-style arms:
+    the adapter is folded into the base weights (``merge_and_unload``) so
+    the model handed to the trainer is an ordinary causal LM, and any LoRA
+    attached afterwards learns a residual on top of it. ``model`` should be
+    in float32 when called; the merged model is cast to ``dtype``.
+
+    :param model: A causal LM (ideally float32) to merge into.
+    :type model: transformers.PreTrainedModel
+    :param adapter_dir: Directory holding the adapter weights.
+    :type adapter_dir: pathlib.Path
+    :param dtype: Torch dtype of the returned model.
+    :type dtype: torch.dtype
+    :returns: The merged, plain (non-PEFT) model in ``dtype``.
+    :rtype: transformers.PreTrainedModel
+    """
+    from peft import PeftModel
+
+    wrapped = PeftModel.from_pretrained(model, str(adapter_dir))
+    merged = wrapped.merge_and_unload()
+    return merged.to(dtype)
+
+
 def sft_train_agent(
     agent: RouterAgent,
     prompts: Sequence[str],
@@ -339,6 +364,7 @@ def sft_train_agent(
     sample_weights: Optional[Sequence[float]] = None,
     eval_weights: Optional[Sequence[float]] = None,
     skip_position_update: bool = False,
+    frozen_base_adapter_dir: Optional[str] = None,
 ) -> dict[str, Any]:
     """Run one LoRA SFT round for a single agent and refresh its position.
 
@@ -389,10 +415,20 @@ def sft_train_agent(
     :param eval_weights: Optional per-eval-prompt weights forwarded as
         ``scores`` to the post-SFT position update (weighted centroid).
     :type eval_weights: Sequence[float] | None
+    :param frozen_base_adapter_dir: Optional directory of a *universal*
+        LoRA that is merged into the base weights before the agent's own
+        adapter is attached (the MoDULA-Res-style residual set-up). The
+        merge runs in float32 and the result is cast to the training dtype,
+        so the universal delta is not rounded away in bfloat16. The merged
+        adapter receives no gradient and is not saved with the agent's
+        adapter; evaluation must merge the same universal adapter again
+        (see :func:`infl_ens.evaluation.adapters.load_base_causal_lm`).
+    :type frozen_base_adapter_dir: str | None
     :returns: Dictionary with keys ``output_dir`` (path to LoRA adapter),
         ``n_train`` (training examples), ``train_loss`` (final train loss
-        if available), and ``log_history`` (per-step log records emitted by
-        the SFT trainer; usable for plotting per-round loss curves).
+        if available), ``log_history`` (per-step log records emitted by
+        the SFT trainer; usable for plotting per-round loss curves) and
+        ``frozen_base_adapter`` (the merged universal adapter, or ``None``).
     :rtype: dict
     :raises ImportError: If ``transformers``/``peft``/``trl``/``datasets``
         are not installed.
@@ -472,11 +508,26 @@ def sft_train_agent(
 
     bf16 = bool(cfg.bf16 and torch.cuda.is_available() and torch.cuda.is_bf16_supported())
     dtype = torch.bfloat16 if bf16 else torch.float16
+    # A frozen universal adapter is merged in float32 so its delta survives
+    # the cast to the (half-precision) training dtype.
+    load_dtype = torch.float32 if frozen_base_adapter_dir is not None else dtype
     # transformers >= 5.x uses `dtype`; earlier versions use `torch_dtype`.
     try:
-        model = AutoModelForCausalLM.from_pretrained(cfg.base_model, dtype=dtype)
+        model = AutoModelForCausalLM.from_pretrained(cfg.base_model, dtype=load_dtype)
     except TypeError:  # pragma: no cover - old transformers
-        model = AutoModelForCausalLM.from_pretrained(cfg.base_model, torch_dtype=dtype)
+        model = AutoModelForCausalLM.from_pretrained(cfg.base_model, torch_dtype=load_dtype)
+
+    frozen_base: Optional[Path] = None
+    if frozen_base_adapter_dir is not None:
+        frozen_base = Path(frozen_base_adapter_dir)
+        if not (
+            (frozen_base / "adapter_model.safetensors").exists()
+            or (frozen_base / "adapter_model.bin").exists()
+        ):
+            raise FileNotFoundError(
+                f"frozen_base_adapter_dir {frozen_base} holds no LoRA weights"
+            )
+        model = merge_frozen_adapter(model, frozen_base, dtype=dtype)
 
     # If cumulative training is requested and the agent already has an
     # adapter from a previous round, load that adapter as a trainable PEFT
@@ -630,4 +681,5 @@ def sft_train_agent(
         "position_blend_effective": float(blend_eff),
         "log_history": log_history,
         "loaded_prior_lora": str(prior_lora) if prior_lora is not None else None,
+        "frozen_base_adapter": str(frozen_base) if frozen_base is not None else None,
     }

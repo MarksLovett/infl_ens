@@ -134,11 +134,11 @@ def _axis_labels(exp: ExperimentConfig) -> tuple[str, ...]:
 
 
 def render_oracle_routing(exp: ExperimentConfig, out: Path) -> list[Path]:
-    """One oracle / pooled / learned pgfplots figure per specialist arm."""
+    """One oracle / pooled / learned pgfplots figure per routed arm."""
     from infl_ens.figures.pgf_tex import oracle_routing_tex
 
     written: list[Path] = []
-    for arm in exp.specialists:
+    for arm in exp.routed:
         report = _routing_report(arm)
         tex = oracle_routing_tex(report, experiment_label=arm.title)
         written += _write_tex(exp, out / f"{arm.name}_vs_oracle.tex", tex)
@@ -146,10 +146,10 @@ def render_oracle_routing(exp: ExperimentConfig, out: Path) -> list[Path]:
 
 
 def render_arm_comparison(exp: ExperimentConfig, out: Path) -> list[Path]:
-    """Cross-arm overlay of every specialist arm with a routing report."""
+    """Cross-arm overlay of every routed arm (specialists + baselines)."""
     from infl_ens.figures.pgf_tex import arm_comparison_tex
 
-    arms = [(arm.label, _routing_report(arm)) for arm in exp.specialists]
+    arms = [(arm.label, _routing_report(arm)) for arm in exp.routed]
     return _write_tex(exp, out / "arm_comparison.tex", arm_comparison_tex(arms))
 
 
@@ -198,16 +198,21 @@ def render_closed_loop_history(exp: ExperimentConfig, out: Path) -> list[Path]:
 
 
 def render_cross_arm_report(exp: ExperimentConfig, out: Path) -> list[Path]:
-    """Data-matching check, routing headline, pair stability, NLL movement."""
+    """Data-matching check, routing headline, pair stability, NLL movement.
+
+    Covers every routed arm; the baseline arms contribute their routing
+    headline and data-matching rows (their positions are copies of the
+    source run, so pair stability is that run's).
+    """
     from infl_ens.figures.cross_arm_report import write_cross_arm_report
 
-    arms = [(arm.label, arm.run_dir) for arm in exp.specialists]
+    arms = [(arm.label, arm.run_dir) for arm in exp.routed]
     gen = exp.generalist
     return write_cross_arm_report(arms, out, generalist_run_dir=gen.run_dir if gen else None)
 
 
 def render_per_round_tables(exp: ExperimentConfig, out: Path) -> list[Path]:
-    """Held-out NLL by pair at the evaluation rounds, per specialist arm.
+    """Held-out NLL by pair at the evaluation rounds, per routed arm.
 
     Written under each run's ``tables/`` (where the cross-arm report reads
     them) and mirrored into the figures directory.
@@ -216,7 +221,7 @@ def render_per_round_tables(exp: ExperimentConfig, out: Path) -> list[Path]:
 
     partition = exp.eval.perround_partition
     written: list[Path] = []
-    for arm in exp.specialists:
+    for arm in exp.routed:
         rounds = exp.eval.resolve_rounds(_final_round(arm))
         label = f"{arm.title} ({partition})"
         stem = arm.run_dir / "tables" / "pair_nll_by_round"

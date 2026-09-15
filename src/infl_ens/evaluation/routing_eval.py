@@ -55,6 +55,20 @@ class FlatRoutingScores:
     :type n_prompts: int
     :param round_idx: Adapter round index scored.
     :type round_idx: int
+    :param universal_nll: Mean NLL of the merged universal adapter with no
+        domain adapter attached (residual arms only; ``None`` otherwise).
+        Must agree with ``pooled_nll`` up to merge rounding when the
+        universal adapter is the pooled generalist.
+    :type universal_nll: float | None
+    :param fitted_argmax_nll: Route-then-score with the argmax of the
+        fitted prompt-level router (``None`` when not fitted).
+    :type fitted_argmax_nll: float | None
+    :param fitted_expected_nll: Expected NLL under the fitted router's
+        probabilities.
+    :type fitted_expected_nll: float | None
+    :param fitted_val_accuracy: Argmax accuracy of the fitted router on its
+        own validation fit.
+    :type fitted_val_accuracy: float | None
     """
 
     pooled_nll: float
@@ -66,6 +80,10 @@ class FlatRoutingScores:
     oracle_nll: float
     n_prompts: int
     round_idx: int
+    universal_nll: float | None = None
+    fitted_argmax_nll: float | None = None
+    fitted_expected_nll: float | None = None
+    fitted_val_accuracy: float | None = None
 
 
 @dataclass
@@ -357,13 +375,19 @@ def score_merge_nll_matrix(
     base_model: str,
     max_seq_length: int,
     forward_batch_size: int,
+    universal_adapter_dir: Path | str | None = None,
 ) -> np.ndarray:
     """Score every merge adapter on every prompt.
 
+    :param universal_adapter_dir: Optional frozen universal LoRA merged into
+        the base once before the merge adapters are attached (residual arms).
+    :type universal_adapter_dir: pathlib.Path | str | None
     :returns: Matrix shape ``(M, n_merge)``.
     :rtype: numpy.ndarray
     """
-    base, tokenizer, device = load_base_causal_lm(base_model)
+    base, tokenizer, device = load_base_causal_lm(
+        base_model, universal_adapter_dir=universal_adapter_dir,
+    )
     cols: list[np.ndarray] = []
     try:
         for merge in merge_names:
@@ -428,6 +452,42 @@ def score_pooled_nll(
             torch.cuda.empty_cache()
 
 
+def score_universal_nll(
+    texts: Sequence[str],
+    *,
+    universal_adapter_dir: Path | str,
+    base_model: str,
+    max_seq_length: int,
+    forward_batch_size: int,
+) -> np.ndarray:
+    """Per-prompt NLL of ``base + universal`` with no domain adapter.
+
+    This is the merge-fidelity check of the residual arms: when the
+    universal adapter is the pooled generalist, the result must match
+    :func:`score_pooled_nll` up to the rounding of the float32 merge.
+
+    :returns: NLL vector, shape ``(len(texts),)``.
+    :rtype: numpy.ndarray
+    """
+    base, tokenizer, device = load_base_causal_lm(
+        base_model, universal_adapter_dir=universal_adapter_dir,
+    )
+    try:
+        return per_example_nll(
+            base,
+            tokenizer,
+            texts,
+            max_length=max_seq_length,
+            batch_size=forward_batch_size,
+            device=device,
+        )
+    finally:
+        import torch
+        del base
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+
 def sample_proportional_merge_idx(
     g_merge: np.ndarray,
     *,
@@ -452,6 +512,121 @@ def sample_proportional_merge_idx(
     return out
 
 
+def compute_flat_scores(
+    *,
+    merge_nll: np.ndarray,
+    pooled_nll: np.ndarray,
+    g_merge: np.ndarray,
+    p_merge: np.ndarray,
+    argmax_merge_idx: np.ndarray,
+    strategic_merge_idx: np.ndarray,
+    sampled_merge_idx: np.ndarray,
+    bench_labels: Sequence[str],
+    round_idx: int,
+    universal_nll: np.ndarray | None = None,
+    fitted_proba: np.ndarray | None = None,
+    fitted_val_accuracy: float | None = None,
+) -> tuple[FlatRoutingScores, dict[str, dict[str, Any]]]:
+    """Reduce per-prompt NLL matrices to the headline and per-benchmark scores.
+
+    Pure numpy so the routing arithmetic (including the universal-only and
+    fitted-router columns) is testable without adapters.
+
+    :param merge_nll: Expert NLL matrix, shape ``(M, n_merge)``.
+    :type merge_nll: numpy.ndarray
+    :param pooled_nll: Pooled-baseline NLL, shape ``(M,)``.
+    :type pooled_nll: numpy.ndarray
+    :param g_merge: Merge-level :math:`G`, shape ``(n_merge, M)``.
+    :type g_merge: numpy.ndarray
+    :param p_merge: Merge-level :math:`G(1-G)` weights, shape ``(n_merge, M)``.
+    :type p_merge: numpy.ndarray
+    :param argmax_merge_idx: Argmax-:math:`G` merge per prompt.
+    :type argmax_merge_idx: numpy.ndarray
+    :param strategic_merge_idx: Argmax strategic merge per prompt.
+    :type strategic_merge_idx: numpy.ndarray
+    :param sampled_merge_idx: One proportional sample per prompt.
+    :type sampled_merge_idx: numpy.ndarray
+    :param bench_labels: Source benchmark per prompt.
+    :type bench_labels: Sequence[str]
+    :param round_idx: Round scored.
+    :type round_idx: int
+    :param universal_nll: Optional universal-only NLL, shape ``(M,)``.
+    :type universal_nll: numpy.ndarray | None
+    :param fitted_proba: Optional fitted-router probabilities, shape
+        ``(M, n_merge)``.
+    :type fitted_proba: numpy.ndarray | None
+    :param fitted_val_accuracy: Fitted router's validation accuracy.
+    :type fitted_val_accuracy: float | None
+    :returns: ``(headline scores, per-benchmark breakdown)``.
+    :rtype: tuple[FlatRoutingScores, dict[str, dict[str, Any]]]
+    """
+    m = merge_nll.shape[0]
+    rows = np.arange(m)
+    expected_nll = (g_merge.T * merge_nll).sum(axis=1)
+    strategic_expected_nll = (p_merge.T * merge_nll).sum(axis=1)
+    argmax_nll = merge_nll[rows, argmax_merge_idx]
+    strategic_argmax_nll = merge_nll[rows, strategic_merge_idx]
+    sampled_nll = merge_nll[rows, sampled_merge_idx]
+    oracle_merge_idx = np.argmin(merge_nll, axis=1)
+    oracle_nll = merge_nll[rows, oracle_merge_idx]
+
+    fitted_argmax_nll: np.ndarray | None = None
+    fitted_expected_nll: np.ndarray | None = None
+    fitted_idx: np.ndarray | None = None
+    if fitted_proba is not None:
+        fitted_idx = np.argmax(fitted_proba, axis=1)
+        fitted_argmax_nll = merge_nll[rows, fitted_idx]
+        fitted_expected_nll = (fitted_proba * merge_nll).sum(axis=1)
+
+    def _mean(v: np.ndarray | None, mask: np.ndarray | None = None) -> float | None:
+        if v is None:
+            return None
+        return float(v.mean() if mask is None else v[mask].mean())
+
+    flat = FlatRoutingScores(
+        pooled_nll=float(pooled_nll.mean()),
+        learned_argmax_nll=float(argmax_nll.mean()),
+        learned_expected_nll=float(expected_nll.mean()),
+        learned_sampled_nll=float(sampled_nll.mean()),
+        strategic_expected_nll=float(strategic_expected_nll.mean()),
+        strategic_argmax_nll=float(strategic_argmax_nll.mean()),
+        oracle_nll=float(oracle_nll.mean()),
+        n_prompts=m,
+        round_idx=round_idx,
+        universal_nll=_mean(universal_nll),
+        fitted_argmax_nll=_mean(fitted_argmax_nll),
+        fitted_expected_nll=_mean(fitted_expected_nll),
+        fitted_val_accuracy=fitted_val_accuracy,
+    )
+
+    per_bench: dict[str, dict[str, Any]] = {}
+    for bench in sorted(set(bench_labels)):
+        mask = np.array([b == bench for b in bench_labels])
+        row: dict[str, Any] = {
+            "n": int(mask.sum()),
+            "pooled_nll": float(pooled_nll[mask].mean()),
+            "learned_argmax_nll": float(argmax_nll[mask].mean()),
+            "learned_expected_nll": float(expected_nll[mask].mean()),
+            "learned_sampled_nll": float(sampled_nll[mask].mean()),
+            "strategic_expected_nll": float(strategic_expected_nll[mask].mean()),
+            "strategic_argmax_nll": float(strategic_argmax_nll[mask].mean()),
+            "oracle_nll": float(oracle_nll[mask].mean()),
+            "agreement_argmax": float(
+                (argmax_merge_idx[mask] == oracle_merge_idx[mask]).mean(),
+            ),
+        }
+        if universal_nll is not None:
+            row["universal_nll"] = _mean(universal_nll, mask)
+        if fitted_idx is not None:
+            row["fitted_argmax_nll"] = _mean(fitted_argmax_nll, mask)
+            row["fitted_expected_nll"] = _mean(fitted_expected_nll, mask)
+            row["fitted_agreement_argmax"] = float(
+                (fitted_idx[mask] == oracle_merge_idx[mask]).mean(),
+            )
+        per_bench[bench] = row
+    return flat, per_bench
+
+
 def run_flat_routing_eval(
     *,
     router_config: Path,
@@ -471,12 +646,37 @@ def run_flat_routing_eval(
     pooled_nll: np.ndarray | None = None,
     merge_nll_cache: Path | None = None,
     save_merge_nll_cache: Path | None = None,
+    universal_adapter_dir: Path | str | None = None,
+    merge_aliases: Mapping[str, str] | None = None,
+    fitted_router: bool = False,
+    val_merge_nll: np.ndarray | None = None,
+    val_merge_nll_cache: Path | None = None,
+    universal_nll: np.ndarray | None = None,
 ) -> FlatRoutingReport:
     """Run flat-pool route-then-score evaluation.
 
     When ``score_adapters`` is false, pass precomputed ``merge_nll`` and
-    ``pooled_nll`` to skip GPU scoring (routing-only analysis).
+    ``pooled_nll`` (and ``val_merge_nll`` if ``fitted_router``) to skip GPU
+    scoring (routing-only analysis).
 
+    :param universal_adapter_dir: Frozen universal LoRA merged under every
+        merge adapter (residual ``modula_res`` arms). Also scored alone as
+        ``universal_nll``.
+    :type universal_adapter_dir: pathlib.Path | str | None
+    :param merge_aliases: Extra ``config merge name -> on-disk adapter name``
+        aliases (the label arms map ``pair-k`` onto benchmark experts).
+    :type merge_aliases: Mapping[str, str] | None
+    :param fitted_router: Also fit a prompt-level softmax router on the
+        validation pool (argmin-NLL expert) and score it on ``partition``.
+    :type fitted_router: bool
+    :param val_merge_nll: Precomputed validation NLL matrix for the fitted
+        router (``(M_val, n_merge)``); scored on GPU when ``None``.
+    :type val_merge_nll: numpy.ndarray | None
+    :param val_merge_nll_cache: Optional ``.npy`` path to read/write the
+        validation NLL matrix.
+    :type val_merge_nll_cache: pathlib.Path | None
+    :param universal_nll: Precomputed universal-only NLL vector.
+    :type universal_nll: numpy.ndarray | None
     :returns: Full routing report.
     :rtype: FlatRoutingReport
     """
@@ -486,7 +686,7 @@ def run_flat_routing_eval(
     agent_names = [a["name"] for a in cfg["agents"]]
     rnd = round_idx if round_idx is not None else final_round(history_path)
     merge_names, merge_name_map = resolve_merge_adapters(
-        merge_run_dir, rnd, config_merge_names,
+        merge_run_dir, rnd, config_merge_names, aliases=merge_aliases,
     )
 
     prompts, responses, bench_labels = load_flat_partition_pool(
@@ -542,6 +742,7 @@ def run_flat_routing_eval(
             base_model=base_model,
             max_seq_length=max_seq_length,
             forward_batch_size=forward_batch_size,
+            universal_adapter_dir=universal_adapter_dir,
         )
         pooled_nll = score_pooled_nll(
             texts,
@@ -551,49 +752,89 @@ def run_flat_routing_eval(
             max_seq_length=max_seq_length,
             forward_batch_size=forward_batch_size,
         )
+        if universal_adapter_dir is not None and universal_nll is None:
+            universal_nll = score_universal_nll(
+                texts,
+                universal_adapter_dir=universal_adapter_dir,
+                base_model=base_model,
+                max_seq_length=max_seq_length,
+                forward_batch_size=forward_batch_size,
+            )
     if save_merge_nll_cache is not None and merge_nll is not None:
         save_merge_nll_cache.parent.mkdir(parents=True, exist_ok=True)
         np.save(save_merge_nll_cache, merge_nll)
     if merge_nll is None or pooled_nll is None:
         raise ValueError("merge_nll and pooled_nll required when score_adapters=False")
 
-    expected_nll = (g_merge.T * merge_nll).sum(axis=1)
-    strategic_expected_nll = (p_merge.T * merge_nll).sum(axis=1)
-    argmax_nll = merge_nll[np.arange(len(texts)), argmax_merge_idx]
-    strategic_argmax_nll = merge_nll[np.arange(len(texts)), strategic_merge_idx]
-    sampled_nll = merge_nll[np.arange(len(texts)), sampled_merge_idx]
-    oracle_merge_idx = np.argmin(merge_nll, axis=1)
-    oracle_nll = merge_nll[np.arange(len(texts)), oracle_merge_idx]
+    # Fitted prompt-level router: argmin-NLL expert on the validation pool,
+    # predicted from trait coordinates, scored on this partition.
+    fitted_proba: np.ndarray | None = None
+    fitted_val_accuracy: float | None = None
+    if fitted_router:
+        from infl_ens.evaluation.fitted_router import fit_argmin_router
 
-    flat = FlatRoutingScores(
-        pooled_nll=float(pooled_nll.mean()),
-        learned_argmax_nll=float(argmax_nll.mean()),
-        learned_expected_nll=float(expected_nll.mean()),
-        learned_sampled_nll=float(sampled_nll.mean()),
-        strategic_expected_nll=float(strategic_expected_nll.mean()),
-        strategic_argmax_nll=float(strategic_argmax_nll.mean()),
-        oracle_nll=float(oracle_nll.mean()),
-        n_prompts=len(texts),
+        val_prompts, _val_responses, _val_bench = load_flat_partition_pool(
+            cfg,
+            repo_root=repo_root,
+            partition="val",
+            max_eval_records=max_eval_records,
+            seed=seed,
+        )
+        if (
+            val_merge_nll is None
+            and val_merge_nll_cache is not None
+            and val_merge_nll_cache.is_file()
+        ):
+            val_merge_nll = np.load(val_merge_nll_cache)
+        if val_merge_nll is None:
+            if not score_adapters:
+                raise ValueError(
+                    "val_merge_nll required for fitted_router when score_adapters=False"
+                )
+            val_texts = [
+                fmt(p, r if r else None)
+                for p, r in zip(val_prompts, _val_responses, strict=True)
+            ]
+            val_merge_nll = score_merge_nll_matrix(
+                merge_names,
+                val_texts,
+                merge_run_dir=merge_run_dir,
+                round_idx=rnd,
+                base_model=base_model,
+                max_seq_length=max_seq_length,
+                forward_batch_size=forward_batch_size,
+                universal_adapter_dir=universal_adapter_dir,
+            )
+            if val_merge_nll_cache is not None:
+                val_merge_nll_cache.parent.mkdir(parents=True, exist_ok=True)
+                np.save(val_merge_nll_cache, val_merge_nll)
+        if val_merge_nll.shape != (len(val_prompts), len(merge_names)):
+            raise ValueError(
+                f"val_merge_nll shape {val_merge_nll.shape} != "
+                f"({len(val_prompts)}, {len(merge_names)})"
+            )
+        val_coords = np.asarray(space.project(val_prompts), dtype=float)
+        router = fit_argmin_router(val_coords, val_merge_nll)
+        fitted_proba = router.predict_proba(coords)  # (M, n_merge)
+        fitted_val_accuracy = float(router.train_accuracy)
+
+    scores, per_bench = compute_flat_scores(
+        merge_nll=merge_nll,
+        pooled_nll=pooled_nll,
+        g_merge=g_merge,
+        p_merge=p_merge,
+        argmax_merge_idx=argmax_merge_idx,
+        strategic_merge_idx=strategic_merge_idx,
+        sampled_merge_idx=sampled_merge_idx,
+        bench_labels=bench_labels,
         round_idx=rnd,
+        universal_nll=universal_nll,
+        fitted_proba=fitted_proba,
+        fitted_val_accuracy=fitted_val_accuracy,
     )
-
+    flat = scores
+    oracle_merge_idx = np.argmin(merge_nll, axis=1)
     bench_names = sorted(set(bench_labels))
-    per_bench: dict[str, dict[str, Any]] = {}
-    for bench in bench_names:
-        mask = np.array([b == bench for b in bench_labels])
-        per_bench[bench] = {
-            "n": int(mask.sum()),
-            "pooled_nll": float(pooled_nll[mask].mean()),
-            "learned_argmax_nll": float(argmax_nll[mask].mean()),
-            "learned_expected_nll": float(expected_nll[mask].mean()),
-            "learned_sampled_nll": float(sampled_nll[mask].mean()),
-            "strategic_expected_nll": float(strategic_expected_nll[mask].mean()),
-            "strategic_argmax_nll": float(strategic_argmax_nll[mask].mean()),
-            "oracle_nll": float(oracle_nll[mask].mean()),
-            "agreement_argmax": float(
-                (argmax_merge_idx[mask] == oracle_merge_idx[mask]).mean(),
-            ),
-        }
 
     n_merge = len(merge_names)
     confusion = np.zeros((n_merge, n_merge), dtype=int)
@@ -682,6 +923,10 @@ def report_to_dict(report: FlatRoutingReport) -> dict[str, Any]:
             "learned_routing_nll": f.learned_expected_nll,
             "oracle_routing_nll": f.oracle_nll,
             "routing_agreement_argmax": agreement,
+            "universal_nll": f.universal_nll,
+            "fitted_routing_argmax_nll": f.fitted_argmax_nll,
+            "fitted_routing_expected_nll": f.fitted_expected_nll,
+            "fitted_router_val_accuracy": f.fitted_val_accuracy,
             "n_prompts": f.n_prompts,
             "round": f.round_idx,
             "merge_names": report.merge_names,
@@ -728,6 +973,23 @@ def format_headline_markdown(report: FlatRoutingReport) -> str:
         f"{f.strategic_argmax_nll - f.oracle_nll:+.4f} |",
         f"| Oracle routing (ceiling) | {f.oracle_nll:.4f} | "
         f"{f.oracle_nll - f.pooled_nll:+.4f} | — |",
+    ]
+    if f.fitted_expected_nll is not None and f.fitted_argmax_nll is not None:
+        lines += [
+            f"| Fitted router (expected) | {f.fitted_expected_nll:.4f} | "
+            f"{f.fitted_expected_nll - f.pooled_nll:+.4f} | "
+            f"{f.fitted_expected_nll - f.oracle_nll:+.4f} |",
+            f"| Fitted router (argmax) | {f.fitted_argmax_nll:.4f} | "
+            f"{f.fitted_argmax_nll - f.pooled_nll:+.4f} | "
+            f"{f.fitted_argmax_nll - f.oracle_nll:+.4f} |",
+        ]
+    if f.universal_nll is not None:
+        lines.append(
+            f"| Universal only (merge check) | {f.universal_nll:.4f} | "
+            f"{f.universal_nll - f.pooled_nll:+.4f} | "
+            f"{f.universal_nll - f.oracle_nll:+.4f} |",
+        )
+    lines += [
         "",
         f"G(1−G) vs naive-G expected: "
         f"{f.strategic_expected_nll - f.learned_expected_nll:+.4f} "

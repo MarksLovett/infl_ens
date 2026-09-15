@@ -27,8 +27,12 @@ Public surface (eager)
   :class:`EvalJobConfig`, :func:`evaluate_adapter_on_split`,
   :func:`evaluate_adapter_on_splits`, :func:`evaluate_run_adapters`,
   :func:`run_eval_job`, :func:`run_unified_eval`,
-  :func:`final_round_from_history`, :func:`write_eval_report` from
+  :func:`final_round_from_history`, :func:`write_eval_report`,
+  :func:`universal_adapter_dir_from_config` from
   :mod:`infl_ens.evaluation.evaluate`.
+- :class:`FittedRouter`, :func:`fit_argmin_router` from
+  :mod:`infl_ens.evaluation.fitted_router` (prompt-level softmax router
+  fitted on the validation pool).
 
 Lazy:
 
@@ -62,8 +66,10 @@ from infl_ens.evaluation.evaluate import (
     final_round_from_history,
     run_eval_job,
     run_unified_eval,
+    universal_adapter_dir_from_config,
     write_eval_report,
 )
+from infl_ens.evaluation.fitted_router import FittedRouter, fit_argmin_router
 
 _LAZY_METRIC_NAMES: frozenset[str] = frozenset({
     "build_chat_formatter",
@@ -78,12 +84,14 @@ __all__ = [
     "BENCHMARK_KINDS",
     "BenchmarkEvalResult",
     "EvalJobConfig",
+    "FittedRouter",
     "build_chat_formatter",
     "discover_adapters",
     "evaluate_adapter_on_split",
     "evaluate_adapter_on_splits",
     "evaluate_run_adapters",
     "final_round_from_history",
+    "fit_argmin_router",
     "format_chat_example",
     "is_adapter_dir",
     "load_benchmark_splits",
@@ -93,6 +101,7 @@ __all__ = [
     "run_unified_eval",
     "split_to_texts",
     "subsample_split",
+    "universal_adapter_dir_from_config",
     "write_eval_report",
 ]
 

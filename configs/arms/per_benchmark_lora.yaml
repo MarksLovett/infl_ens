@@ -1,0 +1,16 @@
+# BASELINE: one LoRA per benchmark, from scratch (no universal adapter).
+# Same task and round schedule as modula_res_labels.yaml with
+# `universal_run_dir: null`; differs from the specialist arms in exactly one
+# way -- the partition is the benchmark label instead of the game's pairs.
+includes:
+  - _modula_res_base.yaml
+
+output_dir: results/seven_axis_per_benchmark_lora/seed0
+
+modula_res:
+  domain_source: labels
+  universal_run_dir: null
+
+sft:
+  lora_r: 8
+  lora_alpha: 16

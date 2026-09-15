@@ -46,6 +46,11 @@ class AdapterEvalConfig:
     :type max_eval_records: int | None
     :param seed: RNG seed for subsampling.
     :type seed: int
+    :param universal_adapter_dir: Optional frozen universal LoRA merged
+        into the base before each scored adapter is attached (the
+        ``modula_res`` residual arms). ``None`` scores adapters on the bare
+        base model.
+    :type universal_adapter_dir: str | None
     """
 
     base_model: str = "Qwen/Qwen2.5-1.5B-Instruct"
@@ -53,6 +58,7 @@ class AdapterEvalConfig:
     forward_batch_size: int = 8
     max_eval_records: Optional[int] = None
     seed: int = 0
+    universal_adapter_dir: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -152,7 +158,9 @@ def evaluate_adapter_on_split(
 
     owns_model = base_model_obj is None
     if owns_model:
-        base_model_obj, tokenizer, device = load_base_causal_lm(cfg.base_model)
+        base_model_obj, tokenizer, device = load_base_causal_lm(
+            cfg.base_model, universal_adapter_dir=cfg.universal_adapter_dir,
+        )
 
     model = load_adapter_model(base_model_obj, adapter_path)
     if formatting_func is None:
@@ -217,7 +225,9 @@ def evaluate_adapter_on_splits(
     """
     _seed_all(cfg.seed)
     adapter_path = resolve_adapter_dir(adapter_dir)
-    base_model_obj, tokenizer, device = load_base_causal_lm(cfg.base_model)
+    base_model_obj, tokenizer, device = load_base_causal_lm(
+        cfg.base_model, universal_adapter_dir=cfg.universal_adapter_dir,
+    )
     model = load_adapter_model(base_model_obj, adapter_path)
     if formatting_func is None:
         from infl_ens.training.sft_training import make_chat_formatter
@@ -371,6 +381,7 @@ class EvalJobConfig:
     rounds: Optional[list[int]] = None
     data_split_manifest: Optional[str] = None
     data_split_partition: Optional[str] = None
+    universal_adapter_dir: Optional[str] = None
 
     def to_adapter_eval_config(self) -> AdapterEvalConfig:
         """Build :class:`AdapterEvalConfig` from the nested ``eval`` block.
@@ -385,6 +396,7 @@ class EvalJobConfig:
             forward_batch_size=int(e.get("forward_batch_size", 8)),
             max_eval_records=e.get("max_eval_records"),
             seed=self.seed,
+            universal_adapter_dir=self.universal_adapter_dir,
         )
 
     @classmethod
@@ -495,7 +507,28 @@ class EvalJobConfig:
             rounds=[int(r) for r in rounds] if rounds is not None else None,
             data_split_manifest=str(manifest),
             data_split_partition=str(partition),
+            universal_adapter_dir=universal_adapter_dir_from_config(cfg),
         )
+
+
+def universal_adapter_dir_from_config(cfg: dict[str, Any]) -> Optional[str]:
+    """The frozen universal adapter a ``modula_res`` run was trained on.
+
+    The task writes the resolved path into
+    ``resolved_config.yaml`` as ``modula_res.universal_adapter_dir``; every
+    evaluation of that run's adapters must merge the same adapter first.
+    Runs of any other task (or from-scratch ``modula_res`` arms) return
+    ``None``.
+
+    :param cfg: Resolved run config.
+    :type cfg: dict
+    :returns: Adapter directory as written, or ``None``.
+    :rtype: str | None
+    """
+    if cfg.get("task") != "modula_res":
+        return None
+    value = (cfg.get("modula_res") or {}).get("universal_adapter_dir")
+    return str(value) if value else None
 
 
 def is_unified_config(cfg: dict[str, Any]) -> bool:
@@ -574,11 +607,13 @@ def run_unified_eval(
         run_eval_job(job)
         reports.append(Path(job.output_dir) / "eval_results.json")
         if baseline_run_dir:
+            # The pooled generalist is always scored on the bare base.
             baseline_job = replace(
                 job,
                 run_dir=str(baseline_run_dir),
                 output_dir=str(Path(baseline_run_dir) / f"eval_{partition}"),
                 agents=eval_block.get("baseline_agents"),
+                universal_adapter_dir=None,
             )
             run_eval_job(baseline_job)
             reports.append(Path(baseline_job.output_dir) / "eval_results.json")
@@ -642,6 +677,7 @@ def run_eval_job(job: EvalJobConfig) -> list[BenchmarkEvalResult]:
             "eval": job.eval_cfg,
             "data_split_manifest": job.data_split_manifest,
             "data_split_partition": job.data_split_partition,
+            "universal_adapter_dir": job.universal_adapter_dir,
         },
     )
     return results
