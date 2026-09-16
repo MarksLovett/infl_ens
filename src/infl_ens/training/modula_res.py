@@ -234,49 +234,114 @@ def round_batch_rows(record: Mapping[str, Any]) -> list[tuple[str, str | None]]:
     return rows
 
 
-def label_domain_batches(
-    record: Mapping[str, Any],
-    *,
-    train_prompts: Sequence[str],
-    train_responses: Sequence[str | None],
-    train_labels: Sequence[str],
-    domain_names: Sequence[str],
-) -> dict[str, DomainBatch]:
-    """Split one round batch by benchmark label.
+class TrainRowLabeler:
+    """Assign benchmark labels to logged rows by matching the train partition.
 
-    Each logged row is matched to the train partition by text, first on
-    ``(prompt, response)`` and then on the prompt alone, and takes the
-    benchmark label of the matching train row.
+    A row is matched first on ``(prompt, response)``, then on the prompt
+    alone. The same text can occur in several benchmarks (e.g. a prompt
+    shared by the jailbreak and prompt-injection sets, both without
+    responses), so each key holds the *multiset* of its train labels, in
+    train order, and successive occurrences consume it. Used across all
+    rounds of one run, this reproduces every benchmark's train count
+    exactly; once a key's labels are exhausted the last one is reused.
 
-    :param record: One source history record.
-    :type record: Mapping
     :param train_prompts: Flattened train partition prompts.
     :type train_prompts: Sequence[str]
     :param train_responses: Aligned responses.
     :type train_responses: Sequence[str | None]
     :param train_labels: Aligned benchmark names.
     :type train_labels: Sequence[str]
+    """
+
+    def __init__(
+        self,
+        train_prompts: Sequence[str],
+        train_responses: Sequence[str | None],
+        train_labels: Sequence[str],
+    ) -> None:
+        self._by_pair: dict[tuple[str, str | None], list[str]] = {}
+        self._by_prompt: dict[str, list[str]] = {}
+        for p, r, lab in zip(train_prompts, train_responses, train_labels, strict=True):
+            key = (str(p), str(r) if r else None)
+            self._by_pair.setdefault(key, []).append(str(lab))
+            self._by_prompt.setdefault(str(p), []).append(str(lab))
+        self._used_pair: dict[tuple[str, str | None], int] = {}
+        self._used_prompt: dict[str, int] = {}
+
+    @staticmethod
+    def _take(labels: list[str], used: dict[Any, int], key: Any) -> str:
+        i = used.get(key, 0)
+        used[key] = i + 1
+        return labels[min(i, len(labels) - 1)]
+
+    def label(self, prompt: str, response: str | None) -> str | None:
+        """Return the benchmark of the next occurrence of ``(prompt, response)``.
+
+        :param prompt: Logged prompt text.
+        :type prompt: str
+        :param response: Logged response text, or ``None``.
+        :type response: str | None
+        :returns: Benchmark name, or ``None`` when the row is not in the
+            train partition.
+        :rtype: str | None
+        """
+        key = (prompt, response)
+        labels = self._by_pair.get(key)
+        if labels:
+            return self._take(labels, self._used_pair, key)
+        labels = self._by_prompt.get(prompt)
+        if labels:
+            return self._take(labels, self._used_prompt, prompt)
+        return None
+
+
+def label_domain_batches(
+    record: Mapping[str, Any],
+    *,
+    train_prompts: Sequence[str] | None = None,
+    train_responses: Sequence[str | None] | None = None,
+    train_labels: Sequence[str] | None = None,
+    domain_names: Sequence[str],
+    labeler: TrainRowLabeler | None = None,
+) -> dict[str, DomainBatch]:
+    """Split one round batch by benchmark label.
+
+    Each logged row takes the benchmark of its matching train row (see
+    :class:`TrainRowLabeler`). Pass one ``labeler`` across the rounds of a
+    run so texts shared by several benchmarks are split with the right
+    multiplicities; otherwise a fresh labeler is built from the train
+    arrays for this record alone.
+
+    :param record: One source history record.
+    :type record: Mapping
+    :param train_prompts: Flattened train partition prompts (when no
+        ``labeler`` is given).
+    :type train_prompts: Sequence[str] | None
+    :param train_responses: Aligned responses.
+    :type train_responses: Sequence[str | None] | None
+    :param train_labels: Aligned benchmark names.
+    :type train_labels: Sequence[str] | None
     :param domain_names: Benchmark names, one expert each (config order).
     :type domain_names: Sequence[str]
+    :param labeler: Shared labeler carrying occurrence state across rounds.
+    :type labeler: TrainRowLabeler | None
     :returns: ``benchmark -> DomainBatch`` (every domain present, possibly
         empty).
     :rtype: dict[str, DomainBatch]
     :raises ValueError: If the record logs no prompts, a logged prompt is
-        not in the train partition, or a label is not a known domain.
+        not in the train partition, a label is not a known domain, or
+        neither a labeler nor the train arrays are given.
     """
     rows = round_batch_rows(record)
-
-    label_by_pair: dict[tuple[str, str | None], str] = {}
-    label_by_prompt: dict[str, str] = {}
-    for p, r, lab in zip(train_prompts, train_responses, train_labels, strict=True):
-        key = (str(p), str(r) if r else None)
-        label_by_pair.setdefault(key, str(lab))
-        label_by_prompt.setdefault(str(p), str(lab))
+    if labeler is None:
+        if train_prompts is None or train_responses is None or train_labels is None:
+            raise ValueError("label_domain_batches needs a labeler or the train arrays")
+        labeler = TrainRowLabeler(train_prompts, train_responses, train_labels)
 
     prompts: dict[str, list[str]] = {d: [] for d in domain_names}
     responses: dict[str, list[str | None]] = {d: [] for d in domain_names}
     for p, r in rows:
-        label = label_by_pair.get((p, r)) or label_by_prompt.get(p)
+        label = labeler.label(p, r)
         if label is None:
             raise ValueError(
                 f"round {record.get('round')}: logged prompt not in the train "
@@ -773,6 +838,7 @@ __all__ = [
     "DOMAIN_SOURCES",
     "DomainBatch",
     "SourceRouterBlocks",
+    "TrainRowLabeler",
     "assign_pairs_to_axes",
     "dominant_axis_by_merge_group",
     "history_domain_batches",

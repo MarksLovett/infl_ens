@@ -25,6 +25,7 @@ from infl_ens.config import KNOWN_TASKS, MODULA_RES_KEYS, TOP_LEVEL_KEYS, load_c
 from infl_ens.training.modula_res import (
     DomainBatch,
     SourceRouterBlocks,
+    TrainRowLabeler,
     assign_pairs_to_axes,
     dominant_axis_by_merge_group,
     history_domain_batches,
@@ -239,6 +240,45 @@ def test_label_batches_from_batch_prompts_only() -> None:
             {"round": 1, "batch_prompts": ["nope"]}, train_prompts=prompts,
             train_responses=responses, train_labels=labels, domain_names=BENCHES,
         )
+    with pytest.raises(ValueError, match="needs a labeler"):
+        label_domain_batches({"round": 0, "batch_prompts": ["x"]}, domain_names=BENCHES)
+
+
+def test_shared_prompt_without_response_splits_by_train_multiplicity() -> None:
+    """Regression: 15 prompts sit verbatim in both jbb_behaviors and
+    prompt_injection with no response. Keying on text alone sent every copy
+    to the earlier benchmark (jbb 155/140, prompt_injection 3485/3500). A
+    labeler shared across rounds must reproduce the train counts exactly.
+    """
+    # "shared" appears once in b0 and twice in b1; "solo" only in b2.
+    train_prompts = ["shared", "shared", "shared", "solo"]
+    train_responses = [None, None, None, None]
+    train_labels = ["b0", "b1", "b1", "b2"]
+    history = [
+        {"round": 0, "batch_prompts": ["shared", "solo"]},
+        {"round": 1, "batch_prompts": ["shared"]},
+        {"round": 2, "batch_prompts": ["shared"]},
+    ]
+    labeler = TrainRowLabeler(train_prompts, train_responses, train_labels)
+    counts = {b: 0 for b in BENCHES}
+    per_round = []
+    for rec in history:
+        batches = label_domain_batches(rec, domain_names=BENCHES, labeler=labeler)
+        per_round.append({b: batches[b].n for b in BENCHES})
+        for b in BENCHES:
+            counts[b] += batches[b].n
+    assert counts == {"b0": 1, "b1": 2, "b2": 1}          # equals the train partition
+    assert per_round[0] == {"b0": 1, "b1": 0, "b2": 1}    # train order: b0 first
+    assert per_round[1] == {"b0": 0, "b1": 1, "b2": 0}
+    # Past the multiset the last label is reused rather than failing.
+    assert labeler.label("shared", None) == "b1"
+    assert labeler.label("missing", None) is None
+    # A fresh labeler per call (no shared state) always picks the first label.
+    lone = label_domain_batches(
+        history[1], train_prompts=train_prompts, train_responses=train_responses,
+        train_labels=train_labels, domain_names=BENCHES,
+    )
+    assert lone["b0"].n == 1 and lone["b1"].n == 0
 
 
 def test_history_batches_replay_pair_prompts_and_weights() -> None:

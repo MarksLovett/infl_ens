@@ -121,6 +121,7 @@ def run_modula_res(cfg: dict[str, Any]) -> int:
     from infl_ens.training.baseline_replay import load_closed_loop_history
     from infl_ens.training.modula_res import (
         DOMAIN_SOURCES,
+        TrainRowLabeler,
         history_domain_batches,
         label_domain_batches,
         pair_to_benchmark_aliases,
@@ -189,14 +190,20 @@ def run_modula_res(cfg: dict[str, Any]) -> int:
             b: _pair_position(bench_to_pair[b]) for b in domain_names
         }
 
-        def batches_for_round(record: dict[str, Any]) -> dict[str, Any]:
-            return label_domain_batches(
-                record,
-                train_prompts=train_prompts,
-                train_responses=train_responses,
-                train_labels=train_labels,
-                domain_names=domain_names,
+        # Partition every round once, in round order, with one labeler so
+        # texts shared by several benchmarks are split with the right
+        # multiplicities; the loop below and the history writer read the
+        # cached result.
+        labeler = TrainRowLabeler(train_prompts, train_responses, train_labels)
+        partition_by_round = {
+            int(rec["round"]): label_domain_batches(
+                rec, domain_names=domain_names, labeler=labeler,
             )
+            for rec in sorted(history, key=lambda r: int(r["round"]))
+        }
+
+        def batches_for_round(record: dict[str, Any]) -> dict[str, Any]:
+            return partition_by_round[int(record["round"])]
 
         # Pre-flight: the label partition over every round must hand each
         # expert at most its benchmark's train rows, and every benchmark
@@ -206,8 +213,8 @@ def run_modula_res(cfg: dict[str, Any]) -> int:
         for lab in train_labels:
             available[str(lab)] = available.get(str(lab), 0) + 1
         routed = {b: 0 for b in domain_names}
-        for rec in history:
-            for b, batch in batches_for_round(rec).items():
+        for batches in partition_by_round.values():
+            for b, batch in batches.items():
                 routed[b] += batch.n
         print(
             "modula_res label partition: rows per expert over all rounds "

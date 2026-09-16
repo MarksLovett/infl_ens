@@ -21,7 +21,7 @@ Eager:
 
 - :class:`RouterTrainingConfig`, :func:`train_router_positions` from
   :mod:`infl_ens.training.router_training`.
-- :class:`DomainBatch`, :class:`SourceRouterBlocks`,
+- :class:`DomainBatch`, :class:`SourceRouterBlocks`, :class:`TrainRowLabeler`,
   :func:`label_domain_batches`, :func:`history_domain_batches`,
   :func:`source_router_blocks`, :func:`rekey_by_merge_group`,
   :func:`dominant_axis_by_merge_group`, :func:`assign_pairs_to_axes`,
@@ -141,6 +141,7 @@ from typing import TYPE_CHECKING, Any
 from infl_ens.training.modula_res import (
     DomainBatch,
     SourceRouterBlocks,
+    TrainRowLabeler,
     assign_pairs_to_axes,
     dominant_axis_by_merge_group,
     history_domain_batches,
@@ -173,6 +174,7 @@ __all__ = [
     "RouterTrainingConfig",
     "SFTTrainingConfig",
     "SourceRouterBlocks",
+    "TrainRowLabeler",
     "assign_pairs_to_axes",
     "dominant_axis_by_merge_group",
     "history_domain_batches",
