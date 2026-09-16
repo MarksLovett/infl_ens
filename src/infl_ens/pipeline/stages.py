@@ -164,6 +164,37 @@ def expected_rounds(arm: ArmSpec, cfg: dict[str, Any]) -> Optional[int]:
     return None
 
 
+def modula_res_run_is_complete(run_dir: Path) -> bool:
+    """Whether a ``modula_res`` run has its summary and every final-round expert.
+
+    The summary alone is not enough: an expert with no rows in the last
+    round used to leave no ``round-NN`` directory, which the per-round and
+    routing evaluations then failed to find. Requiring one adapter per
+    expert at the final round lets the (resumable) task repair such runs.
+
+    :param run_dir: The arm's run directory.
+    :type run_dir: pathlib.Path
+    :returns: ``True`` when ``train`` can skip this arm.
+    :rtype: bool
+    """
+    from infl_ens.evaluation.adapters import is_adapter_dir
+
+    summary_path = run_dir / "modula_res_summary.json"
+    if not summary_path.is_file():
+        return False
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    rounds = summary.get("rounds") or []
+    experts = [str(e) for e in summary.get("experts") or []]
+    if not rounds or not experts:
+        return False
+    final = int(rounds[-1]["round"])
+    agents_root = run_dir / "agents"
+    return all(is_adapter_dir(agents_root / e / f"round-{final:02d}") for e in experts)
+
+
 def run_is_complete(arm: ArmSpec, cfg: dict[str, Any]) -> bool:
     """Whether an arm's training outputs are already present.
 
@@ -180,7 +211,7 @@ def run_is_complete(arm: ArmSpec, cfg: dict[str, Any]) -> bool:
     if cfg.get("task") == "baseline_replay":
         return (arm.run_dir / "replay_summary.json").is_file()
     if cfg.get("task") == "modula_res":
-        return (arm.run_dir / "modula_res_summary.json").is_file()
+        return modula_res_run_is_complete(arm.run_dir)
     try:
         records = json.loads(history.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -468,6 +499,7 @@ __all__ = [
     "expected_rounds",
     "final_round",
     "resolved_run_config",
+    "modula_res_run_is_complete",
     "run_is_complete",
     "run_pipeline",
     "run_smoke",

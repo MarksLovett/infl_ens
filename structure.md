@@ -190,7 +190,7 @@ infl_ens/
 | `sft_training.py` | `SFTTrainingConfig`, `sft_train_agent` (`frozen_base_adapter_dir` merges a universal LoRA in fp32 before training), `merge_frozen_adapter`, weighted causal-LM loss, `make_chat_formatter` (base-model chat template with Qwen fallback) |
 | `merge_training.py` | `parse_sft_merge_groups`, `merge_groups_from_theory_pairs`, `snap_configured_merge_pairs`, `soft_pair_assignments`, `soft_pair_position_target`, `closed_loop_weight_args` |
 | `baseline_replay.py` | `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
-| `modula_res.py` | `DomainBatch`, `SourceRouterBlocks`, `round_batch_indices`, `label_domain_batches` (per-benchmark rows of each round batch), `history_domain_batches` (logged pair batches + weights), `source_router_blocks`, `rekey_by_merge_group` / `dominant_axis_by_merge_group` (re-key the theory init's `pair_<a>_<b>` entries by merge-group name), `assign_pairs_to_axes` (one-to-one pair→axis assignment from pair coordinates), `pair_to_benchmark_aliases` (argmax axes when bijective, else the assignment, else in order), `resolve_universal_adapter_dir`, `train_modula_res` |
+| `modula_res.py` | `DomainBatch`, `SourceRouterBlocks`, `round_batch_indices`, `label_domain_batches` (per-benchmark rows of each round batch), `history_domain_batches` (logged pair batches + weights), `source_router_blocks`, `rekey_by_merge_group` / `dominant_axis_by_merge_group` (re-key the theory init's `pair_<a>_<b>` entries by merge-group name), `assign_pairs_to_axes` (one-to-one pair→axis assignment from pair coordinates), `pair_to_benchmark_aliases` (argmax axes when bijective, else the assignment, else in order), `resolve_universal_adapter_dir`, `train_modula_res` (resumable; empty rounds copy the previous adapter forward as `carried_from`) |
 | `data_split.py` | `resolve_closed_loop_data_split`, `shuffled_train_batch_indices`, `partitioned_splits_for_eval` |
 | `closed_loop_eval.py` | `run_closed_loop_val_eval`, `append_val_eval_summary` |
 | `pool_dynamics.py` | `run_gradient_ascent_theory`, `classify_layout`, `pairwise_spread`, `agent_pairwise_geometry` |
@@ -229,7 +229,7 @@ infl_ens/
 
 | File | Role |
 |---|---|
-| `stages.py` | `PipelineContext` (`arms(specialists_only|routed_only)`), `STAGES`, `run_pipeline`, `run_smoke`, `run_is_complete` (`modula_res` ⇔ `modula_res_summary.json`), `smoke_config`, `resolved_run_config`; `perround` / `routing` iterate routed arms and pass `universal_adapter_dir`, `merge_aliases`, `fitted_router` |
+| `stages.py` | `PipelineContext` (`arms(specialists_only|routed_only)`), `STAGES`, `run_pipeline`, `run_smoke`, `run_is_complete`, `modula_res_run_is_complete` (`modula_res` ⇔ summary + one adapter per expert at the final round), `smoke_config`, `resolved_run_config`; `perround` / `routing` iterate routed arms and pass `universal_adapter_dir`, `merge_aliases`, `fitted_router` |
 | `__main__.py` | argparse, `--dry-run` planner (`describe`), logging to `<results_dir>/pipeline.log` |
 
 ## `src/infl_ens/utils/`

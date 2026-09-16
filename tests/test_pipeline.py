@@ -164,7 +164,23 @@ def test_modula_res_run_is_complete_needs_summary(tmp_path: Path) -> None:
     ))
     arm = exp.arms[0]
     assert not run_is_complete(arm, arm.load())
+    # A bare summary is not enough ...
     (run / "modula_res_summary.json").write_text("{}", encoding="utf-8")
+    assert not run_is_complete(arm, arm.load())
+    # ... every expert needs an adapter at the final round.
+    (run / "modula_res_summary.json").write_text(json.dumps({
+        "experts": ["b0", "b1"],
+        "rounds": [{"round": 0, "experts": {}}, {"round": 3, "experts": {}}],
+    }), encoding="utf-8")
+    for expert in ("b0", "b1"):
+        (run / "agents" / expert / "round-00").mkdir(parents=True)
+        (run / "agents" / expert / "round-00" / "adapter_model.safetensors").write_bytes(b"")
+    assert not run_is_complete(arm, arm.load())
+    (run / "agents" / "b0" / "round-03").mkdir()
+    (run / "agents" / "b0" / "round-03" / "adapter_model.safetensors").write_bytes(b"")
+    assert not run_is_complete(arm, arm.load())          # b1 still lacks round-03
+    (run / "agents" / "b1" / "round-03").mkdir()
+    (run / "agents" / "b1" / "round-03" / "adapter_model.safetensors").write_bytes(b"")
     assert run_is_complete(arm, arm.load())
 
 

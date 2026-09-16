@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
+import shutil
 import types
 from pathlib import Path
 from typing import Any
@@ -342,7 +343,13 @@ class _FakeSFT:
             "out": out_dir_override, "weights": sample_weights,
             "skip": skip_position_update, "frozen": frozen_base_adapter_dir,
         })
-        Path(out_dir_override).mkdir(parents=True, exist_ok=True)
+        out = Path(out_dir_override)
+        out.mkdir(parents=True, exist_ok=True)
+        # Leave a recognisable adapter behind, tagged with who wrote it.
+        (out / "adapter_model.safetensors").write_bytes(b"")
+        (out / "adapter_config.json").write_text(
+            json.dumps({"agent": agent.name, "n": len(prompts)}), encoding="utf-8",
+        )
         return {"output_dir": out_dir_override, "n_train": len(prompts), "train_loss": 0.1,
                 "loaded_prior_lora": None, "frozen_base_adapter": frozen_base_adapter_dir}
 
@@ -382,7 +389,62 @@ def test_train_modula_res_calls_trainer_per_nonempty_cell(tmp_path: Path) -> Non
     assert [c["agent"] for c in fake2.calls] == ["b0", "b2"]
     assert all(c["frozen"] is None for c in fake2.calls)
     assert fake2.calls[0]["responses"] is None and fake2.calls[1]["responses"] == ["a"]
+    # b1 has never been trained, so there is nothing to carry forward.
     assert summaries2[0]["experts"]["b1"] == {"n_train": 0, "output_dir": None, "skipped": True}
+
+
+def test_train_modula_res_carries_empty_rounds_forward_and_resumes(tmp_path: Path) -> None:
+    """An expert with no rows in a round keeps its previous adapter under that round.
+
+    Mirrors the seven-axis run where jbb_behaviors (~70 train rows) had no
+    rows in the final round, leaving no ``round-11`` for the routing eval.
+    """
+    history = [{"round": r, "positions": {}} for r in range(3)]
+
+    def batches(rec):
+        r = int(rec["round"])
+        b1 = DomainBatch(["p1"], ["a1"]) if r == 0 else DomainBatch([], [])
+        return {"b0": DomainBatch([f"p0-{r}"], [f"a0-{r}"]), "b1": b1, "b2": DomainBatch([f"p2-{r}"], [None])}
+
+    common = dict(
+        domain_names=BENCHES, batches_for_round=batches, sft_cfg=object(), project=None,
+        output_dir=tmp_path / "agents", universal_adapter_dir=None,
+        initial_positions={b: [0.0, 0.0, 0.0] for b in BENCHES},
+    )
+    fake = _FakeSFT()
+    summaries = train_modula_res(history, sft_train=fake, **common)
+    assert [c["agent"] for c in fake.calls] == ["b0", "b1", "b2", "b0", "b2", "b0", "b2"]
+    root = tmp_path / "agents"
+    # Every expert now has every round on disk.
+    for b in BENCHES:
+        assert sorted(p.name for p in (root / b).iterdir()) == ["round-00", "round-01", "round-02"]
+    e1 = summaries[1]["experts"]["b1"]
+    assert e1["skipped"] is True and e1["n_train"] == 0
+    assert e1["output_dir"] == str(root / "b1" / "round-01")
+    assert e1["carried_from"] == str(root / "b1" / "round-00")
+    # Round 2 carries the round-1 copy (chain), and the copy is the round-0 adapter.
+    assert summaries[2]["experts"]["b1"]["carried_from"] == str(root / "b1" / "round-01")
+    cfg = json.loads((root / "b1" / "round-02" / "adapter_config.json").read_text(encoding="utf-8"))
+    assert cfg == {"agent": "b1", "n": 1}
+
+    # Resume on the same output dir: nothing is retrained, everything is reused.
+    fake_resume = _FakeSFT()
+    again = train_modula_res(history, sft_train=fake_resume, **common)
+    assert fake_resume.calls == []
+    assert all(
+        e.get("reused") is True for s in again for name, e in s["experts"].items() if not e["skipped"]
+    )
+    assert again[0]["experts"]["b0"]["n_train"] == 1
+    assert again[2]["experts"]["b1"]["carried_from"] == str(root / "b1" / "round-01")
+    for b in BENCHES:
+        assert sorted(p.name for p in (root / b).iterdir()) == ["round-00", "round-01", "round-02"]
+
+    # Repair: delete the carried round-02 for b1 and resume; only the copy is redone.
+    shutil.rmtree(root / "b1" / "round-02")
+    fake_repair = _FakeSFT()
+    train_modula_res(history, sft_train=fake_repair, **common)
+    assert fake_repair.calls == []
+    assert (root / "b1" / "round-02" / "adapter_model.safetensors").exists()
 
 
 # ---------------------------------------------------------------------------

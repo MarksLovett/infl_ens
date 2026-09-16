@@ -38,6 +38,7 @@ touches evaluation artifacts.
 from __future__ import annotations
 
 import json
+import shutil
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -45,6 +46,7 @@ from typing import Any
 
 import numpy as np
 
+from infl_ens.evaluation.adapters import is_adapter_dir
 from infl_ens.inflgame.router.agents import RouterAgent
 
 PathLike = str | Path
@@ -609,6 +611,14 @@ def train_modula_res(
 ) -> list[dict[str, Any]]:
     """Train one cumulative LoRA expert per domain over the source rounds.
 
+    With ``save_per_round`` every expert ends up with an adapter under
+    ``<output_dir>/<expert>/round-NN`` for **every** round it has been
+    trained at least once by: a round in which an expert receives no rows
+    copies its previous adapter forward (recorded as ``carried_from``), so
+    the per-round tables and the routing eval never meet a missing round.
+    Rounds whose adapter already exists on disk are reused rather than
+    retrained (``reused: true``), which makes the task resumable.
+
     :param history: Source closed-loop history.
     :type history: Sequence[Mapping]
     :param domain_names: Expert names (benchmarks or ``pair-k``).
@@ -656,6 +666,10 @@ def train_modula_res(
     out_root.mkdir(parents=True, exist_ok=True)
     universal = str(universal_adapter_dir) if universal_adapter_dir is not None else None
 
+    # Latest adapter directory per expert; seeds cumulative training on
+    # resume and is what an empty round carries forward.
+    last_saved: dict[str, Path] = {}
+
     summaries: list[dict[str, Any]] = []
     for r in target_rounds:
         rec = by_round.get(r)
@@ -665,13 +679,44 @@ def train_modula_res(
         per_expert: dict[str, dict[str, Any]] = {}
         for name in domain_names:
             batch = batches.get(name)
-            if batch is None or batch.n == 0:
-                per_expert[name] = {"n_train": 0, "output_dir": None, "skipped": True}
-                continue
             agent = agents[name]
-            out_override = (
-                str(out_root / name / f"round-{r:02d}") if save_per_round else None
-            )
+            round_dir = out_root / name / f"round-{r:02d}" if save_per_round else None
+
+            if batch is None or batch.n == 0:
+                # No rows for this expert this round: its state is unchanged,
+                # so materialise the previous adapter under this round's
+                # directory. Every consumer (per-round tables, routing eval)
+                # can then assume one adapter per expert per round.
+                entry: dict[str, Any] = {"n_train": 0, "output_dir": None, "skipped": True}
+                prev = last_saved.get(name)
+                if round_dir is not None and prev is not None:
+                    if not is_adapter_dir(round_dir):
+                        if round_dir.exists():
+                            shutil.rmtree(round_dir)
+                        shutil.copytree(prev, round_dir)
+                    entry["output_dir"] = str(round_dir)
+                    entry["carried_from"] = str(prev)
+                    last_saved[name] = round_dir
+                    agent.metadata["lora_dir"] = str(round_dir)
+                per_expert[name] = entry
+                continue
+
+            if round_dir is not None and is_adapter_dir(round_dir):
+                # Resume: this expert/round was already trained.
+                per_expert[name] = {
+                    "n_train": int(batch.n),
+                    "train_loss": None,
+                    "output_dir": str(round_dir),
+                    "loaded_prior_lora": str(last_saved[name]) if name in last_saved else None,
+                    "frozen_base_adapter": universal,
+                    "skipped": False,
+                    "reused": True,
+                }
+                last_saved[name] = round_dir
+                agent.metadata["lora_dir"] = str(round_dir)
+                continue
+
+            out_override = str(round_dir) if round_dir is not None else None
             result = sft_train(
                 agent,
                 prompts=batch.prompts,
@@ -693,6 +738,8 @@ def train_modula_res(
                 "frozen_base_adapter": result.get("frozen_base_adapter"),
                 "skipped": False,
             }
+            if result.get("output_dir"):
+                last_saved[name] = Path(str(result["output_dir"]))
         summaries.append({
             "round": r,
             "experts": per_expert,
