@@ -9,6 +9,7 @@ from infl_ens.evaluation.adapters import (
     AdapterRef,
     discover_adapters,
     is_adapter_dir,
+    latest_round_dir,
     resolve_adapter_dir,
 )
 from infl_ens.evaluation.benchmarks import load_benchmark_splits, subsample_split
@@ -71,6 +72,61 @@ def test_discover_adapters_per_round(tmp_path: Path) -> None:
     (agents / "adapter_model.safetensors").write_bytes(b"")
     found = discover_adapters(tmp_path)
     assert found == [AdapterRef(agent="clone-0", round=1, path=agents)]
+
+
+def _mk_adapter(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "adapter_model.safetensors").write_bytes(b"")
+    return path
+
+
+def test_latest_round_dir_falls_back_to_newest_earlier_round(tmp_path: Path) -> None:
+    """Cumulative adapters: a round the agent skipped resolves to its last trained round."""
+    agent = tmp_path / "agents" / "jbb"
+    r0 = _mk_adapter(agent / "round-00")
+    r3 = _mk_adapter(agent / "round-03")
+    (agent / "round-05").mkdir()                       # empty dir: not an adapter
+    assert latest_round_dir(agent, 3) == r3            # exact hit
+    assert latest_round_dir(agent, 11) == r3           # skipped rounds -> newest earlier
+    assert latest_round_dir(agent, 5) == r3            # empty round dir is ignored
+    assert latest_round_dir(agent, 2) == r0
+    assert latest_round_dir(agent, 0) == r0
+    assert latest_round_dir(tmp_path / "agents" / "missing", 4) is None
+    _mk_adapter(tmp_path / "agents" / "late" / "round-07")
+    assert latest_round_dir(tmp_path / "agents" / "late", 4) is None   # nothing at or before 4
+
+
+def test_discover_adapters_requested_rounds_keep_every_agent(tmp_path: Path) -> None:
+    """With explicit rounds, an agent missing a round is reported with the adapter in effect."""
+    a0 = _mk_adapter(tmp_path / "agents" / "a" / "round-00")
+    a1 = _mk_adapter(tmp_path / "agents" / "a" / "round-01")
+    b0 = _mk_adapter(tmp_path / "agents" / "b" / "round-00")   # b never trained again
+    found = discover_adapters(tmp_path, rounds=[0, 1])
+    assert found == [
+        AdapterRef(agent="a", round=0, path=a0),
+        AdapterRef(agent="a", round=1, path=a1),
+        AdapterRef(agent="b", round=0, path=b0),
+        AdapterRef(agent="b", round=1, path=b0),          # stands in for the missing round-01
+    ]
+    # Without a round filter, only what is on disk is listed.
+    assert [(r.agent, r.round) for r in discover_adapters(tmp_path)] == [("a", 0), ("a", 1), ("b", 0)]
+
+
+def test_resolve_merge_adapters_uses_adapter_in_effect(tmp_path: Path) -> None:
+    from infl_ens.evaluation.routing_eval import resolve_merge_adapters
+
+    _mk_adapter(tmp_path / "agents" / "jbb_behaviors" / "round-09")
+    _mk_adapter(tmp_path / "agents" / "halueval" / "round-11")
+    names, name_map = resolve_merge_adapters(
+        tmp_path, 11, ["pair-0", "pair-1"],
+        aliases={"pair-0": "jbb_behaviors", "pair-1": "halueval"},
+    )
+    assert names == ["jbb_behaviors", "halueval"]
+    assert name_map == {"pair-0": "jbb_behaviors", "pair-1": "halueval"}
+    import pytest
+
+    with pytest.raises(FileNotFoundError, match="at or before round 5"):
+        resolve_merge_adapters(tmp_path, 5, ["pair-0"], aliases={"pair-0": "jbb_behaviors"})
 
 
 def test_write_eval_report(tmp_path: Path) -> None:

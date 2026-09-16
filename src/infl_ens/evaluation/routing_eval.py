@@ -16,7 +16,11 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 
 from infl_ens.data.splits import flatten_partition_prompts, load_split_manifest
-from infl_ens.evaluation.adapters import load_adapter_model, load_base_causal_lm
+from infl_ens.evaluation.adapters import (
+    latest_round_dir,
+    load_adapter_model,
+    load_base_causal_lm,
+)
 from infl_ens.config import load_config
 from infl_ens.data.benchmarks.loading import subsample_split
 from infl_ens.evaluation.metrics import build_chat_formatter
@@ -163,7 +167,9 @@ def resolve_merge_adapters(
     :type aliases: Mapping[str, str] | None
     :returns: ``(resolved_merge_names, config_to_resolved)``.
     :rtype: tuple[list[str], dict[str, str]]
-    :raises FileNotFoundError: If no adapter exists for a config merge name.
+    :raises FileNotFoundError: If no adapter exists for a config merge name
+        at or before ``round_idx`` (adapters are cumulative, so the newest
+        earlier round stands in for a round the agent was not trained in).
     """
     alias_map = dict(DEFAULT_MERGE_ALIASES)
     if aliases:
@@ -179,13 +185,12 @@ def resolve_merge_adapters(
             if not cand or cand in seen:
                 continue
             seen.add(cand)
-            adapter_dir = agents_root / cand / f"round-{round_idx:02d}"
-            if adapter_dir.is_dir():
+            if latest_round_dir(agents_root / cand, round_idx) is not None:
                 pick = cand
                 break
         if pick is None:
             raise FileNotFoundError(
-                f"no merge adapter for {config_name!r} at round {round_idx} "
+                f"no merge adapter for {config_name!r} at or before round {round_idx} "
                 f"under {agents_root} (tried {list(seen)})",
             )
         name_map[config_name] = pick
@@ -391,7 +396,12 @@ def score_merge_nll_matrix(
     cols: list[np.ndarray] = []
     try:
         for merge in merge_names:
-            adapter_dir = merge_run_dir / "agents" / merge / f"round-{round_idx:02d}"
+            adapter_dir = latest_round_dir(merge_run_dir / "agents" / merge, round_idx)
+            if adapter_dir is None:
+                raise FileNotFoundError(
+                    f"no adapter for {merge!r} at or before round {round_idx} "
+                    f"under {merge_run_dir / 'agents'}"
+                )
             model = load_adapter_model(base, adapter_dir)
             try:
                 cols.append(
@@ -432,9 +442,11 @@ def score_pooled_nll(
     :rtype: numpy.ndarray
     """
     base, tokenizer, device = load_base_causal_lm(base_model)
-    adapter_dir = (
-        baseline_run_dir / "agents" / "pooled-baseline" / f"round-{round_idx:02d}"
-    )
+    adapter_dir = latest_round_dir(baseline_run_dir / "agents" / "pooled-baseline", round_idx)
+    if adapter_dir is None:
+        raise FileNotFoundError(
+            f"no pooled-baseline adapter at or before round {round_idx} under {baseline_run_dir}"
+        )
     model = load_adapter_model(base, adapter_dir)
     try:
         return per_example_nll(

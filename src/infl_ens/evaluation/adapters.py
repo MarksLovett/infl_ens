@@ -24,6 +24,40 @@ def is_adapter_dir(path: Path) -> bool:
     return any((path / name).exists() for name in _ADAPTER_FILES)
 
 
+def latest_round_dir(agent_dir: Path, round_idx: int) -> Optional[Path]:
+    """Return the adapter directory in effect for ``agent_dir`` at ``round_idx``.
+
+    Adapters are cumulative: an agent that received no data in a round
+    keeps the weights of its last trained round. The directory in effect at
+    round ``r`` is therefore ``round-r`` when it exists, else the newest
+    ``round-NN`` with ``NN < r``.
+
+    :param agent_dir: ``<run>/agents/<name>``.
+    :type agent_dir: pathlib.Path
+    :param round_idx: Requested round index.
+    :type round_idx: int
+    :returns: The adapter directory, or ``None`` when the agent has no
+        adapter at or before ``round_idx``.
+    :rtype: pathlib.Path | None
+    """
+    exact = agent_dir / f"round-{round_idx:02d}"
+    if is_adapter_dir(exact):
+        return exact
+    if not agent_dir.is_dir():
+        return None
+    best: Optional[tuple[int, Path]] = None
+    for child in agent_dir.iterdir():
+        if not child.name.startswith("round-") or not is_adapter_dir(child):
+            continue
+        try:
+            idx = int(child.name.split("-", 1)[1])
+        except ValueError:
+            continue
+        if idx <= round_idx and (best is None or idx > best[0]):
+            best = (idx, child)
+    return best[1] if best is not None else None
+
+
 def resolve_adapter_dir(path: PathLike) -> Path:
     """Validate and return an adapter directory.
 
@@ -79,6 +113,10 @@ def discover_adapters(
     :type agents: Sequence[str] | None
     :param rounds: Optional subset of round indices for per-round dirs.
         ``None`` includes every ``round-*`` subdirectory plus flat dirs.
+        When given, each requested round resolves to the adapter *in
+        effect* at that round (:func:`latest_round_dir`): an agent not
+        trained in round ``r`` is reported at ``r`` with the newest earlier
+        adapter, so a per-round table keeps every agent in every column.
     :type rounds: Sequence[int] | None
     :returns: Discovered adapters sorted by agent then round.
     :rtype: list[AdapterRef]
@@ -89,7 +127,7 @@ def discover_adapters(
         return []
 
     want_agents = set(agents) if agents is not None else None
-    want_rounds = set(int(r) for r in rounds) if rounds is not None else None
+    want_rounds = sorted(set(int(r) for r in rounds)) if rounds is not None else None
     found: list[AdapterRef] = []
 
     for agent_dir in sorted(agents_root.iterdir()):
@@ -97,6 +135,13 @@ def discover_adapters(
             continue
         agent = agent_dir.name
         if want_agents is not None and agent not in want_agents:
+            continue
+
+        if want_rounds is not None:
+            for r_idx in want_rounds:
+                rd = latest_round_dir(agent_dir, r_idx)
+                if rd is not None:
+                    found.append(AdapterRef(agent=agent, round=r_idx, path=rd))
             continue
 
         round_dirs = sorted(
@@ -109,13 +154,10 @@ def discover_adapters(
                     r_idx = int(rd.name.split("-", 1)[1])
                 except (IndexError, ValueError):
                     continue
-                if want_rounds is not None and r_idx not in want_rounds:
-                    continue
                 if is_adapter_dir(rd):
                     found.append(AdapterRef(agent=agent, round=r_idx, path=rd))
         elif is_adapter_dir(agent_dir):
-            if want_rounds is None:
-                found.append(AdapterRef(agent=agent, round=None, path=agent_dir))
+            found.append(AdapterRef(agent=agent, round=None, path=agent_dir))
 
     return found
 

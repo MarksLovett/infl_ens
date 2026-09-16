@@ -20,7 +20,7 @@ Public surface (eager)
 - :data:`BENCHMARK_KINDS`, :func:`load_benchmark_splits`,
   :func:`subsample_split` (re-exported from
   :mod:`infl_ens.data.benchmarks.loading`).
-- :func:`is_adapter_dir`, :func:`resolve_adapter_dir`,
+- :func:`is_adapter_dir`, :func:`latest_round_dir`, :func:`resolve_adapter_dir`,
   :func:`discover_adapters`, :class:`AdapterRef` from
   :mod:`infl_ens.evaluation.adapters`.
 - :class:`AdapterEvalConfig`, :class:`BenchmarkEvalResult`,
@@ -49,6 +49,7 @@ from infl_ens.evaluation.adapters import (
     AdapterRef,
     discover_adapters,
     is_adapter_dir,
+    latest_round_dir,
     resolve_adapter_dir,
 )
 from infl_ens.evaluation.benchmarks import (
@@ -94,6 +95,7 @@ __all__ = [
     "fit_argmin_router",
     "format_chat_example",
     "is_adapter_dir",
+    "latest_round_dir",
     "load_benchmark_splits",
     "mean_token_nll",
     "resolve_adapter_dir",
