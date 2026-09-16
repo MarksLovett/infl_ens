@@ -95,6 +95,7 @@ def test_encoder_uses_left_padded_final_token_pooling() -> None:
     ):
         encoder = HuggingFaceEncoder(
             "example/qwen-embedding",
+            device="cpu",
             device_map=None,
         )
         embeddings = encoder(["short", "long"])

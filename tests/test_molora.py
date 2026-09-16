@@ -98,7 +98,7 @@ def test_gate_is_uniform_at_init_and_gradients_reach_everything() -> None:
     assert all(abs(u - 1.0 / 3.0) < 1e-6 for u in usage)
     bal = balance_loss(mods)
     assert bal is not None
-    assert pytest.approx(float(bal), abs=1e-6) == 1.0  # uniform => E * sum (1/E)^2 = 1
+    assert pytest.approx(bal.detach().item(), abs=1e-6) == 1.0  # uniform => E * sum (1/E)^2 = 1
     loss = out.pow(2).mean() + cfg.balance_coef * bal
     loss.backward()
     for m in mods:
