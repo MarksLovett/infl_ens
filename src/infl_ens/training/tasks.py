@@ -179,6 +179,11 @@ def run_modula_res(cfg: dict[str, Any]) -> int:
         )
         domain_names = list(benchmark_names)
         merge_aliases = pair_to_benchmark_aliases(blocks, benchmark_names)
+        print(
+            "modula_res label partition: pair -> benchmark aliases "
+            + ", ".join(f"{p}->{b}" for p, b in merge_aliases.items()),
+            flush=True,
+        )
         bench_to_pair = {b: p for p, b in merge_aliases.items()}
         initial_positions = {
             b: _pair_position(bench_to_pair[b]) for b in domain_names

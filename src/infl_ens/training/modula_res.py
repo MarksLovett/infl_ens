@@ -89,12 +89,18 @@ class SourceRouterBlocks:
     :param pair_dominant_axis: ``pair-k -> axis index`` from the theory
         initialisation, or an empty mapping when unavailable.
     :type pair_dominant_axis: dict[str, int]
+    :param pair_positions: ``pair-k -> trait coordinates`` of the pair at
+        initialisation, or an empty mapping when unavailable. Used to
+        assign pairs to benchmarks one-to-one when the dominant axes
+        collide.
+    :type pair_positions: dict[str, list[float]]
     """
 
     agents: list[dict[str, Any]]
     merge_groups: list[dict[str, Any]]
     router_keys: dict[str, Any] = field(default_factory=dict)
     pair_dominant_axis: dict[str, int] = field(default_factory=dict)
+    pair_positions: dict[str, list[float]] = field(default_factory=dict)
 
     @property
     def pair_names(self) -> list[str]:
@@ -305,33 +311,33 @@ def history_domain_batches(
     return out
 
 
-def dominant_axis_by_merge_group(
-    pair_dominant_axis: Mapping[str, Any],
+def rekey_by_merge_group(
+    per_pair: Mapping[str, Any],
     groups: Sequence[Mapping[str, Any]],
-) -> dict[str, int]:
-    """Re-key the theory-init ``pair_dominant_axis`` by merge-group name.
+) -> dict[str, Any]:
+    """Re-key a theory-init per-pair mapping by merge-group name.
 
-    The paired theory initialisation logs the dominant axis under a
-    membership key, ``pair_<clone-a>_<clone-b>`` (see
+    The paired theory initialisation logs per-pair quantities
+    (``pair_dominant_axis``, ``pair_positions``) under a membership key,
+    ``pair_<clone-a>_<clone-b>`` (see
     :func:`infl_ens.training.agent_init.init_agents_theory_gradient_paired`),
     while the SFT merge groups the rest of the pipeline uses are named
     ``pair-k`` (``merge_group_prefix``). This maps each group's ``train_as``
-    name onto the axis logged for the group's members, in any member order.
+    name onto the value logged for the group's members, in any member order.
     Keys that already equal a ``train_as`` name are kept as they are.
 
-    :param pair_dominant_axis: Raw ``theory_init.pair_dominant_axis`` mapping.
-    :type pair_dominant_axis: Mapping[str, Any]
+    :param per_pair: Raw theory-init mapping keyed by membership.
+    :type per_pair: Mapping[str, Any]
     :param groups: Merge groups, each with ``train_as`` and ``names``.
     :type groups: Sequence[Mapping]
-    :returns: ``train_as -> axis index`` for every group that could be
-        matched; empty when nothing matches (callers then fall back to
-        in-order matching).
-    :rtype: dict[str, int]
+    :returns: ``train_as -> value`` for every group that could be matched;
+        empty when nothing matches.
+    :rtype: dict[str, Any]
     """
     from itertools import permutations
 
-    raw = {str(k): int(v) for k, v in pair_dominant_axis.items()}
-    out: dict[str, int] = {}
+    raw = {str(k): v for k, v in per_pair.items()}
+    out: dict[str, Any] = {}
     for group in groups:
         train_as = str(group["train_as"])
         names = [str(n) for n in group["names"]]
@@ -343,6 +349,94 @@ def dominant_axis_by_merge_group(
             if key in raw:
                 out[train_as] = raw[key]
                 break
+    return out
+
+
+def dominant_axis_by_merge_group(
+    pair_dominant_axis: Mapping[str, Any],
+    groups: Sequence[Mapping[str, Any]],
+) -> dict[str, int]:
+    """Re-key ``theory_init.pair_dominant_axis`` by merge-group name.
+
+    Thin wrapper over :func:`rekey_by_merge_group` that casts to ``int``.
+
+    :param pair_dominant_axis: Raw ``theory_init.pair_dominant_axis`` mapping.
+    :type pair_dominant_axis: Mapping[str, Any]
+    :param groups: Merge groups, each with ``train_as`` and ``names``.
+    :type groups: Sequence[Mapping]
+    :returns: ``train_as -> axis index`` for every matched group.
+    :rtype: dict[str, int]
+    """
+    return {k: int(v) for k, v in rekey_by_merge_group(pair_dominant_axis, groups).items()}
+
+
+def assign_pairs_to_axes(
+    positions: Mapping[str, Sequence[float]],
+    pairs: Sequence[str],
+    n_axes: int,
+) -> dict[str, int]:
+    """Assign pairs to distinct axes maximising the summed coordinate.
+
+    A pair's argmax coordinate is not a bijection in general: at the game
+    equilibrium two pairs may share a dominant axis while another axis has
+    none. The label partition needs exactly one expert per benchmark, so
+    this solves the linear assignment
+    :math:`\\max_{\\pi} \\sum_k x_{k,\\pi(k)}` over permutations
+    :math:`\\pi` (Hungarian method via :func:`scipy.optimize.linear_sum_assignment`
+    when SciPy is available, otherwise exhaustive search for up to nine
+    pairs and a greedy fallback beyond).
+
+    :param positions: ``pair -> coordinates`` (length ``n_axes``).
+    :type positions: Mapping[str, Sequence[float]]
+    :param pairs: Pair names to assign, in output order.
+    :type pairs: Sequence[str]
+    :param n_axes: Number of axes; must equal ``len(pairs)``.
+    :type n_axes: int
+    :returns: ``pair -> axis index``, a bijection onto ``range(n_axes)``.
+    :rtype: dict[str, int]
+    :raises ValueError: If a position is missing, the wrong length, or
+        ``len(pairs) != n_axes``.
+    """
+    if len(pairs) != n_axes:
+        raise ValueError(f"{len(pairs)} pairs but {n_axes} axes")
+    rows = []
+    for pair in pairs:
+        if pair not in positions:
+            raise ValueError(f"pair_positions lacks {pair!r}")
+        vec = np.asarray(positions[pair], dtype=float).ravel()
+        if vec.shape[0] != n_axes:
+            raise ValueError(f"{pair}: position has {vec.shape[0]} coordinates, expected {n_axes}")
+        rows.append(vec)
+    score = np.stack(rows, axis=0)
+
+    try:
+        from scipy.optimize import linear_sum_assignment
+    except ImportError:  # pragma: no cover - scipy optional
+        linear_sum_assignment = None
+    if linear_sum_assignment is not None:
+        row_ind, col_ind = linear_sum_assignment(score, maximize=True)
+        return {pairs[int(r)]: int(c) for r, c in zip(row_ind, col_ind, strict=True)}
+
+    from itertools import permutations
+
+    if n_axes <= 9:
+        best, best_val = None, -np.inf
+        for perm in permutations(range(n_axes)):
+            val = float(sum(score[k, perm[k]] for k in range(n_axes)))
+            if val > best_val:
+                best, best_val = perm, val
+        assert best is not None
+        return {pairs[k]: int(best[k]) for k in range(n_axes)}
+    # Greedy: repeatedly take the largest remaining (pair, axis) cell.
+    out: dict[str, int] = {}
+    free_rows, free_cols = set(range(n_axes)), set(range(n_axes))
+    while free_rows:
+        r, c = max(
+            ((r, c) for r in free_rows for c in free_cols), key=lambda rc: score[rc[0], rc[1]],
+        )
+        out[pairs[r]] = c
+        free_rows.discard(r)
+        free_cols.discard(c)
     return out
 
 
@@ -412,11 +506,25 @@ def source_router_blocks(
     pair_dominant_axis = dominant_axis_by_merge_group(
         theory_init.get("pair_dominant_axis") or {}, groups,
     )
+    # Pair coordinates: the theory init's own record first, else the
+    # round-0 position of each group's first member (partners are
+    # co-located after the paired init).
+    pair_positions = {
+        str(k): [float(x) for x in v]
+        for k, v in rekey_by_merge_group(theory_init.get("pair_positions") or {}, groups).items()
+    }
+    if not pair_positions:
+        positions0 = history[0].get("positions") or {}
+        for g in groups:
+            first = str(g["names"][0]) if g["names"] else None
+            if first in positions0:
+                pair_positions[str(g["train_as"])] = [float(x) for x in positions0[first]]
     return SourceRouterBlocks(
         agents=agents,
         merge_groups=groups,
         router_keys=router_keys,
         pair_dominant_axis=pair_dominant_axis,
+        pair_positions=pair_positions,
     )
 
 
@@ -424,12 +532,19 @@ def pair_to_benchmark_aliases(
     blocks: SourceRouterBlocks,
     benchmark_names: Sequence[str],
 ) -> dict[str, str]:
-    """Map every source pair onto the benchmark expert of its dominant axis.
+    """Map every source pair onto one benchmark expert, one-to-one.
 
     Axis ``k`` is the ``k``-th benchmark of the config (the trait space
-    learns one axis per benchmark in loader order). When the theory
-    initialisation did not log ``pair_dominant_axis`` the pairs are matched
-    to the benchmarks in order.
+    learns one axis per benchmark in loader order). The mapping is chosen
+    in this order of preference:
+
+    1. the theory initialisation's ``pair_dominant_axis`` (each pair's
+       argmax coordinate) when it happens to be a bijection;
+    2. otherwise the optimal one-to-one assignment of pairs to axes from
+       the pairs' initial coordinates (:func:`assign_pairs_to_axes`), which
+       agrees with the argmax wherever that is unambiguous;
+    3. otherwise, when neither is recorded, the pairs are matched to the
+       benchmarks in order.
 
     :param blocks: Source router blocks.
     :type blocks: SourceRouterBlocks
@@ -437,30 +552,44 @@ def pair_to_benchmark_aliases(
     :type benchmark_names: Sequence[str]
     :returns: ``pair-k -> benchmark`` covering every pair.
     :rtype: dict[str, str]
-    :raises ValueError: If the mapping is not a bijection onto the benchmarks.
+    :raises ValueError: If the pair and benchmark counts differ, a
+        recorded axis is out of range, a recorded mapping is incomplete,
+        or no bijection can be formed.
     """
     pairs = blocks.pair_names
     benches = [str(b) for b in benchmark_names]
-    if len(pairs) != len(benches):
+    n = len(benches)
+    if len(pairs) != n:
         raise ValueError(
-            f"{len(pairs)} merge groups but {len(benches)} benchmarks; the "
+            f"{len(pairs)} merge groups but {n} benchmarks; the "
             "label partition needs one pair per benchmark"
         )
+
+    axis_of: dict[str, int]
     if blocks.pair_dominant_axis:
-        aliases = {}
+        axis_of = {}
         for pair in pairs:
             if pair not in blocks.pair_dominant_axis:
                 raise ValueError(f"pair_dominant_axis lacks {pair!r}")
             axis = blocks.pair_dominant_axis[pair]
-            if not 0 <= axis < len(benches):
-                raise ValueError(f"{pair}: axis {axis} outside 0..{len(benches) - 1}")
-            aliases[pair] = benches[axis]
+            if not 0 <= axis < n:
+                raise ValueError(f"{pair}: axis {axis} outside 0..{n - 1}")
+            axis_of[pair] = axis
+        if len(set(axis_of.values())) != n:
+            if not blocks.pair_positions:
+                raise ValueError(
+                    "pair dominant axes collide and no pair_positions are "
+                    f"available to break the tie: {axis_of}"
+                )
+            axis_of = assign_pairs_to_axes(blocks.pair_positions, pairs, n)
+    elif blocks.pair_positions:
+        axis_of = assign_pairs_to_axes(blocks.pair_positions, pairs, n)
     else:
-        aliases = dict(zip(pairs, benches, strict=True))
-    if len(set(aliases.values())) != len(benches):
-        raise ValueError(
-            f"pair -> benchmark aliases are not one-to-one: {aliases}"
-        )
+        axis_of = {pair: k for k, pair in enumerate(pairs)}
+
+    aliases = {pair: benches[axis_of[pair]] for pair in pairs}
+    if len(set(aliases.values())) != n:  # pragma: no cover - assignment guarantees this
+        raise ValueError(f"pair -> benchmark aliases are not one-to-one: {aliases}")
     return aliases
 
 
@@ -576,11 +705,13 @@ __all__ = [
     "DOMAIN_SOURCES",
     "DomainBatch",
     "SourceRouterBlocks",
+    "assign_pairs_to_axes",
     "dominant_axis_by_merge_group",
     "history_domain_batches",
     "label_domain_batches",
     "load_closed_loop_history_lenient",
     "pair_to_benchmark_aliases",
+    "rekey_by_merge_group",
     "resolve_universal_adapter_dir",
     "round_batch_indices",
     "source_router_blocks",

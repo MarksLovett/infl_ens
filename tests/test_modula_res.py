@@ -24,6 +24,7 @@ from infl_ens.config import KNOWN_TASKS, MODULA_RES_KEYS, TOP_LEVEL_KEYS, load_c
 from infl_ens.training.modula_res import (
     DomainBatch,
     SourceRouterBlocks,
+    assign_pairs_to_axes,
     dominant_axis_by_merge_group,
     history_domain_batches,
     label_domain_batches,
@@ -69,7 +70,11 @@ def _source_history(train_prompts: list[str], train_responses: list[str]) -> lis
             "round": r,
             "routing_mode": "soft",
             "soft_loss": "weighted",
-            "positions": {c: [float(r), float(i)] for i, c in enumerate(CLONES)},
+            # One coordinate per benchmark; pair k (clones 2k, 2k+1) sits on axis k.
+            "positions": {
+                c: [1.0 if a == i // 2 else 0.1 * r for a in range(len(BENCHES))]
+                for i, c in enumerate(CLONES)
+            },
             "pair_members": {PAIRS[k]: [CLONES[2 * k], CLONES[2 * k + 1]] for k in range(3)},
             "agent_batch_indices": per_pair,
             "agent_prompts": {p: [train_prompts[i] for i in idx] for p, idx in per_pair.items()},
@@ -266,23 +271,59 @@ def test_source_router_blocks_and_aliases(tmp_path: Path) -> None:
     assert blocks.pair_names == PAIRS
     assert blocks.router_keys == {"policy": "gaussian", "sigma_mode": "absolute", "sigma": 0.3}
     assert blocks.pair_dominant_axis == {"pair-0": 2, "pair-1": 0, "pair-2": 1}
+    # Positions fall back to the round-0 coordinates of each group's first member.
+    assert set(blocks.pair_positions) == set(PAIRS)
+    assert blocks.pair_positions["pair-1"] == history[0]["positions"][CLONES[2]]
     aliases = pair_to_benchmark_aliases(blocks, BENCHES)
     assert aliases == {"pair-0": "b2", "pair-1": "b0", "pair-2": "b1"}
-    # Without the theory block the fallback is history pair_members + order.
+    # Without the theory block: positions still give a one-to-one assignment
+    # (pair k sits on axis k in the fixture).
     (run / "resolved_config.yaml").unlink()
     bare = [dict(history[0]), history[1]]
     bare[0].pop("theory_init")
     blocks2 = source_router_blocks(run, bare)
     assert blocks2.pair_names == PAIRS and blocks2.pair_dominant_axis == {}
-    assert pair_to_benchmark_aliases(blocks2, BENCHES) == dict(zip(PAIRS, BENCHES))
+    assert pair_to_benchmark_aliases(blocks2, BENCHES) == dict(zip(PAIRS, BENCHES, strict=True))
+    # With neither recorded the pairs are matched to the benchmarks in order.
+    blocks3 = SourceRouterBlocks(agents=[], merge_groups=blocks.merge_groups)
+    assert pair_to_benchmark_aliases(blocks3, BENCHES) == dict(zip(PAIRS, BENCHES, strict=True))
     with pytest.raises(ValueError, match="one pair per benchmark"):
         pair_to_benchmark_aliases(blocks, BENCHES[:2])
-    with pytest.raises(ValueError, match="one-to-one"):
+    with pytest.raises(ValueError, match="collide"):
         pair_to_benchmark_aliases(
             SourceRouterBlocks(agents=[], merge_groups=blocks.merge_groups,
                                pair_dominant_axis={"pair-0": 0, "pair-1": 0, "pair-2": 1}),
             BENCHES,
         )
+
+
+def test_colliding_dominant_axes_resolve_by_assignment() -> None:
+    """Two pairs sharing an argmax axis are split one-to-one via their coordinates.
+
+    Mirrors the seven-axis source run where two pairs both peaked on the
+    beavertails axis and none on do_not_answer.
+    """
+    groups = [{"train_as": p, "names": [f"c{2*k}", f"c{2*k+1}"]} for k, p in enumerate(PAIRS)]
+    # pair-0 and pair-1 both argmax on axis 0; pair-1 is the weaker of the
+    # two there but the strongest on axis 2, which no pair peaks on.
+    positions = {
+        "pair-0": [0.9, 0.1, 0.0],
+        "pair-1": [0.8, 0.0, 0.7],
+        "pair-2": [0.0, 0.9, 0.1],
+    }
+    blocks = SourceRouterBlocks(
+        agents=[], merge_groups=groups,
+        pair_dominant_axis={"pair-0": 0, "pair-1": 0, "pair-2": 1},
+        pair_positions=positions,
+    )
+    assert pair_to_benchmark_aliases(blocks, BENCHES) == {"pair-0": "b0", "pair-1": "b2", "pair-2": "b1"}
+    assert assign_pairs_to_axes(positions, PAIRS, 3) == {"pair-0": 0, "pair-1": 2, "pair-2": 1}
+    with pytest.raises(ValueError, match="lacks 'pair-2'"):
+        assign_pairs_to_axes({k: v for k, v in positions.items() if k != "pair-2"}, PAIRS, 3)
+    with pytest.raises(ValueError, match="expected 3"):
+        assign_pairs_to_axes({**positions, "pair-2": [0.0, 1.0]}, PAIRS, 3)
+    with pytest.raises(ValueError, match="pairs but"):
+        assign_pairs_to_axes(positions, PAIRS[:2], 3)
 
 
 # ---------------------------------------------------------------------------
