@@ -305,6 +305,47 @@ def history_domain_batches(
     return out
 
 
+def dominant_axis_by_merge_group(
+    pair_dominant_axis: Mapping[str, Any],
+    groups: Sequence[Mapping[str, Any]],
+) -> dict[str, int]:
+    """Re-key the theory-init ``pair_dominant_axis`` by merge-group name.
+
+    The paired theory initialisation logs the dominant axis under a
+    membership key, ``pair_<clone-a>_<clone-b>`` (see
+    :func:`infl_ens.training.agent_init.init_agents_theory_gradient_paired`),
+    while the SFT merge groups the rest of the pipeline uses are named
+    ``pair-k`` (``merge_group_prefix``). This maps each group's ``train_as``
+    name onto the axis logged for the group's members, in any member order.
+    Keys that already equal a ``train_as`` name are kept as they are.
+
+    :param pair_dominant_axis: Raw ``theory_init.pair_dominant_axis`` mapping.
+    :type pair_dominant_axis: Mapping[str, Any]
+    :param groups: Merge groups, each with ``train_as`` and ``names``.
+    :type groups: Sequence[Mapping]
+    :returns: ``train_as -> axis index`` for every group that could be
+        matched; empty when nothing matches (callers then fall back to
+        in-order matching).
+    :rtype: dict[str, int]
+    """
+    from itertools import permutations
+
+    raw = {str(k): int(v) for k, v in pair_dominant_axis.items()}
+    out: dict[str, int] = {}
+    for group in groups:
+        train_as = str(group["train_as"])
+        names = [str(n) for n in group["names"]]
+        if train_as in raw:
+            out[train_as] = raw[train_as]
+            continue
+        for order in permutations(names):
+            key = "pair_" + "_".join(order)
+            if key in raw:
+                out[train_as] = raw[key]
+                break
+    return out
+
+
 def source_router_blocks(
     source_run_dir: PathLike,
     history: Sequence[Mapping[str, Any]],
@@ -368,8 +409,9 @@ def source_router_blocks(
         raise ValueError(f"cannot recover sft_merge_groups from {run_dir}")
 
     router_keys = {k: cfg[k] for k in _ROUTER_TOP_LEVEL_KEYS if k in cfg}
-    pda_raw = theory_init.get("pair_dominant_axis") or {}
-    pair_dominant_axis = {str(k): int(v) for k, v in pda_raw.items()}
+    pair_dominant_axis = dominant_axis_by_merge_group(
+        theory_init.get("pair_dominant_axis") or {}, groups,
+    )
     return SourceRouterBlocks(
         agents=agents,
         merge_groups=groups,
@@ -534,6 +576,7 @@ __all__ = [
     "DOMAIN_SOURCES",
     "DomainBatch",
     "SourceRouterBlocks",
+    "dominant_axis_by_merge_group",
     "history_domain_batches",
     "label_domain_batches",
     "load_closed_loop_history_lenient",

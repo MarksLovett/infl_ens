@@ -24,6 +24,7 @@ from infl_ens.config import KNOWN_TASKS, MODULA_RES_KEYS, TOP_LEVEL_KEYS, load_c
 from infl_ens.training.modula_res import (
     DomainBatch,
     SourceRouterBlocks,
+    dominant_axis_by_merge_group,
     history_domain_batches,
     label_domain_batches,
     pair_to_benchmark_aliases,
@@ -79,8 +80,15 @@ def _source_history(train_prompts: list[str], train_responses: list[str]) -> lis
         }
         if r == 0:
             rec["theory_init"] = {
+                # The paired theory init keys this by clone membership
+                # (``pair_<a>_<b>``), not by merge-group name; one entry is
+                # written in reversed member order on purpose.
                 # pair-0 -> axis 2, pair-1 -> axis 0, pair-2 -> axis 1
-                "pair_dominant_axis": {"pair-0": 2, "pair-1": 0, "pair-2": 1},
+                "pair_dominant_axis": {
+                    f"pair_{CLONES[0]}_{CLONES[1]}": 2,
+                    f"pair_{CLONES[3]}_{CLONES[2]}": 0,
+                    f"pair_{CLONES[4]}_{CLONES[5]}": 1,
+                },
                 "sft_merge_groups_resolved": [
                     {"train_as": PAIRS[k], "names": [CLONES[2 * k], CLONES[2 * k + 1]]} for k in range(3)
                 ],
@@ -223,6 +231,30 @@ def test_resolve_universal_adapter_dir(tmp_path: Path) -> None:
     cfg["modula_res"]["universal_round"] = "latest"
     with pytest.raises(ValueError, match="universal_round"):
         resolve_universal_adapter_dir(cfg, repo_root=tmp_path)
+
+
+def test_dominant_axis_by_merge_group_rekeys_membership_keys() -> None:
+    """Theory-init ``pair_<a>_<b>`` keys map onto ``train_as`` in any member order."""
+    groups = [
+        {"train_as": "pair-0", "names": ["clone-5", "clone-10"]},
+        {"train_as": "pair-1", "names": ["clone-3", "clone-12"]},
+        {"train_as": "pair-2", "names": ["clone-8", "clone-9"]},
+    ]
+    raw = {
+        "pair_clone-5_clone-10": 4,   # same order as the group
+        "pair_clone-12_clone-3": 1,   # reversed order
+        "pair-2": 6,                  # already keyed by merge-group name
+    }
+    assert dominant_axis_by_merge_group(raw, groups) == {"pair-0": 4, "pair-1": 1, "pair-2": 6}
+    # Unmatched groups are simply absent; an empty input stays empty.
+    assert dominant_axis_by_merge_group({"pair_clone-1_clone-2": 0}, groups) == {}
+    assert dominant_axis_by_merge_group({}, groups) == {}
+    # A partial match is surfaced by the alias step rather than silently
+    # falling back to in-order matching.
+    partial = dominant_axis_by_merge_group({"pair_clone-5_clone-10": 0}, groups)
+    blocks = SourceRouterBlocks(agents=[], merge_groups=groups, pair_dominant_axis=partial)
+    with pytest.raises(ValueError, match="lacks 'pair-1'"):
+        pair_to_benchmark_aliases(blocks, ["b0", "b1", "b2"])
 
 
 def test_source_router_blocks_and_aliases(tmp_path: Path) -> None:
