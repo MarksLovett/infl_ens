@@ -26,6 +26,10 @@ Lazy:
 
 - :class:`SFTTrainingConfig`, :func:`sft_train_agent` from
   :mod:`infl_ens.training.sft_training`.
+- :class:`MoLoRAConfig`, :func:`inject_molora`, :func:`load_molora`,
+  :func:`save_molora` from :mod:`infl_ens.training.molora` (the mixture of
+  low-rank experts baseline; its trainer is
+  :mod:`infl_ens.training.molora_replay`).
 
 The closed loop itself lives in :mod:`infl_ens.training.closed_loop`
 and the task registry in :mod:`infl_ens.training.tasks`.
@@ -137,6 +141,12 @@ from infl_ens.training.router_training import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover - import-time only for type checkers / IDEs
+    from infl_ens.training.molora import (
+        MoLoRAConfig,
+        inject_molora,
+        load_molora,
+        save_molora,
+    )
     from infl_ens.training.sft_training import (
         SFTTrainingConfig,
         make_chat_formatter,
@@ -147,23 +157,31 @@ if TYPE_CHECKING:  # pragma: no cover - import-time only for type checkers / IDE
 _LAZY_SFT_NAMES: frozenset[str] = frozenset(
     {"SFTTrainingConfig", "make_chat_formatter", "sft_train_agent"},
 )
+_LAZY_MOLORA_NAMES: frozenset[str] = frozenset(
+    {"MoLoRAConfig", "inject_molora", "load_molora", "save_molora"},
+)
 
 __all__ = [
+    "MoLoRAConfig",
     "RouterTrainingConfig",
     "SFTTrainingConfig",
+    "inject_molora",
+    "load_molora",
     "make_chat_formatter",
+    "save_molora",
     "sft_train_agent",
     "train_router_positions",
 ]
 
 
 def __getattr__(name: str) -> Any:
-    """Resolve lazy SFT exports on first access.
+    """Resolve lazy SFT / MoLoRA exports on first access.
 
     :param name: Attribute name being looked up on the module.
     :type name: str
     :returns: The requested attribute from
-              :mod:`infl_ens.training.sft_training`.
+              :mod:`infl_ens.training.sft_training` or
+              :mod:`infl_ens.training.molora`.
     :rtype: Any
     :raises AttributeError: If ``name`` is not a recognised lazy export.
     """
@@ -172,13 +190,18 @@ def __getattr__(name: str) -> Any:
         value = getattr(sft_training, name)
         globals()[name] = value
         return value
+    if name in _LAZY_MOLORA_NAMES:
+        from infl_ens.training import molora
+        value = getattr(molora, name)
+        globals()[name] = value
+        return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__() -> list[str]:
-    """Expose lazy SFT names to :func:`dir` and shell tab-completion.
+    """Expose lazy names to :func:`dir` and shell tab-completion.
 
     :returns: Sorted list of public attribute names.
     :rtype: list[str]
     """
-    return sorted(set(globals()) | _LAZY_SFT_NAMES)
+    return sorted(set(globals()) | _LAZY_SFT_NAMES | _LAZY_MOLORA_NAMES)

@@ -30,7 +30,7 @@ ALL_STAGES: tuple[str, ...] = (
     "prune",
 )
 DEFAULT_STAGES: tuple[str, ...] = ("manifest", "train", "perround", "routing", "figures")
-ARM_ROLES: frozenset[str] = frozenset({"specialist", "generalist"})
+ARM_ROLES: frozenset[str] = frozenset({"specialist", "generalist", "baseline"})
 
 EXPERIMENT_KEYS: frozenset[str] = frozenset(
     {"name", "results_dir", "figures_dir", "arms", "stages", "eval", "figures", "smoke"},
@@ -65,8 +65,11 @@ class ArmSpec:
     :type label: str
     :param title: Longer figure title.
     :type title: str
-    :param role: ``specialist`` (a routed closed loop) or ``generalist`` (the
-        pooled replay comparator).
+    :param role: ``specialist`` (a routed closed loop), ``generalist`` (the
+        pooled replay comparator used by route-then-score) or ``baseline``
+        (any other self-contained comparator, e.g. the MoLoRA replay; trained
+        and pruned by the pipeline, scored by its own ``eval`` block, and
+        ignored by the specialist-only analysis stages).
     :type role: str
     :param config_path: Absolute path of the arm's run config.
     :type config_path: pathlib.Path

@@ -26,7 +26,7 @@ from infl_ens.evaluation.adapters import (
     load_base_causal_lm,
     resolve_adapter_dir,
 )
-from infl_ens.config import resolve_sft_block
+from infl_ens.config import KNOWN_TASKS, resolve_sft_block
 from infl_ens.data.benchmarks.loading import load_benchmark_splits, subsample_split
 from infl_ens.evaluation.metrics import mean_token_nll, split_to_texts
 
@@ -448,10 +448,10 @@ class EvalJobConfig:
         :raises ValueError: If the mapping is not a closed-loop training
             config or lacks a split manifest.
         """
-        if not isinstance(cfg.get("closed_loop"), dict):
+        if not _is_training_config(cfg):
             raise ValueError(
-                "from_unified expects a closed-loop training config with a "
-                "'closed_loop' block"
+                "from_unified expects a training config: a 'closed_loop' "
+                f"block or a task in {sorted(KNOWN_TASKS)}"
             )
         eval_block = dict(cfg.get("eval") or {})
         sft = resolve_sft_block(cfg)
@@ -498,17 +498,29 @@ class EvalJobConfig:
         )
 
 
+def _is_training_config(cfg: dict[str, Any]) -> bool:
+    """Whether ``cfg`` is a run config of one of the training tasks.
+
+    Closed-loop configs are recognised by their ``closed_loop`` block
+    (older files omit ``task``); replay configs by ``task``.
+
+    :param cfg: Loaded YAML mapping.
+    :type cfg: dict
+    :returns: ``True`` for any config ``python -m infl_ens.training`` accepts.
+    :rtype: bool
+    """
+    return isinstance(cfg.get("closed_loop"), dict) or cfg.get("task") in KNOWN_TASKS
+
+
 def is_unified_config(cfg: dict[str, Any]) -> bool:
-    """Whether ``cfg`` is a closed-loop training config with an ``eval`` block.
+    """Whether ``cfg`` is a training config with an ``eval`` block.
 
     :param cfg: Loaded YAML mapping.
     :type cfg: dict
     :returns: ``True`` for the unified training + evaluation shape.
     :rtype: bool
     """
-    return isinstance(cfg.get("closed_loop"), dict) and isinstance(
-        cfg.get("eval"), dict,
-    )
+    return _is_training_config(cfg) and isinstance(cfg.get("eval"), dict)
 
 
 def final_round_from_history(run_dir: str | Path) -> int:

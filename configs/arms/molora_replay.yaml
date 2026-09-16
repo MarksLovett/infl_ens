@@ -1,0 +1,37 @@
+# BASELINE: MoLoRA (Zadouri et al., 2023) replayed from the logged batches of
+# ARM 1 — the standard PEFT-MoE alternative to the game-routed specialists.
+#
+# One frozen base with 7 rank-16 LoRA experts per target module and a
+# token-level dense softmax gate, all trained jointly on ordinary SFT loss.
+# Expert weights match the parameter budget of the seven rank-16 pair
+# adapters; the data is exactly what the generalist sees (soft rounds are
+# de-duplicated back to the round batch). No trait space, no game: MoLoRA
+# routes internally.
+#
+# Runs AFTER ARM 1, since it reads that run's history.json. Scores its
+# final checkpoint on the test partition when training finishes.
+includes:
+  - ../data/seven_axis_safety.yaml
+  - ../trait_space/seven_axis.yaml
+  - ../models/qwen2_5_1_5b_instruct.yaml
+
+task: molora_replay
+seed: 0
+history_path: results/seven_axis_soft_topk3_pairs/seed0/history.json
+output_dir: results/seven_axis_3arm_molora/seed0
+
+molora:
+  n_experts: 7                      # one per merged pair (pair-0 .. pair-6)
+  expert_rank: 16                   # = sft.lora_r -> budget-matched experts
+  expert_alpha: 32                  # alpha / r = 2, as the specialists
+  balance_coef: 0.0                 # paper default; set 0.01 if the gate collapses
+  agent_name: molora
+  save_per_round: true
+  rounds: null                      # replay every logged round
+
+eval:
+  partitions: [test]
+  rounds: final
+  max_eval_records: 1000            # per benchmark
+  forward_batch_size: 8
+  after_training: true

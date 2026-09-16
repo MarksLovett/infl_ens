@@ -12,6 +12,7 @@
 #   hard_topk    sampled w/o repl.    3   unit
 #   hard         sampled              1   unit
 #   generalist   pooled replay of the `soft` arm
+#   molora       MoLoRA (7 gated LoRA experts) replay of the `soft` arm
 #
 #   python -m infl_ens.pipeline --config configs/experiments/seven_axis_3arm.yaml
 #   python -m infl_ens.pipeline --config ... --stages routing,figures   # re-run analysis
@@ -55,6 +56,11 @@ arms:
     title: "Pooled generalist"
     role: generalist
     config: ../arms/generalist_replay.yaml
+  - name: molora
+    label: "MoLoRA (7 experts)"
+    title: "MoLoRA dense token gate"
+    role: baseline
+    config: ../arms/molora_replay.yaml
 
 # Stages run in this order. `download` and `prune` are opt-in
 # (--stages download,manifest,... or --stages prune).

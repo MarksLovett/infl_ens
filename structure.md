@@ -45,7 +45,7 @@ infl_ens/
 │   ├── training/
 │   │   ├── __init__.py
 │   │   ├── __main__.py                   thin CLI: load_config -> TASKS[task]
-│   │   ├── tasks.py                      TASKS registry; run_baseline_replay
+│   │   ├── tasks.py                      TASKS registry; run_baseline_replay, run_molora_replay
 │   │   ├── closed_loop.py                run_closed_loop (route -> SFT -> position update), knob validation, agent init
 │   │   ├── setup.py                      load_splits, make_trait_space, sigma_from_config, init_agents, history/resolved-config writers
 │   │   ├── agent_init.py                 theory_gradient / theory_gradient_paired inits, pairing rules, resolve_agent_entries
@@ -54,6 +54,8 @@ infl_ens/
 │   │   ├── sft_training.py               LoRA SFT trainer (weighted loss, cumulative adapters)
 │   │   ├── merge_training.py             pair-merge SFT helpers; soft routing over pairs
 │   │   ├── baseline_replay.py            pooled generalist replayed from history.json batches
+│   │   ├── molora.py                     MoLoRA model code: gated mixture of LoRA experts, inject / save / load
+│   │   ├── molora_replay.py              MoLoRA baseline trained on the same replayed batches (HF Trainer)
 │   │   ├── data_split.py                 resolve train/val/test partitions + batch plan for a run
 │   │   ├── closed_loop_eval.py           periodic validation NLL during training
 │   │   └── pool_dynamics.py              grid-Nash gradient ascent, layout classification, pair geometry
@@ -62,7 +64,7 @@ infl_ens/
 │   │   ├── __main__.py                   single CLI; unified (training-YAML) or standalone eval jobs
 │   │   ├── evaluate.py                   evaluate_adapter_on_*, run_unified_eval, JSON reports
 │   │   ├── routing_eval.py               flat-pool route-then-score: pooled / learned / oracle
-│   │   ├── adapters.py                   resolve + load saved LoRA checkpoints
+│   │   ├── adapters.py                   resolve + load saved LoRA / MoLoRA checkpoints
 │   │   ├── metrics.py                    mean NLL on chat-formatted splits
 │   │   └── benchmarks.py                 re-export shim of data.benchmarks.loading
 │   ├── figures/
@@ -111,6 +113,7 @@ infl_ens/
 │   │   ├── hard_topk3_pairs.yaml         sampled top-3 without replacement, unit weight
 │   │   ├── hard_pairs_matched.yaml       hard (one sampled winner), unit weight
 │   │   ├── generalist_replay.yaml        pooled generalist replayed from the k = 3 arm
+│   │   ├── molora_replay.yaml            MoLoRA baseline (7 gated rank-16 experts) replayed from the k = 3 arm
 │   │   └── scale_family/                 model scale-family sweep cells (share the pinned fingerprint)
 │   │       ├── _specialist_base.yaml     soft k = 3 base; cells override only output_dir + sft.base_model
 │   │       ├── _generalist_base.yaml     pooled-baseline replay base; cells add base_model + history_path
@@ -134,7 +137,7 @@ infl_ens/
 | Command | Module | Purpose |
 |---|---|---|
 | `python -m infl_ens.pipeline --config configs/experiments/<name>.yaml` | `pipeline/__main__.py` | run an experiment end to end (`--stages`, `--only-arm`, `--force`, `--smoke`, `--dry-run`) |
-| `python -m infl_ens.training --config configs/arms/<arm>.yaml [-- k=v]` | `training/__main__.py` | one arm: `closed_loop` or `baseline_replay` |
+| `python -m infl_ens.training --config configs/arms/<arm>.yaml [-- k=v]` | `training/__main__.py` | one arm: `closed_loop`, `baseline_replay` or `molora_replay` |
 | `python -m infl_ens.evaluation --config <run>/resolved_config.yaml [-- k=v]` | `evaluation/__main__.py` | score archived adapters on the held-out partitions |
 | `python -m infl_ens.figures --config <experiment> [--only a,b] [--list]` | `figures/__main__.py` | render figures and tables into `figures/<experiment>/` |
 | `bash scripts/run_on_doob.sh` | — | drive the pipeline on the GPU host under tmux |
@@ -143,8 +146,8 @@ infl_ens/
 
 | File | Role |
 |---|---|
-| `config.py` | `load_config` (includes → overrides → validation), key tables (`TOP_LEVEL_KEYS`, `CLOSED_LOOP_KEYS`, ...), `resolve_sft_block`, `ConfigError` |
-| `experiment.py` | `load_experiment` → `ExperimentConfig` (`arms`, `stages`, `eval`, `figures`, `smoke`), `ArmSpec` (with optional `family`/`scale` + `cell`); `generalists`/`generalist_for` pair each specialist with its same `(family, scale)` generalist |
+| `config.py` | `load_config` (includes → overrides → validation), key tables (`TOP_LEVEL_KEYS`, `CLOSED_LOOP_KEYS`, `BASELINE_REPLAY_KEYS`, `MOLORA_KEYS`, ...), `KNOWN_TASKS`, `resolve_sft_block`, `ConfigError` |
+| `experiment.py` | `load_experiment` → `ExperimentConfig` (`arms`, `stages`, `eval`, `figures`, `smoke`), `ArmSpec` (roles `specialist` / `generalist` / `baseline`, optional `family`/`scale` + `cell`); `generalists`/`generalist_for` pair each specialist with its same `(family, scale)` generalist |
 
 ## `src/infl_ens/data/`
 
@@ -175,7 +178,7 @@ infl_ens/
 | File | Role |
 |---|---|
 | `__main__.py` | argparse → `load_config` → `TASKS[cfg["task"]]`; exit 2 on config errors |
-| `tasks.py` | `TASKS = {closed_loop, baseline_replay}`, `run_baseline_replay` |
+| `tasks.py` | `TASKS = {closed_loop, baseline_replay, molora_replay}`, `run_baseline_replay`, `run_molora_replay` (writes `history.json` + `replay_summary.json`, then `run_unified_eval` when `eval.after_training`) |
 | `closed_loop.py` | `run_closed_loop`, `validate_routing_and_loss_modes`, `init_agents_closed_loop`; module docstring lists every `closed_loop.*` knob |
 | `setup.py` | `load_splits`, `make_trait_space`, `sigma_from_config`, `init_agents`, `coords_for_prompts`, `write_history`, `write_resolved_config` |
 | `agent_init.py` | `resolve_agent_entries`, `init_agents_theory_gradient(_paired)`, `co_locate_theory_pairs`, pairing rules, separated random starts |
@@ -184,6 +187,8 @@ infl_ens/
 | `sft_training.py` | `SFTTrainingConfig`, `sft_train_agent`, weighted causal-LM loss, `make_chat_formatter` (base-model chat template with Qwen fallback) |
 | `merge_training.py` | `parse_sft_merge_groups`, `merge_groups_from_theory_pairs`, `snap_configured_merge_pairs`, `soft_pair_assignments`, `soft_pair_position_target`, `closed_loop_weight_args` |
 | `baseline_replay.py` | `pooled_batch_from_round`, `replay_pooled_baseline_sft`, `make_pooled_baseline_agent` |
+| `molora.py` | `MoLoRAConfig`, `MoLoRALinear` (via `molora_linear_class`; token-level dense softmax gate over `n_experts` rank-`expert_rank` LoRA experts), `inject_molora`, `molora_modules`, `molora_state_dict`, `molora_param_count`, `gate_usage`, `balance_loss`, `save_molora` / `load_molora` / `is_molora_dir` (`molora_weights.safetensors` + `molora_config.json`) |
+| `molora_replay.py` | `replay_molora_sft` (one MoLoRA model, round-by-round from a logged `history.json`, fresh HF `Trainer` per round like the generalist), `train_molora_round` |
 | `data_split.py` | `resolve_closed_loop_data_split`, `shuffled_train_batch_indices`, `partitioned_splits_for_eval` |
 | `closed_loop_eval.py` | `run_closed_loop_val_eval`, `append_val_eval_summary` |
 | `pool_dynamics.py` | `run_gradient_ascent_theory`, `classify_layout`, `pairwise_spread`, `agent_pairwise_geometry` |
@@ -193,9 +198,9 @@ infl_ens/
 | File | Role |
 |---|---|
 | `__main__.py` | argparse → `load_config` → `run_unified_eval` (training YAML with `eval`) or `run_eval_job` |
-| `evaluate.py` | `AdapterEvalConfig`, `EvalJobConfig` (+ `from_unified`), `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_unified_eval`, `final_round_from_history`, `write_eval_report` |
+| `evaluate.py` | `AdapterEvalConfig`, `EvalJobConfig` (+ `from_unified`, accepts any `KNOWN_TASKS` config), `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_unified_eval`, `final_round_from_history`, `write_eval_report` |
 | `routing_eval.py` | `run_flat_routing_eval` (pooled / expected / sampled / argmax G / oracle), `report_to_dict`, `format_headline_markdown` |
-| `adapters.py` | `AdapterRef`, `discover_adapters`, `resolve_adapter_dir`, `load_adapter_model` |
+| `adapters.py` | `AdapterRef`, `discover_adapters`, `resolve_adapter_dir`, `load_adapter_model` (PEFT LoRA, or `load_molora` when the dir holds `molora_config.json`) |
 | `metrics.py` | `format_chat_example`, `build_chat_formatter` (chat formatter from a base-model id), `mean_token_nll`, `split_to_texts` |
 | `benchmarks.py` | re-exports `data.benchmarks.loading` |
 
@@ -221,7 +226,7 @@ infl_ens/
 
 | File | Role |
 |---|---|
-| `stages.py` | `PipelineContext`, `STAGES`, `run_pipeline`, `run_smoke`, `run_is_complete`, `smoke_config`, `resolved_run_config` |
+| `stages.py` | `PipelineContext`, `STAGES`, `REPLAY_TASKS`, `run_pipeline`, `run_smoke`, `run_is_complete`, `smoke_config`, `resolved_run_config` |
 | `__main__.py` | argparse, `--dry-run` planner (`describe`), logging to `<results_dir>/pipeline.log` |
 
 ## `src/infl_ens/utils/`
@@ -246,7 +251,7 @@ infl_ens/
 | `arms/scale_family/_generalist_base.yaml` | pooled-baseline replay base (data + trait_space + model), no hardcoded run paths |
 | `arms/scale_family/{qwen,llama,gemma}_{1b,3b,8b}.yaml` | 9 specialist cells; each overrides only `output_dir` + `sft.base_model` |
 | `arms/scale_family/{qwen,llama,gemma}_{1b,3b,8b}_gen.yaml` | 9 per-cell generalists; each sets `sft.base_model`, `history_path`, `output_dir` |
-| `experiments/seven_axis_3arm.yaml` | five specialist arms + generalist, stages, `perround_rounds: [4, final]`, figure list, smoke gate |
+| `experiments/seven_axis_3arm.yaml` | five specialist arms + generalist + MoLoRA baseline (`role: baseline`), stages, `perround_rounds: [4, final]`, figure list, smoke gate |
 | `experiments/scale_family_sweep.yaml` | 3 family x 3 scale sweep: 9 specialist + 9 generalist arms (with `family`/`scale`), routing per cell, `family_scale_nll` figure |
 
 Every arm (including all scale-family cells) resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py` and `tests/test_scale_family.py`.
@@ -256,7 +261,8 @@ Every arm (including all scale-family cells) resolves to byte-identical `benchma
 | File | Covers |
 |---|---|
 | `test_config.py` | includes, overrides, key validation of `infl_ens.config` |
-| `test_config_fingerprint.py` | every arm keeps the cache fingerprint; arms differ only in routing knobs |
+| `test_config_fingerprint.py` | every arm keeps the cache fingerprint; specialist arms differ only in routing knobs |
+| `test_molora.py` | MoLoRA wrapper: injection / freezing, identity at init, uniform gate, gradient flow, parity count, save/load round-trip |
 | `test_scale_family.py` | the 9 sweep cells keep the fingerprint and differ only in `sft.base_model`; experiment pairs each cell's generalist; `make_chat_formatter` template + fallback; `family_scale_nll` figure/table |
 | `test_encoder_config.py` | encoder presets and `make_encoder` resolution (no torch) |
 | `test_encoders.py` | `HuggingFaceEncoder` pooling / placement (mocked transformers; needs torch) |
@@ -275,7 +281,7 @@ Every arm (including all scale-family cells) resolves to byte-identical `benchma
 - `infl_ens.data`: `TraitSpace`, `build_trait_space`, `position_from_corpus`, `HuggingFaceEncoder`, `QuantileNormalizer`, `benchmarks`
 - `infl_ens.data.benchmarks`: `BenchmarkSplit`, `LearnedAxis`, `build_safety_trait_space`, the seven `load_*` loaders and their constants
 - `infl_ens.inflgame.router`: `InfluencerRouter`, `RouterAgent`, `allocation_weights`, `expected_utilities`, `empirical_utility`, `utility_gradient`, `strategic_routing_weights`, `top_k_allocation_weights`, `sampled_top_k_mask`, `matched_centroid_mass`, `group_allocation_weights`
-- `infl_ens.training`: `RouterTrainingConfig`, `train_router_positions` (eager); `SFTTrainingConfig`, `sft_train_agent`, `make_chat_formatter` (lazy)
+- `infl_ens.training`: `RouterTrainingConfig`, `train_router_positions` (eager); `SFTTrainingConfig`, `sft_train_agent`, `make_chat_formatter`, `MoLoRAConfig`, `inject_molora`, `save_molora`, `load_molora` (lazy)
 - `infl_ens.evaluation`: `AdapterEvalConfig`, `BenchmarkEvalResult`, `EvalJobConfig`, `evaluate_adapter_on_split(s)`, `evaluate_run_adapters`, `run_eval_job`, `run_unified_eval`, `final_round_from_history`, `write_eval_report`, `AdapterRef`, `discover_adapters`, `is_adapter_dir`, `resolve_adapter_dir`, `BENCHMARK_KINDS`, `load_benchmark_splits`, `subsample_split`; lazy `build_chat_formatter`, `format_chat_example`, `mean_token_nll`, `split_to_texts`
 - `infl_ens.figures`: the pure plot functions (incl. `plot_family_scale_nll`, `write_family_scale_table`, `CellNLL`), `oracle_routing_tex`, `arm_comparison_tex`, `save_figure`, `apply_paper_style`, `BENCHMARK_ORDER`, `BENCHMARK_LABELS`
 - `infl_ens.pipeline`: `STAGES`, `PipelineContext`, `run_pipeline`, `run_smoke`

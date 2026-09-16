@@ -14,7 +14,8 @@ directory, i.e. the repository root):
     Build ``data_split.manifest`` of the first specialist arm from its
     config (skipped when the file exists).
 ``train``
-    Run every arm's task (``closed_loop`` or ``baseline_replay``) in order.
+    Run every arm's task (``closed_loop``, ``baseline_replay`` or
+    ``molora_replay``) in order.
 ``perround``
     Score each specialist arm's per-round adapters on
     ``eval.perround_partition`` at ``eval.perround_rounds`` and write the
@@ -44,6 +45,10 @@ from infl_ens.config import apply_overrides, load_config
 from infl_ens.experiment import ALL_STAGES, ArmSpec, ExperimentConfig
 
 log = logging.getLogger("infl_ens.pipeline")
+
+#: Tasks that replay a logged history into one adapter; their completion is
+#: marked by ``replay_summary.json`` rather than a round count.
+REPLAY_TASKS: frozenset[str] = frozenset({"baseline_replay", "molora_replay"})
 
 
 @dataclass
@@ -145,7 +150,7 @@ def expected_rounds(arm: ArmSpec, cfg: dict[str, Any]) -> Optional[int]:
                 return int(meta["n_rounds"])
         except (OSError, ValueError):
             pass
-    if cfg.get("task") == "baseline_replay":
+    if cfg.get("task") in REPLAY_TASKS:
         return None
     if not cfg.get("data_split"):
         return int((cfg.get("closed_loop") or {}).get("n_rounds", 5))
@@ -165,7 +170,7 @@ def run_is_complete(arm: ArmSpec, cfg: dict[str, Any]) -> bool:
     history = arm.run_dir / "history.json"
     if not history.is_file():
         return False
-    if cfg.get("task") == "baseline_replay":
+    if cfg.get("task") in REPLAY_TASKS:
         return (arm.run_dir / "replay_summary.json").is_file()
     try:
         records = json.loads(history.read_text(encoding="utf-8"))

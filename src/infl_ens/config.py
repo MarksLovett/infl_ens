@@ -34,7 +34,7 @@ from typing import Any, Mapping, Sequence
 INCLUDES_KEY = "includes"
 
 #: Tasks accepted by ``python -m infl_ens.training``.
-KNOWN_TASKS: frozenset[str] = frozenset({"closed_loop", "baseline_replay"})
+KNOWN_TASKS: frozenset[str] = frozenset({"closed_loop", "baseline_replay", "molora_replay"})
 
 #: Keys allowed at the top level of a run config.
 TOP_LEVEL_KEYS: frozenset[str] = frozenset(
@@ -57,6 +57,7 @@ TOP_LEVEL_KEYS: frozenset[str] = frozenset(
         "sft",
         "eval",
         "baseline_replay",
+        "molora",
     },
 )
 
@@ -209,6 +210,22 @@ EVAL_KEYS: frozenset[str] = frozenset(
 
 BASELINE_REPLAY_KEYS: frozenset[str] = frozenset(
     {"agent_name", "save_per_round", "rounds"},
+)
+
+#: ``molora`` block of a ``molora_replay`` run: the
+#: :class:`infl_ens.training.molora.MoLoRAConfig` fields plus the replay
+#: knobs shared with ``baseline_replay``.
+MOLORA_KEYS: frozenset[str] = frozenset(
+    {
+        "n_experts",
+        "expert_rank",
+        "expert_alpha",
+        "expert_dropout",
+        "balance_coef",
+        "agent_name",
+        "save_per_round",
+        "rounds",
+    },
 )
 
 
@@ -463,6 +480,7 @@ def validate_config(cfg: Mapping[str, Any], *, source: str = "<config>") -> None
         ("sft", SFT_KEYS),
         ("eval", EVAL_KEYS),
         ("baseline_replay", BASELINE_REPLAY_KEYS),
+        ("molora", MOLORA_KEYS),
     )
     for name, allowed in simple_blocks:
         block = cfg.get(name)
@@ -552,6 +570,7 @@ __all__ = [
     "ENCODER_KEYS",
     "EVAL_KEYS",
     "KNOWN_TASKS",
+    "MOLORA_KEYS",
     "SFT_KEYS",
     "THEORY_GRADIENT_KEYS",
     "TOP_LEVEL_KEYS",

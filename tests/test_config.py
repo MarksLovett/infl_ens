@@ -141,6 +141,19 @@ def test_null_blocks_are_allowed() -> None:
     validate_config({"data_split": None, "eval": None, "closed_loop": {"n_rounds": 2}})
 
 
+def test_molora_task_and_block_are_validated() -> None:
+    validate_config({
+        "task": "molora_replay",
+        "molora": {
+            "n_experts": 7, "expert_rank": 16, "expert_alpha": 32,
+            "expert_dropout": 0.0, "balance_coef": 0.0,
+            "agent_name": "molora", "save_per_round": True, "rounds": None,
+        },
+    })
+    with pytest.raises(ConfigError, match="'gate_lr_mult'"):
+        validate_config({"task": "molora_replay", "molora": {"gate_lr_mult": 2.0}})
+
+
 def test_validation_does_not_mutate_trait_space() -> None:
     ts = {"encoder": "some/model", "n_grid": 3, "mode_alignment_weights": {"a": 1.0}}
     cfg = {"trait_space": ts, "encoder": {"model_name": "some/model"}}

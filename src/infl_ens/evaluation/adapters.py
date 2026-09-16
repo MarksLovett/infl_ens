@@ -1,4 +1,4 @@
-"""Resolve and load saved LoRA adapters for evaluation."""
+"""Resolve and load saved adapters (PEFT LoRA or MoLoRA) for evaluation."""
 
 from __future__ import annotations
 
@@ -6,13 +6,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
+from infl_ens.training.molora import MOLORA_WEIGHTS_FILE, is_molora_dir
+
 PathLike = Union[str, Path]
 
-_ADAPTER_FILES = ("adapter_model.safetensors", "adapter_model.bin")
+#: Weight files that mark a checkpoint directory: PEFT LoRA (either format)
+#: or a MoLoRA checkpoint written by :func:`infl_ens.training.molora.save_molora`.
+_ADAPTER_FILES = ("adapter_model.safetensors", "adapter_model.bin", MOLORA_WEIGHTS_FILE)
 
 
 def is_adapter_dir(path: Path) -> bool:
-    """Return whether ``path`` looks like a PEFT LoRA checkpoint directory.
+    """Return whether ``path`` looks like a LoRA or MoLoRA checkpoint directory.
 
     :param path: Candidate adapter directory.
     :type path: pathlib.Path
@@ -156,18 +160,28 @@ def load_base_causal_lm(base_model: str):
 
 
 def load_adapter_model(base_model, adapter_dir: PathLike):
-    """Wrap ``base_model`` with a PEFT adapter from disk.
+    """Wrap ``base_model`` with the adapter saved in ``adapter_dir``.
+
+    A MoLoRA checkpoint (``molora_config.json`` + weights) is injected in
+    place with :func:`infl_ens.training.molora.load_molora`; anything else
+    is loaded as a PEFT adapter.  Either way the base is mutated, so pass a
+    freshly loaded base per adapter.
 
     :param base_model: Base causal LM from :func:`load_base_causal_lm`.
     :type base_model: transformers.PreTrainedModel
-    :param adapter_dir: LoRA checkpoint directory.
+    :param adapter_dir: LoRA or MoLoRA checkpoint directory.
     :type adapter_dir: str | pathlib.Path
-    :returns: ``PeftModel`` in eval mode on the same device as the base.
-    :rtype: peft.PeftModel
+    :returns: The adapted model in eval mode on the same device as the base.
+    :rtype: torch.nn.Module
     """
+    path = resolve_adapter_dir(adapter_dir)
+    if is_molora_dir(path):
+        from infl_ens.training.molora import load_molora
+
+        return load_molora(base_model, path)
+
     from peft import PeftModel
 
-    path = resolve_adapter_dir(adapter_dir)
     wrapped = PeftModel.from_pretrained(base_model, str(path))
     wrapped.eval()
     return wrapped

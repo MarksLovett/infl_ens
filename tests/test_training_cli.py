@@ -47,3 +47,17 @@ def test_dispatch_passes_overrides_to_the_task(tmp_path: Path, monkeypatch: pyte
     assert seen["seed"] == 3
     assert seen["closed_loop"] == {"n_rounds": 2, "batch_size": 64}
     assert seen["data_split"] is None
+
+
+def test_molora_replay_task_is_registered_and_dispatched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    assert "molora_replay" in tasks_mod.TASKS
+    seen: dict = {}
+    monkeypatch.setitem(tasks_mod.TASKS, "molora_replay", lambda cfg: seen.update(cfg) or 0)
+    monkeypatch.setattr(cli, "TASKS", tasks_mod.TASKS)
+    cfg = _write(
+        tmp_path / "molora.yaml",
+        "task: molora_replay\nhistory_path: h.json\noutput_dir: r\n"
+        "molora: {n_experts: 7, expert_rank: 16, rounds: null}\n",
+    )
+    assert cli.main(["--config", str(cfg), "molora.rounds=[0,1]"]) == 0
+    assert seen["molora"] == {"n_experts": 7, "expert_rank": 16, "rounds": [0, 1]}

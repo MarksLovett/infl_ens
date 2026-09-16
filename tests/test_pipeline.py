@@ -27,9 +27,15 @@ FINGERPRINT = "3b42c68a8dd334c5"
 def test_load_canonical_experiment() -> None:
     exp = load_experiment(EXPERIMENT)
     assert exp.name == "seven_axis_3arm"
-    assert [a.name for a in exp.arms] == ["soft_full", "soft", "soft_unit", "hard_topk", "hard", "generalist"]
+    assert [a.name for a in exp.arms] == [
+        "soft_full", "soft", "soft_unit", "hard_topk", "hard", "generalist", "molora",
+    ]
     assert len(exp.specialists) == 5
     assert exp.generalist is not None and exp.generalist.name == "generalist"
+    molora = exp.arms[-1]
+    assert molora.role == "baseline" and not molora.is_specialist
+    assert molora not in exp.generalists
+    assert exp.generalist_for(exp.specialists[0]) is exp.generalist
     assert exp.eval.resolve_rounds(11) == [4, 11]
     assert exp.stages == ("manifest", "train", "perround", "routing", "figures")
     assert set(exp.smoke.arms) <= {a.name for a in exp.arms}
@@ -39,8 +45,9 @@ def test_load_canonical_experiment() -> None:
 def test_dry_run_prints_every_arm_with_the_cached_fingerprint(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["--config", str(EXPERIMENT), "--dry-run"]) == 0
     out = capsys.readouterr().out
-    assert out.count(FINGERPRINT) == 6
+    assert out.count(FINGERPRINT) == 7
     assert "task=baseline_replay" in out
+    assert "task=molora_replay" in out
     assert "stages:      manifest, train, perround, routing, figures" in out
 
 
@@ -116,6 +123,49 @@ def test_train_stage_skips_complete_runs(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setitem(tasks_mod.TASKS, "closed_loop", lambda cfg: calls.append(cfg["output_dir"]) or 0)
     stage_train(PipelineContext(exp=exp))
     assert calls == [run.as_posix()]
+
+
+def test_replay_arms_complete_on_summary_and_train_in_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gen = tmp_path / "gen"
+    mol = tmp_path / "mol"
+    (tmp_path / "gen.yaml").write_text(
+        f"task: baseline_replay\nhistory_path: h.json\noutput_dir: {gen.as_posix()}\n", encoding="utf-8",
+    )
+    (tmp_path / "mol.yaml").write_text(
+        f"task: molora_replay\nhistory_path: h.json\noutput_dir: {mol.as_posix()}\n"
+        "molora: {n_experts: 7}\n",
+        encoding="utf-8",
+    )
+    exp = load_experiment(_write_experiment(
+        tmp_path,
+        f"task: closed_loop\noutput_dir: {(tmp_path / 'spec').as_posix()}\nclosed_loop: {{n_rounds: 1}}\n",
+        extra=(
+            "  - {name: generalist, role: generalist, config: gen.yaml}\n"
+            "  - {name: molora, role: baseline, config: mol.yaml}\n"
+        ),
+    ))
+    assert [a.role for a in exp.arms] == ["specialist", "generalist", "baseline"]
+    assert exp.specialists == (exp.arms[0],)
+    assert exp.generalist is exp.arms[1]
+
+    mol_arm = exp.arms[2]
+    assert not run_is_complete(mol_arm, mol_arm.load())
+    mol.mkdir()
+    (mol / "history.json").write_text("[]", encoding="utf-8")
+    assert not run_is_complete(mol_arm, mol_arm.load())
+    (mol / "replay_summary.json").write_text("{}", encoding="utf-8")
+    assert run_is_complete(mol_arm, mol_arm.load())
+
+    import infl_ens.training.tasks as tasks_mod
+
+    calls: list[str] = []
+    for task in ("closed_loop", "baseline_replay", "molora_replay"):
+        monkeypatch.setitem(tasks_mod.TASKS, task, lambda cfg, t=task: calls.append(t) or 0)
+    stage_train(PipelineContext(exp=exp))
+    # molora is already complete; the other two run in experiment order.
+    assert calls == ["closed_loop", "baseline_replay"]
 
 
 def test_smoke_config_redirects_outputs(tmp_path: Path) -> None:

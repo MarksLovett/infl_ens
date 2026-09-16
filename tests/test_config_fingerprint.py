@@ -18,7 +18,8 @@ from infl_ens.config import load_config
 ROOT = Path(__file__).resolve().parents[1]
 ARMS_DIR = ROOT / "configs" / "arms"
 ARMS = sorted(p for p in ARMS_DIR.glob("*.yaml") if not p.name.startswith("_"))
-SPECIALISTS = [p for p in ARMS if p.name != "generalist_replay.yaml"]
+REPLAY_ARMS = {"generalist_replay.yaml", "molora_replay.yaml"}
+SPECIALISTS = [p for p in ARMS if p.name not in REPLAY_ARMS]
 
 EXPECTED_FINGERPRINT = "3b42c68a8dd334c5"
 
@@ -75,6 +76,7 @@ def test_all_arms_are_present() -> None:
         "hard_topk3_pairs",
         "hard_pairs_matched",
         "generalist_replay",
+        "molora_replay",
     }
 
 

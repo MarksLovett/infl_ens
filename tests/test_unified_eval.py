@@ -110,6 +110,20 @@ def test_from_unified_rejects_bad_shapes(tmp_path: Path) -> None:
         EvalJobConfig.from_unified(cfg, partition="test")
 
 
+def test_from_unified_accepts_replay_tasks_without_closed_loop(tmp_path: Path) -> None:
+    cfg = _unified_cfg(tmp_path / "molora")
+    cfg["task"] = "molora_replay"
+    cfg.pop("closed_loop")
+    cfg["sft"] = {"base_model": "org/model", "max_seq_length": 512}
+    cfg["molora"] = {"n_experts": 7, "agent_name": "molora"}
+    assert is_unified_config(cfg)
+    job = EvalJobConfig.from_unified(cfg, partition="test", rounds=[5])
+    assert job.run_dir == str(tmp_path / "molora")
+    assert job.base_model == "org/model"
+    assert job.to_adapter_eval_config().max_seq_length == 512
+    assert job.rounds == [5]
+
+
 def test_is_unified_config(tmp_path: Path) -> None:
     assert is_unified_config(_unified_cfg(tmp_path))
     assert not is_unified_config({"task": "run_eval", "eval": {}})
