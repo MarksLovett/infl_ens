@@ -11,8 +11,8 @@ Two switches define an arm:
 
 ``domain_source``
     ``labels``: one expert per benchmark, trained on that benchmark's rows
-    of every round batch (``agent_batch_indices`` of the source history,
-    falling back to ``batch_prompts``). This is the MoDULA-Res baseline
+    of every round batch (the source history's ``batch_prompts`` matched
+    back to the train partition by text). This is the MoDULA-Res baseline
     when a universal adapter is given and "one LoRA per benchmark" when it
     is not.
     ``history``: one expert per source merge group (``pair-k``), trained on
@@ -178,26 +178,60 @@ def load_closed_loop_history_lenient(path: PathLike) -> list[dict[str, Any]]:
     return records
 
 
-def round_batch_indices(record: Mapping[str, Any]) -> list[int] | None:
-    """Recover the round's row indices into the train partition.
+def round_batch_rows(record: Mapping[str, Any]) -> list[tuple[str, str | None]]:
+    """Recover the round batch as ``(prompt, response)`` rows.
 
-    Soft-pair runs log ``agent_batch_indices`` (per merge group, indices
-    into the flattened train partition). Their union, sorted, is the round
-    batch. Returns ``None`` when the record carries no indices, in which
-    case callers fall back to ``batch_prompts`` matched by text.
+    The closed loop logs the round's texts as ``batch_prompts`` /
+    ``batch_responses``. Its ``agent_batch_indices`` are positions *within
+    that batch* (not into the train partition), so they are only used, when
+    the batch texts are absent, to de-duplicate the per-agent prompt lists
+    that hard-routing runs log instead. Order follows the logged batch.
 
     :param record: One history record.
     :type record: Mapping
-    :returns: Sorted unique row indices, or ``None``.
-    :rtype: list[int] | None
+    :returns: Unique rows of the round batch.
+    :rtype: list[tuple[str, str | None]]
+    :raises ValueError: If the record logs no prompts at all.
     """
-    per_agent = record.get("agent_batch_indices")
-    if not isinstance(per_agent, Mapping) or not per_agent:
-        return None
-    rows: set[int] = set()
-    for idx in per_agent.values():
-        rows.update(int(i) for i in idx)
-    return sorted(rows)
+    batch_prompts = record.get("batch_prompts")
+    if batch_prompts:
+        batch_responses = list(record.get("batch_responses") or [None] * len(batch_prompts))
+        return [
+            (str(p), (str(r) if r else None))
+            for p, r in zip(batch_prompts, batch_responses, strict=True)
+        ]
+
+    agent_prompts = record.get("agent_prompts") or {}
+    agent_responses = record.get("agent_responses") or {}
+    agent_indices = record.get("agent_batch_indices") or {}
+    if not agent_prompts:
+        raise ValueError(
+            f"round {record.get('round')} logs neither batch_prompts nor agent_prompts"
+        )
+    aligned = bool(agent_indices) and all(
+        len(agent_indices.get(name, [])) == len(agent_prompts[name]) for name in agent_prompts
+    )
+    if aligned:
+        by_index: dict[int, tuple[str, str | None]] = {}
+        for name in sorted(agent_prompts):
+            p_list = list(agent_prompts[name])
+            r_list = list(agent_responses.get(name) or [])
+            for i, p in enumerate(p_list):
+                r = r_list[i] if i < len(r_list) and r_list[i] else None
+                by_index.setdefault(int(agent_indices[name][i]), (str(p), r))
+        return [by_index[k] for k in sorted(by_index)]
+    seen: set[str] = set()
+    rows: list[tuple[str, str | None]] = []
+    for name in sorted(agent_prompts):
+        p_list = list(agent_prompts[name])
+        r_list = list(agent_responses.get(name) or [])
+        for i, p in enumerate(p_list):
+            if p in seen:
+                continue
+            seen.add(p)
+            r = r_list[i] if i < len(r_list) and r_list[i] else None
+            rows.append((str(p), r))
+    return rows
 
 
 def label_domain_batches(
@@ -210,10 +244,13 @@ def label_domain_batches(
 ) -> dict[str, DomainBatch]:
     """Split one round batch by benchmark label.
 
+    Each logged row is matched to the train partition by text, first on
+    ``(prompt, response)`` and then on the prompt alone, and takes the
+    benchmark label of the matching train row.
+
     :param record: One source history record.
     :type record: Mapping
-    :param train_prompts: Flattened train partition prompts (the order the
-        closed loop indexed with ``agent_batch_indices``).
+    :param train_prompts: Flattened train partition prompts.
     :type train_prompts: Sequence[str]
     :param train_responses: Aligned responses.
     :type train_responses: Sequence[str | None]
@@ -224,47 +261,31 @@ def label_domain_batches(
     :returns: ``benchmark -> DomainBatch`` (every domain present, possibly
         empty).
     :rtype: dict[str, DomainBatch]
-    :raises ValueError: If the record has neither indices nor prompts, or a
-        logged prompt is not in the train partition.
+    :raises ValueError: If the record logs no prompts, a logged prompt is
+        not in the train partition, or a label is not a known domain.
     """
-    rows = round_batch_indices(record)
-    if rows is None:
-        batch_prompts = record.get("batch_prompts")
-        if not batch_prompts:
-            # Hard-routing runs log only per-agent prompt lists.
-            agent_prompts = record.get("agent_prompts") or {}
-            seen: set[str] = set()
-            batch_prompts = []
-            for name in sorted(agent_prompts):
-                for p in agent_prompts[name]:
-                    if p not in seen:
-                        seen.add(p)
-                        batch_prompts.append(p)
-        if not batch_prompts:
-            raise ValueError(
-                f"round {record.get('round')} logs neither agent_batch_indices "
-                "nor batch_prompts / agent_prompts"
-            )
-        index_of: dict[str, int] = {}
-        for i, p in enumerate(train_prompts):
-            index_of.setdefault(p, i)
-        try:
-            rows = sorted({index_of[str(p)] for p in batch_prompts})
-        except KeyError as exc:
-            raise ValueError(
-                f"round {record.get('round')}: logged prompt not in the train "
-                f"partition: {str(exc)[:80]!r}"
-            ) from exc
+    rows = round_batch_rows(record)
+
+    label_by_pair: dict[tuple[str, str | None], str] = {}
+    label_by_prompt: dict[str, str] = {}
+    for p, r, lab in zip(train_prompts, train_responses, train_labels, strict=True):
+        key = (str(p), str(r) if r else None)
+        label_by_pair.setdefault(key, str(lab))
+        label_by_prompt.setdefault(str(p), str(lab))
 
     prompts: dict[str, list[str]] = {d: [] for d in domain_names}
     responses: dict[str, list[str | None]] = {d: [] for d in domain_names}
-    for i in rows:
-        label = str(train_labels[i])
+    for p, r in rows:
+        label = label_by_pair.get((p, r)) or label_by_prompt.get(p)
+        if label is None:
+            raise ValueError(
+                f"round {record.get('round')}: logged prompt not in the train "
+                f"partition: {p[:80]!r}"
+            )
         if label not in prompts:
             raise ValueError(f"benchmark {label!r} is not one of {list(domain_names)}")
-        prompts[label].append(str(train_prompts[i]))
-        r = train_responses[i]
-        responses[label].append(r if r else None)
+        prompts[label].append(p)
+        responses[label].append(r)
     return {
         d: DomainBatch(prompts=prompts[d], responses=responses[d], sample_weights=None)
         for d in domain_names
@@ -760,7 +781,7 @@ __all__ = [
     "pair_to_benchmark_aliases",
     "rekey_by_merge_group",
     "resolve_universal_adapter_dir",
-    "round_batch_indices",
+    "round_batch_rows",
     "source_router_blocks",
     "train_modula_res",
 ]

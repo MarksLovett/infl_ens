@@ -197,6 +197,30 @@ def run_modula_res(cfg: dict[str, Any]) -> int:
                 train_labels=train_labels,
                 domain_names=domain_names,
             )
+
+        # Pre-flight: the label partition over every round must hand each
+        # expert at most its benchmark's train rows, and every benchmark
+        # with train rows must reach its expert. Fails fast, before any GPU
+        # work, if the history rows are being mislabelled.
+        available = {b: 0 for b in domain_names}
+        for lab in train_labels:
+            available[str(lab)] = available.get(str(lab), 0) + 1
+        routed = {b: 0 for b in domain_names}
+        for rec in history:
+            for b, batch in batches_for_round(rec).items():
+                routed[b] += batch.n
+        print(
+            "modula_res label partition: rows per expert over all rounds "
+            + ", ".join(f"{b}={routed[b]}/{available[b]}" for b in domain_names),
+            flush=True,
+        )
+        over = [b for b in domain_names if routed[b] > available[b]]
+        starved = [b for b in domain_names if available[b] > 0 and routed[b] == 0]
+        if over or starved:
+            raise ValueError(
+                "label partition is inconsistent with the train partition: "
+                f"over-assigned={over} unreached={starved}; routed={routed} available={available}"
+            )
     else:
         domain_names = list(blocks.pair_names)
         initial_positions = {p: _pair_position(p) for p in domain_names}

@@ -31,7 +31,7 @@ from infl_ens.training.modula_res import (
     label_domain_batches,
     pair_to_benchmark_aliases,
     resolve_universal_adapter_dir,
-    round_batch_indices,
+    round_batch_rows,
     source_router_blocks,
     train_modula_res,
 )
@@ -62,11 +62,15 @@ def _source_history(train_prompts: list[str], train_responses: list[str]) -> lis
     rows_by_round = [list(range(0, n, 2)), list(range(1, n, 2))]
     history = []
     for r, rows in enumerate(rows_by_round):
-        # Each prompt is routed to two pairs (soft top-k = 2).
+        # Each prompt is routed to two pairs (soft top-k = 2). Like the real
+        # closed loop, ``agent_batch_indices`` are positions *within the round
+        # batch* (``j``), not indices into the train partition (``row``).
         per_pair: dict[str, list[int]] = {p: [] for p in PAIRS}
+        per_pair_rows: dict[str, list[int]] = {p: [] for p in PAIRS}
         for j, row in enumerate(rows):
-            per_pair[PAIRS[j % 3]].append(row)
-            per_pair[PAIRS[(j + 1) % 3]].append(row)
+            for p in (PAIRS[j % 3], PAIRS[(j + 1) % 3]):
+                per_pair[p].append(j)
+                per_pair_rows[p].append(row)
         rec = {
             "round": r,
             "routing_mode": "soft",
@@ -78,8 +82,8 @@ def _source_history(train_prompts: list[str], train_responses: list[str]) -> lis
             },
             "pair_members": {PAIRS[k]: [CLONES[2 * k], CLONES[2 * k + 1]] for k in range(3)},
             "agent_batch_indices": per_pair,
-            "agent_prompts": {p: [train_prompts[i] for i in idx] for p, idx in per_pair.items()},
-            "agent_responses": {p: [train_responses[i] for i in idx] for p, idx in per_pair.items()},
+            "agent_prompts": {p: [train_prompts[i] for i in idx] for p, idx in per_pair_rows.items()},
+            "agent_responses": {p: [train_responses[i] for i in idx] for p, idx in per_pair_rows.items()},
             "agent_sample_weights": {p: [0.5 + 0.1 * k for k in range(len(idx))] for p, idx in per_pair.items()},
             "batch_prompts": [train_prompts[i] for i in rows],
             "batch_responses": [train_responses[i] for i in rows],
@@ -160,13 +164,34 @@ def test_unknown_modula_res_key_is_rejected(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_round_batch_indices_is_the_sorted_union() -> None:
-    rec = {"agent_batch_indices": {"pair-0": [5, 1], "pair-1": [1, 3]}}
-    assert round_batch_indices(rec) == [1, 3, 5]
-    assert round_batch_indices({"round": 0}) is None
+def test_round_batch_rows_prefers_batch_texts_and_treats_indices_as_batch_local() -> None:
+    # batch_prompts present: rows follow the logged batch, responses aligned.
+    rec = {
+        "batch_prompts": ["p2", "p0", "p1"], "batch_responses": ["r2", None, "r1"],
+        "agent_batch_indices": {"pair-0": [0, 2], "pair-1": [1]},
+    }
+    assert round_batch_rows(rec) == [("p2", "r2"), ("p0", None), ("p1", "r1")]
+    # Hard-routing runs: only per-agent lists; indices are positions in the
+    # (unlogged) round batch and only serve to de-duplicate.
+    rec = {
+        "agent_prompts": {"pair-1": ["p1", "p0"], "pair-0": ["p0", "p2"]},
+        "agent_responses": {"pair-1": ["r1", "r0"], "pair-0": ["r0", "r2"]},
+        "agent_batch_indices": {"pair-1": [1, 0], "pair-0": [0, 2]},
+    }
+    assert round_batch_rows(rec) == [("p0", "r0"), ("p1", "r1"), ("p2", "r2")]
+    # Misaligned indices -> de-duplicate by text.
+    rec = {"agent_prompts": {"a": ["x", "y"], "b": ["y"]}, "agent_batch_indices": {"a": [0]}}
+    assert round_batch_rows(rec) == [("x", None), ("y", None)]
+    with pytest.raises(ValueError, match="neither batch_prompts"):
+        round_batch_rows({"round": 0})
 
 
 def test_label_batches_partition_each_round_by_benchmark_and_cover_train_once() -> None:
+    """Regression: the real history's ``agent_batch_indices`` are batch-local.
+
+    Reading them as train-partition indices sent every row to the first
+    benchmark (beavertails got all 19 848 rows on the seven-axis run).
+    """
     prompts, responses, labels = _train_partition()
     history = _source_history(prompts, responses)
     seen: list[str] = []
@@ -176,27 +201,39 @@ def test_label_batches_partition_each_round_by_benchmark_and_cover_train_once() 
             train_labels=labels, domain_names=BENCHES,
         )
         assert set(batches) == set(BENCHES)
-        rows = round_batch_indices(rec)
-        assert rows is not None
+        batch = list(rec["batch_prompts"])
         for b in BENCHES:
-            expected = [prompts[i] for i in rows if labels[i] == b]
+            expected = [p for p in batch if labels[prompts.index(p)] == b]
             assert batches[b].prompts == expected
-            assert batches[b].responses == [responses[i] for i in rows if labels[i] == b]
+            assert batches[b].responses == [responses[prompts.index(p)] for p in expected]
             assert batches[b].sample_weights is None
             seen += batches[b].prompts
+        # No benchmark is starved and none receives another benchmark's rows.
+        assert all(batches[b].n == len(batch) // len(BENCHES) for b in BENCHES)
     assert sorted(seen) == sorted(prompts)          # every train row exactly once
     assert len(seen) == len(set(seen))
 
 
-def test_label_batches_fall_back_to_batch_prompts_when_indices_missing() -> None:
+def test_label_batches_from_batch_prompts_only() -> None:
     prompts, responses, labels = _train_partition()
     rec = {"round": 0, "batch_prompts": [prompts[3], prompts[0], prompts[9]]}
     batches = label_domain_batches(
         rec, train_prompts=prompts, train_responses=responses, train_labels=labels, domain_names=BENCHES,
     )
-    assert batches["b0"].prompts == [prompts[0], prompts[3]]
+    assert batches["b0"].prompts == [prompts[3], prompts[0]]     # batch order is kept
     assert batches["b1"].n == 0
     assert batches["b2"].prompts == [prompts[9]]
+    # Same prompt text in two benchmarks: the (prompt, response) pair disambiguates.
+    dup_prompts = ["same", "same", "other"]
+    dup_responses = ["ans-a", "ans-b", "x"]
+    dup_labels = ["b0", "b1", "b2"]
+    out = label_domain_batches(
+        {"round": 0, "batch_prompts": ["same", "same"], "batch_responses": ["ans-b", "ans-a"]},
+        train_prompts=dup_prompts, train_responses=dup_responses, train_labels=dup_labels,
+        domain_names=BENCHES,
+    )
+    assert out["b0"].prompts == ["same"] and out["b0"].responses == ["ans-a"]
+    assert out["b1"].prompts == ["same"] and out["b1"].responses == ["ans-b"]
     with pytest.raises(ValueError, match="not in the train partition"):
         label_domain_batches(
             {"round": 1, "batch_prompts": ["nope"]}, train_prompts=prompts,
