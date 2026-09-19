@@ -1,7 +1,7 @@
 # Seven-axis top-k sweep: the canonical experiment.
 #
 # Five specialist arms sweep routing from fully distributed to a single
-# sampled winner, plus one pooled generalist replayed from the top-3 arm's
+# sampled winner, plus one pooled generalist replayed from the k=7 arm's
 # batches. All arms share manifest, seed and theory initialization, so they
 # draw identical round batches and ONE generalist is data-matched to all.
 #
@@ -11,9 +11,9 @@
 #   soft_unit    deterministic top-3  3   unit
 #   hard_topk    sampled w/o repl.    3   unit
 #   hard         sampled              1   unit
-#   generalist   pooled replay of the `soft` arm
+#   generalist   pooled replay of the `soft_full` arm
 #
-# Baseline arms (role: baseline) reuse the `soft` arm's round schedule and
+# Baseline arms (role: baseline) reuse the `soft_full` arm's round schedule and
 # the generalist as the frozen universal adapter:
 #   modula_res          label partition, residual on U, r=8   (primary baseline)
 #   per_benchmark_lora  label partition, from scratch,  r=8   ("one LoRA per benchmark")
@@ -61,7 +61,7 @@ arms:
     title: "Pooled generalist"
     role: generalist
     config: ../arms/generalist_replay.yaml
-  # Baselines on the `soft` arm's round schedule (run after it and the
+  # Baselines on the `soft_full` arm's round schedule (run after it and the
   # generalist). {label, game} partition x {residual-on-U, from-scratch}:
   - name: modula_res
     label: "MoDULA-Res (labels)"

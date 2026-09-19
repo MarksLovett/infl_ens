@@ -1,7 +1,9 @@
-# ARM 3: pooled GENERALIST replayed from the logged batches of ARM 1.
+# ARM 3: pooled GENERALIST replayed from the logged batches of ARM 1a (k=7).
 # One cumulative LoRA trained on the union of the routed batches (soft rounds
 # are de-duplicated back to the round batch): the data-matched comparator.
-# Runs AFTER ARM 1, since it reads that run's history.json.
+# Runs AFTER ARM 1a, since it reads that run's history.json. Every closed-loop
+# arm draws its round batches from the seeded RNG before any k-dependent
+# code runs, so this generalist is data-matched to all of them.
 #
 # The agent name must stay `pooled-baseline`: the route-then-score evaluator
 # loads the generalist from <baseline_run_dir>/agents/pooled-baseline/round-NN.
@@ -12,7 +14,7 @@ includes:
 
 task: baseline_replay
 seed: 0
-history_path: results/seven_axis_soft_topk3_pairs/seed0/history.json
+history_path: results/seven_axis_soft_full_pairs/seed0/history.json
 output_dir: results/seven_axis_3arm_generalist/seed0
 
 baseline_replay:

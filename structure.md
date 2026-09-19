@@ -112,8 +112,8 @@ infl_ens/
 │   │   ├── topk3_unit_pairs.yaml         soft, k = 3, unit weight
 │   │   ├── hard_topk3_pairs.yaml         sampled top-3 without replacement, unit weight
 │   │   ├── hard_pairs_matched.yaml       hard (one sampled winner), unit weight
-│   │   ├── generalist_replay.yaml        pooled generalist replayed from the k = 3 arm
-│   │   ├── _modula_res_base.yaml         everything the modula_res baseline arms share (k = 3 schedule, eval block)
+│   │   ├── generalist_replay.yaml        pooled generalist replayed from the k = 7 arm
+│   │   ├── _modula_res_base.yaml         everything the modula_res baseline arms share (k = 7 schedule, eval block)
 │   │   ├── modula_res_labels.yaml        BASELINE: per-benchmark residual LoRAs (r = 8) on the merged generalist
 │   │   ├── per_benchmark_lora.yaml       BASELINE: per-benchmark LoRAs (r = 8) from scratch
 │   │   ├── frozen_u_pairs.yaml           ABLATION: residual pair LoRAs (r = 16) on the merged generalist
@@ -124,6 +124,7 @@ infl_ens/
 │   │       └── {qwen,llama,gemma}_{1b,3b,8b}_gen.yaml    9 per-cell pooled generalists
 │   └── experiments/
 │       ├── seven_axis_3arm.yaml          the canonical experiment: 5 specialist + generalist + 3 baseline arms, stages, eval window, figures, smoke
+│       ├── seven_axis_modula_vs_soft.yaml subset of the above: soft_full + soft + generalist + modula_res (game vs MoDULA-Res report)
 │       └── scale_family_sweep.yaml       18-arm sweep (9 specialist + 9 generalist); family x scale NLL figure
 ├── scripts/
 │   ├── run_on_doob.sh                    the only shell script: sync + tmux launch + status + pull
@@ -250,7 +251,7 @@ infl_ens/
 | `models/qwen2_5_1_5b_instruct.yaml` | top-level `sft` block: base model, LoRA r/alpha/dropout, batch, epochs, bf16, cumulative LoRA |
 | `arms/_closed_loop_base.yaml` | includes data + trait_space + model; theory-paired init, `sft_merge_groups: from_init`, `position_update: theory_matched`, final-round `eval` |
 | `arms/*.yaml` | one closed-loop arm each: only `output_dir` and the routing knobs differ (see the on-disk tree) |
-| `arms/_modula_res_base.yaml` | `task: modula_res` on the soft k = 3 run's `history.json`; `universal_agent: pooled-baseline`, `universal_round: final`; final-round `eval` against the generalist |
+| `arms/_modula_res_base.yaml` | `task: modula_res` on the soft k = 7 run's `history.json`; `universal_agent: pooled-baseline`, `universal_round: final`; final-round `eval` against the generalist |
 | `arms/modula_res_labels.yaml` | `domain_source: labels`, `universal_run_dir` = generalist, `sft.lora_r: 8` (primary MoDULA-Res-style baseline) |
 | `arms/per_benchmark_lora.yaml` | `domain_source: labels`, `universal_run_dir: null`, `sft.lora_r: 8` (one LoRA per benchmark) |
 | `arms/frozen_u_pairs.yaml` | `domain_source: history`, `universal_run_dir` = generalist, `sft.lora_r: 16` (ablation: residual pairs) |
@@ -259,6 +260,7 @@ infl_ens/
 | `arms/scale_family/{qwen,llama,gemma}_{1b,3b,8b}.yaml` | 9 specialist cells; each overrides only `output_dir` + `sft.base_model` |
 | `arms/scale_family/{qwen,llama,gemma}_{1b,3b,8b}_gen.yaml` | 9 per-cell generalists; each sets `sft.base_model`, `history_path`, `output_dir` |
 | `experiments/seven_axis_3arm.yaml` | five specialist arms + generalist + three `role: baseline` arms (`modula_res`, `per_benchmark_lora`, `frozen_u_pairs`), stages, `perround_rounds: [4, final]`, `fitted_router: true`, figure list, smoke gate |
+| `experiments/seven_axis_modula_vs_soft.yaml` | four-arm subset of `seven_axis_3arm.yaml` (`soft_full`, `soft`, `generalist`, `modula_res`) with the same stages, eval window and figure list; the game-vs-MoDULA-Res comparison run and report |
 | `experiments/scale_family_sweep.yaml` | 3 family x 3 scale sweep: 9 specialist + 9 generalist arms (with `family`/`scale`), routing per cell, `family_scale_nll` figure |
 
 Every arm (including all scale-family cells) resolves to byte-identical `benchmarks` + `trait_space` blocks (cache fingerprint `3b42c68a8dd334c5`), enforced by `tests/test_config_fingerprint.py` and `tests/test_scale_family.py`.

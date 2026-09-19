@@ -95,7 +95,7 @@ def test_baseline_arms_fill_the_design_grid() -> None:
     resolved = {p.stem: load_config(p) for p in BASELINES}
     for name, cfg in resolved.items():
         assert cfg["task"] == "modula_res", name
-        assert cfg["history_path"] == "results/seven_axis_soft_topk3_pairs/seed0/history.json", name
+        assert cfg["history_path"] == "results/seven_axis_soft_full_pairs/seed0/history.json", name
         assert cfg["eval"]["baseline_run_dir"] == "results/seven_axis_3arm_generalist/seed0", name
         assert cfg["modula_res"]["universal_agent"] == "pooled-baseline", name
     gen = "results/seven_axis_3arm_generalist/seed0"

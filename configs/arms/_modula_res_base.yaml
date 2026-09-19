@@ -2,12 +2,12 @@
 # and sets only `output_dir`, `modula_res.domain_source`,
 # `modula_res.universal_run_dir` and `sft.lora_r`.
 #
-# The task replays the round schedule of the soft top-3 run (ARM 1): each
-# round's batch is split into per-domain batches (by benchmark label or by
-# the game's logged pair assignment) and one cumulative LoRA expert per
-# domain is trained on them. Positions are copied from the source run, so
-# route-then-score uses the game router unchanged. Runs AFTER ARM 1 and the
-# generalist, since it reads their history.json / adapters.
+# The task replays the round schedule of the fully distributed soft run
+# (ARM 1a, k=7): each round's batch is split into per-domain batches (by
+# benchmark label or by the game's logged pair assignment) and one cumulative
+# LoRA expert per domain is trained on them. Positions are copied from the
+# source run, so route-then-score uses the game router unchanged. Runs AFTER
+# ARM 1a and the generalist, since it reads their history.json / adapters.
 includes:
   - ../data/seven_axis_safety.yaml
   - ../trait_space/seven_axis.yaml
@@ -15,7 +15,7 @@ includes:
 
 task: modula_res
 seed: 0
-history_path: results/seven_axis_soft_topk3_pairs/seed0/history.json
+history_path: results/seven_axis_soft_full_pairs/seed0/history.json
 
 modula_res:
   universal_agent: pooled-baseline   # adapter name inside universal_run_dir
